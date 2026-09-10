@@ -10,8 +10,20 @@ node build.js   # one-shot build → dist/
 node serve.js   # dev server on http://localhost:3000 with watch + live reload
 ```
 
-Requires Node 18+. No `package.json`, no dependencies. The whole pipeline is in
-`build.js` (~1100 lines, two `require`s: `fs`, `path`).
+Requires Node 18+. No `package.json`, no dependencies, nothing to install.
+
+If you're on a phone, or on anything that kills long-running processes, the build
+also splits into two commands — one to gather the files, one to walk them:
+
+```sh
+node build.js scan                    # gather inputs → .cache/manifest.json
+node build.js render                  # walk them → dist/
+node build.js render --group notes    # or just one group at a time
+node build.js render --resume         # pick up after an interrupted run
+```
+
+`node build.js render --list` shows the groups. `docs/BUILD.md` explains the
+model and why it exists; you don't need any of it for normal editing.
 
 ## Where things live
 
