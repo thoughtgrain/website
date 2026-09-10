@@ -13,6 +13,7 @@
  *   node build.js scan               gather inputs → .cache/manifest.json
  *   node build.js render             iterate the manifest → dist/
  *   node build.js clean              prune dist/ against the last complete build
+ *   node build.js status             what's done and what's left, no building
  *
  * ## Flags
  *
@@ -32,6 +33,12 @@
  * every group checkpoints, and a killed run resumes instead of restarting from
  * nothing. See lib/commands/render.js for the mechanics.
  *
+ * ## Why progress also goes to a file
+ *
+ * That same runtime shows no stdout at all, so every line is mirrored to
+ * .cache/build.log and .cache/status.txt, which are readable in an editor pane.
+ * See lib/log.js — it's also why nothing here calls process.exit().
+ *
  * The module also exports `build` for serve.js. It only auto-runs when invoked
  * directly — the `require.main === module` guard at the bottom. Without that
  * guard, `require('./build')` started a second concurrent build, which is what
@@ -48,6 +55,7 @@ const COMMANDS = {
   render: require('./lib/commands/render'),
   build: require('./lib/commands/build'),
   clean: require('./lib/commands/clean'),
+  status: require('./lib/commands/status'),
 };
 
 /**
@@ -74,11 +82,26 @@ async function main(argv) {
     return;
   }
 
-  await command.run(parsed);
+  // Start the run log before any work, so a failure in the first few lines is
+  // still captured to .cache/build.log even when nothing reaches the terminal.
+  log.openRun([name].concat(argv.filter(function (a) { return a !== name; })).join(' '));
+  try {
+    await command.run(parsed);
+  } catch (err) {
+    // Handled here rather than by the caller so the failure is written BEFORE
+    // closeRun's finish marker — a log that ends mid-stack with the reason above
+    // the footer is a lot easier to read than one where they're inverted.
+    log.error('build', 'failed: ' + (err && err.stack ? err.stack : err));
+    process.exitCode = 1;
+  } finally {
+    log.closeRun(__dirname);
+  }
 }
 
 function printUsage() {
-  console.log([
+  // Through the logger, not console.log, so usage text takes the same
+  // synchronous write path as everything else — see lib/log.js.
+  [
     'Usage: node build.js [command] [flags]',
     '',
     'Commands:',
@@ -86,6 +109,7 @@ function printUsage() {
     '  scan       gather inputs into .cache/manifest.json',
     '  render     render the manifest into dist/',
     '  clean      prune dist/ against the last complete build',
+    '  status     what is done and what is left, without building',
     '',
     'Flags:',
     '  --group <id>    render a single group (--list to see them)',
@@ -95,15 +119,23 @@ function printUsage() {
     '  --quiet         warnings and errors only',
     '  --fetch-images  allow network fetches for product images',
     '  --no-prune      keep files this build did not write',
-  ].join('\n'));
+    '',
+    'Progress is also written to .cache/build.log and .cache/status.txt,',
+    'which are readable when a terminal is not.',
+  ].forEach(log.raw);
 }
 
 // Only run when invoked directly. serve.js requires this module for `build`,
 // and without this guard that require would kick off a whole second build.
 if (require.main === module) {
+  // main() already reports command failures; this only catches anything thrown
+  // before it gets that far (a bad argv, a module that won't load).
   main(process.argv.slice(2)).catch(function (err) {
     log.error('build', 'failed: ' + (err && err.stack ? err.stack : err));
-    process.exit(1);
+    // NOT process.exit(1): that discards anything still buffered on stdout, so
+    // on a runtime where writes are async the error message you most need is
+    // the one you lose. Setting exitCode lets Node exit once output has drained.
+    process.exitCode = 1;
   });
 }
 

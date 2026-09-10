@@ -165,6 +165,58 @@ doesn't walk directories on every tick either.
 [serve] fs.watch unavailable (ERR_FEATURE_UNAVAILABLE_ON_PLATFORM), polling src/ every 1000ms instead
 ```
 
+## When the terminal shows nothing
+
+On my phone I get no build output at all — not a truncated tail, nothing. That
+reframed the original problem: the build never *looked* silent because it was
+silent, it looked silent because I was never seeing its stdout. The only way I
+could tell it had done anything was to open `dist/` in the file browser.
+
+Three changes, in order of how much they help.
+
+**Every line is written synchronously.** Node only guarantees synchronous writes
+to stdout for a TTY, and for pipes on Linux. Anywhere else a pipe write is
+asynchronous and buffered, and a process that ends before the buffer drains loses
+whatever was queued. So `lib/log.js` writes with `fs.writeSync` rather than
+`console.log` — unbuffered, lands before the next statement runs, with an EAGAIN
+retry for a full pipe.
+
+**Nothing calls `process.exit()` any more.** It discards that buffer outright, so
+a *failing* build could emit literally nothing — the one moment you actually need
+the message. Both call sites now set `process.exitCode` and let Node exit once
+output has drained.
+
+**And the terminal isn't the only channel.** If the host simply doesn't wire
+stdout to its terminal pane, flushing can't help. So every run also writes:
+
+- **`.cache/build.log`** — the complete output of the last run, truncated at the
+  start of each one so it never grows without bound. Includes the failure and
+  stack trace when there is one.
+- **`.cache/status.txt`** — a four-line snapshot of what's done and what's left,
+  rewritten *after every group*, so it's accurate even for a run that got killed
+  partway. That's the case it's really for.
+
+```
+build status — 2026-09-10 21:14
+  done     assets, home, notes
+  pending  writing, series, projects, flat, enjoying, products, feeds
+  3 of 10 groups, 8 files written
+  resume with: node build.js render --resume
+```
+
+Both open in an editor pane. `node build.js status` prints the same block and
+refreshes the file, without building anything — so I can ask "did that finish?"
+without re-running work.
+
+**What's left is on the last line.** It used to print above the summary, and only
+for `--group` runs. Now it rides on the final `done` line, for any incomplete run:
+
+```
+[render] done       4 files     29ms  (4 written, 0 unchanged)  — 9 left: assets, home, writing, series, projects, flat, enjoying, products, feeds
+```
+
+If the terminal shows you one line, that's the line worth having.
+
 ## Command reference
 
 | Command | What it does |
@@ -173,6 +225,7 @@ doesn't walk directories on every tick either.
 | `node build.js scan` | gather inputs into `.cache/manifest.json` |
 | `node build.js render` | render the manifest into `dist/` |
 | `node build.js clean` | prune `dist/` against the last complete build |
+| `node build.js status` | what's done and what's left, without building |
 | `node serve.js` | dev server with live reload |
 
 | Flag | What it does |
@@ -197,7 +250,8 @@ serve.js                    dev server
 lib/
   config.js                 paths, content dirs, CSS/JS order
   args.js                   tiny argv parser
-  log.js                    progress reporting
+  log.js                    progress reporting — synchronous, also to a file
+  status.js                 the .cache/status.txt snapshot
   fsx.js                    write-then-prune writer  ← the durability fix
   manifest.js               scan: gather inputs
   state.js                  render checkpoint
@@ -208,7 +262,7 @@ lib/
                             plus the shared writing / notes / series blocks
   net/                      the opt-in HTTP client and image grabber
   pages/                    one module per output group; index.js is the registry
-  commands/                 scan, render, build, clean
+  commands/                 scan, render, build, clean, status
   watch-poll.js             the fs.watch fallback
 ```
 

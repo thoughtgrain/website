@@ -46,6 +46,9 @@ const components = require('./lib/parse/components');
 const watchPoll = require('./lib/watch-poll');
 
 log.configure(args);
+// One run log for the server's lifetime — the initial build plus every rebuild
+// the watcher triggers. Same reason as build.js: the terminal may show nothing.
+log.openRun('serve');
 
 const PORT = args.port || process.env.PORT || 3000;
 // Default to loopback: a dev server binding every interface by default is a
@@ -247,5 +250,7 @@ buildCommand.run(args).then(function () {
   });
 }).catch(function (e) {
   log.error('serve', 'initial build failed: ' + (e && e.stack ? e.stack : e));
-  process.exit(1);
+  // exitCode, not exit(): see the same note in build.js. There's nothing left
+  // holding the loop open at this point, so Node exits as soon as output drains.
+  process.exitCode = 1;
 });
