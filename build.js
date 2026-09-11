@@ -56,6 +56,24 @@ const COMMANDS = {
   build: require('./lib/commands/build'),
   clean: require('./lib/commands/clean'),
   status: require('./lib/commands/status'),
+  doctor: require('./lib/commands/doctor'),
+};
+
+/**
+ * Flagless shorthands for the two things I do most on a phone.
+ *
+ * Typing `--` on an iOS keyboard fights autocorrect every time (it wants to make
+ * an em dash of it). The parser copes with that now, but the better answer is
+ * not to need a flag at all:
+ *
+ *   node build.js next     render the next pending group, then stop
+ *   node build.js resume   continue an interrupted run
+ *
+ * Each maps to the `render` command with the flag already set.
+ */
+const ALIASES = {
+  next: { command: 'render', flags: { next: true } },
+  resume: { command: 'render', flags: { resume: true } },
 };
 
 /**
@@ -66,27 +84,16 @@ async function main(argv) {
   const parsed = args.parse(argv);
   log.configure(parsed);
 
-  // No positional argument means the default full build.
-  const name = parsed._[0] || 'build';
+  // Open the run log FIRST, before any dispatch decision.
+  //
+  // It used to open after the help and unknown-command branches, which meant the
+  // one command you'd reach for as a diagnostic — `--help` — left no trace in
+  // any file. On a device showing no terminal output, that's two dead channels
+  // and nothing to look at afterwards.
+  log.openRun(argv.join(' ') || 'build', argv);
 
-  if (name === 'help' || parsed.help) {
-    printUsage();
-    return;
-  }
-
-  const command = COMMANDS[name];
-  if (!command) {
-    log.error('build', 'unknown command "' + name + '"');
-    printUsage();
-    process.exitCode = 1;
-    return;
-  }
-
-  // Start the run log before any work, so a failure in the first few lines is
-  // still captured to .cache/build.log even when nothing reaches the terminal.
-  log.openRun([name].concat(argv.filter(function (a) { return a !== name; })).join(' '));
   try {
-    await command.run(parsed);
+    await dispatch(parsed);
   } catch (err) {
     // Handled here rather than by the caller so the failure is written BEFORE
     // closeRun's finish marker — a log that ends mid-stack with the reason above
@@ -98,6 +105,42 @@ async function main(argv) {
   }
 }
 
+/**
+ * Pick a command from the parsed arguments and run it.
+ * @param {object} parsed
+ */
+async function dispatch(parsed) {
+  // No positional argument means the default full build.
+  let name = parsed._[0] || 'build';
+
+  if (name === 'help' || parsed.help) {
+    printUsage();
+    return;
+  }
+
+  // Expand a flagless alias into its command plus flags.
+  if (ALIASES[name]) {
+    Object.assign(parsed, ALIASES[name].flags);
+    name = ALIASES[name].command;
+  }
+
+  const command = COMMANDS[name];
+  if (!command) {
+    log.error('build', 'unknown command "' + name + '"');
+    printUsage();
+    process.exitCode = 1;
+    return;
+  }
+
+  // A second positional after `render` is the group name, so `render notes`
+  // works as well as `render --group notes`. An explicit flag still wins.
+  if (name === 'render' && !parsed.group && parsed._[1]) {
+    parsed.group = parsed._[1];
+  }
+
+  await command.run(parsed);
+}
+
 function printUsage() {
   // Through the logger, not console.log, so usage text takes the same
   // synchronous write path as everything else — see lib/log.js.
@@ -105,23 +148,30 @@ function printUsage() {
     'Usage: node build.js [command] [flags]',
     '',
     'Commands:',
-    '  (none)     scan + render everything',
-    '  scan       gather inputs into .cache/manifest.json',
-    '  render     render the manifest into dist/',
-    '  clean      prune dist/ against the last complete build',
-    '  status     what is done and what is left, without building',
+    '  (none)          scan + render everything',
+    '  scan            gather inputs into .cache/manifest.json',
+    '  render [group]  render the manifest into dist/',
+    '  next            render the next pending group, then stop',
+    '  resume          continue an interrupted run',
+    '  status          what is done and what is left, without building',
+    '  clean           prune dist/ against the last complete build',
+    '  doctor          write a diagnostic report to build-doctor.txt',
     '',
     'Flags:',
     '  --group <id>    render a single group (--list to see them)',
     '  --resume        skip groups already checkpointed as done',
+    '  --next          render only the next pending group',
     '  --list          list the groups and exit',
     '  --verbose       log every path written',
     '  --quiet         warnings and errors only',
     '  --fetch-images  allow network fetches for product images',
     '  --no-prune      keep files this build did not write',
     '',
-    'Progress is also written to .cache/build.log and .cache/status.txt,',
-    'which are readable when a terminal is not.',
+    'On a phone, skip the flags — `next` and `resume` need none, and',
+    '`render notes` works as well as `render --group notes`.',
+    '',
+    'Progress is also written to build.log and build-status.txt in this',
+    'directory, which are readable when a terminal is not.',
   ].forEach(log.raw);
 }
 

@@ -165,6 +165,61 @@ doesn't walk directories on every tick either.
 [serve] fs.watch unavailable (ERR_FEATURE_UNAVAILABLE_ON_PLATFORM), polling src/ every 1000ms instead
 ```
 
+## The em dash that ate every flag
+
+This one cost me a while, so it goes first.
+
+I ran `node build.js --help` on the phone to test whether output worked at all,
+and got nothing. What I had actually typed was `—help` — an **em dash**. iOS
+autocorrect turns two hyphens into one as you type, and it does it in the
+terminal as readily as anywhere else.
+
+The parser only recognised a literal `--`, so every flag I'd ever typed on that
+device was being silently discarded:
+
+| what I typed | what the parser did |
+| ------------ | ------------------- |
+| `—help` | a positional named `"—help"`, not the help flag |
+| `render —group notes` | `render` with **no group flag** → rendered all 64 files |
+| `render —resume` | flag dropped → started over instead of resuming |
+
+So the chunked, one-group-at-a-time workflow I built specifically for the phone
+had never once worked there. It was quietly rendering the whole site every time
+and I had no way to see that it was.
+
+Three fixes, and I'd argue the third is the real one:
+
+**The parser normalises dashes now.** `lib/args.js` converts any leading run of
+em dash, en dash, minus sign or typographic hyphen into `--` before it decides
+anything. That's safe because this CLI has no short flags — there's no `-g` to
+distinguish from `--group` — so a leading dash of any shape can only have been
+an attempt at a long flag. Smart quotes get stripped off values too. `—group`,
+`–group`, `-group` and `--group` all work.
+
+**The log names the character.** Every run's header records `argv` verbatim and
+describes anything non-ASCII by codepoint:
+
+```
+# argv: "—help"
+#   non-ascii in "—help": — U+2014 dash
+```
+
+If a flag goes missing again, that line says why in one glance.
+
+**And the commands don't need flags any more.** Fighting autocorrect for every
+`--` is a bad deal, so the things I actually do on a phone are plain words:
+
+```sh
+node build.js next            # render the next pending group, then stop
+node build.js resume          # continue an interrupted run
+node build.js render notes    # positional, same as --group notes
+```
+
+`next` is the one to remember. Run it, it does one group and tells you what's
+left. Run it again, it does the following one. No flags, no group ids to
+memorise, and ten short commands get you a complete site — byte-identical to
+what a single `node build.js` produces, which I check.
+
 ## When the terminal shows nothing
 
 On my phone I get no build output at all — not a truncated tail, nothing. That
@@ -189,12 +244,19 @@ output has drained.
 **And the terminal isn't the only channel.** If the host simply doesn't wire
 stdout to its terminal pane, flushing can't help. So every run also writes:
 
-- **`.cache/build.log`** — the complete output of the last run, truncated at the
-  start of each one so it never grows without bound. Includes the failure and
-  stack trace when there is one.
-- **`.cache/status.txt`** — a four-line snapshot of what's done and what's left,
+- **`build.log`** — the complete output of the last run, truncated at the start
+  of each one so it never grows without bound. Includes the failure and stack
+  trace when there is one, and the `argv` header described above.
+- **`build-status.txt`** — a four-line snapshot of what's done and what's left,
   rewritten *after every group*, so it's accurate even for a run that got killed
   partway. That's the case it's really for.
+
+Both sit at the **repo root**, not in `.cache/`. They used to be in `.cache/`,
+and that was a mistake: a directory whose name starts with a dot is hidden by
+default in most file browsers, so the fallback channel I'd added for a broken
+terminal was itself invisible on the one device that needed it. `.cache/` keeps
+`manifest.json` and `state.json` — machine state I never read by hand. Anything
+meant for a person goes where a person will see it.
 
 ```
 build status — 2026-09-10 21:14
@@ -207,6 +269,13 @@ build status — 2026-09-10 21:14
 Both open in an editor pane. `node build.js status` prints the same block and
 refreshes the file, without building anything — so I can ask "did that finish?"
 without re-running work.
+
+And when none of that explains it, **`node build.js doctor`** writes
+`build-doctor.txt`: node version and platform, whether stdout is a TTY, `argv`
+verbatim with any non-ASCII named, whether the repo root and `.cache/` are
+actually writable, and the current git branch and commit — that last one so I can
+confirm the device is running the code I think it is, and not an older
+`build.js`. If the terminal shows nothing, that file is the record.
 
 **What's left is on the last line.** It used to print above the summary, and only
 for `--group` runs. Now it rides on the final `done` line, for any incomplete run:
@@ -225,12 +294,16 @@ If the terminal shows you one line, that's the line worth having.
 | `node build.js scan` | gather inputs into `.cache/manifest.json` |
 | `node build.js render` | render the manifest into `dist/` |
 | `node build.js clean` | prune `dist/` against the last complete build |
+| `node build.js next` | render the next pending group, then stop |
+| `node build.js resume` | continue an interrupted run |
 | `node build.js status` | what's done and what's left, without building |
+| `node build.js doctor` | write a diagnostic report to `build-doctor.txt` |
 | `node serve.js` | dev server with live reload |
 
 | Flag | What it does |
 | ---- | ------------ |
-| `--group <id>` | render one group only |
+| `--group <id>` | render one group only (or just `render <id>`) |
+| `--next` | render only the next pending group |
 | `--resume` | skip groups a previous run finished |
 | `--list` | print the groups and stop |
 | `--verbose` | log every path, not just per-group counts |
@@ -249,7 +322,7 @@ serve.js                    dev server
 
 lib/
   config.js                 paths, content dirs, CSS/JS order
-  args.js                   tiny argv parser
+  args.js                   argv parser — normalises iOS smart punctuation
   log.js                    progress reporting — synchronous, also to a file
   status.js                 the .cache/status.txt snapshot
   fsx.js                    write-then-prune writer  ← the durability fix
@@ -262,7 +335,7 @@ lib/
                             plus the shared writing / notes / series blocks
   net/                      the opt-in HTTP client and image grabber
   pages/                    one module per output group; index.js is the registry
-  commands/                 scan, render, build, clean, status
+  commands/                 scan, render, build, clean, status, doctor
   watch-poll.js             the fs.watch fallback
 ```
 

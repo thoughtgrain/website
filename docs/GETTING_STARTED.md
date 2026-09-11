@@ -16,14 +16,21 @@ If you're on a phone, or on anything that kills long-running processes, the buil
 also splits into two commands — one to gather the files, one to walk them:
 
 ```sh
-node build.js scan                    # gather inputs → .cache/manifest.json
-node build.js render                  # walk them → dist/
-node build.js render --group notes    # or just one group at a time
-node build.js render --resume         # pick up after an interrupted run
+node build.js scan      # gather inputs → .cache/manifest.json
+node build.js next      # render the next pending group, then stop
 ```
 
-`node build.js render --list` shows the groups. `docs/BUILD.md` explains the
-model and why it exists; you don't need any of it for normal editing.
+Run `next` until it says nothing is pending — ten short commands, and the result
+is byte-identical to a single `node build.js`. `node build.js status` says how
+far you got, `node build.js resume` continues an interrupted run, and
+`node build.js doctor` writes a diagnostic if something looks wrong.
+
+None of these need flags, which matters more than it sounds: iOS autocorrect
+turns `--` into an em dash, so flags are a fight on a phone keyboard. (The parser
+accepts em dashes now too, but not needing them is better.)
+
+`docs/BUILD.md` explains the model and why it exists; you don't need any of it
+for normal editing.
 
 ## Where things live
 

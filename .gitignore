@@ -3,5 +3,12 @@
 # (they record absolute mtimes), so committing them would only cause conflicts.
 .cache/
 
+# Human-readable build output. These live at the repo root on purpose — a
+# dot-directory is hidden in most file browsers, which made them useless on the
+# one device that needed them. See lib/config.js.
+build.log
+build-status.txt
+build-doctor.txt
+
 # macOS / editor noise
 .DS_Store
