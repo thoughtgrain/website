@@ -17,10 +17,10 @@ also splits into two commands — one to gather the files, one to walk them:
 
 ```sh
 node build.js scan      # gather inputs → .cache/manifest.json
-node build.js next      # render the next pending group, then stop
+node build.js step      # render the next pending group, then stop
 ```
 
-Run `next` until it says nothing is pending — ten short commands, and the result
+Run `step` until it says nothing is pending — ten short commands, and the result
 is byte-identical to a single `node build.js`. `node build.js status` says how
 far you got, `node build.js resume` continues an interrupted run, and
 `node build.js doctor` writes a diagnostic if something looks wrong.

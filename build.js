@@ -66,13 +66,19 @@ const COMMANDS = {
  * an em dash of it). The parser copes with that now, but the better answer is
  * not to need a flag at all:
  *
- *   node build.js next     render the next pending group, then stop
+ *   node build.js step     render the next pending group, then stop
  *   node build.js resume   continue an interrupted run
  *
  * Each maps to the `render` command with the flag already set.
+ *
+ * `step` was called `next` first, which was a bad name in a JavaScript project —
+ * it reads as Next.js to anyone who glances at it, including me in six months.
+ * `next` still works as an undocumented alias so anything already typed or
+ * bookmarked keeps running; it just isn't what the docs or `--help` say.
  */
 const ALIASES = {
-  next: { command: 'render', flags: { next: true } },
+  step: { command: 'render', flags: { step: true } },
+  next: { command: 'render', flags: { step: true } },
   resume: { command: 'render', flags: { resume: true } },
 };
 
@@ -151,7 +157,7 @@ function printUsage() {
     '  (none)          scan + render everything',
     '  scan            gather inputs into .cache/manifest.json',
     '  render [group]  render the manifest into dist/',
-    '  next            render the next pending group, then stop',
+    '  step            render the next pending group, then stop',
     '  resume          continue an interrupted run',
     '  status          what is done and what is left, without building',
     '  clean           prune dist/ against the last complete build',
@@ -160,14 +166,14 @@ function printUsage() {
     'Flags:',
     '  --group <id>    render a single group (--list to see them)',
     '  --resume        skip groups already checkpointed as done',
-    '  --next          render only the next pending group',
+    '  --step          render only the next pending group',
     '  --list          list the groups and exit',
     '  --verbose       log every path written',
     '  --quiet         warnings and errors only',
     '  --fetch-images  allow network fetches for product images',
     '  --no-prune      keep files this build did not write',
     '',
-    'On a phone, skip the flags — `next` and `resume` need none, and',
+    'On a phone, skip the flags — `step` and `resume` need none, and',
     '`render notes` works as well as `render --group notes`.',
     '',
     'Progress is also written to build.log and build-status.txt in this',

@@ -210,12 +210,12 @@ If a flag goes missing again, that line says why in one glance.
 `--` is a bad deal, so the things I actually do on a phone are plain words:
 
 ```sh
-node build.js next            # render the next pending group, then stop
+node build.js step            # render the next pending group, then stop
 node build.js resume          # continue an interrupted run
 node build.js render notes    # positional, same as --group notes
 ```
 
-`next` is the one to remember. Run it, it does one group and tells you what's
+`step` is the one to remember. Run it, it does one group and tells you what's
 left. Run it again, it does the following one. No flags, no group ids to
 memorise, and ten short commands get you a complete site — byte-identical to
 what a single `node build.js` produces, which I check.
@@ -286,19 +286,19 @@ for `--group` runs. Now it rides on the final `done` line, for any incomplete ru
 
 If the terminal shows you one line, that's the line worth having.
 
-## `next` rebuilds what you changed
+## `step` rebuilds what you changed
 
-The first version of `next` had a flaw worth writing down, because the symptom
+The first version of `step` had a flaw worth writing down, because the symptom
 was "I edited a file, ran the build, and `dist/` didn't change" — which sounds
 like a broken build and was actually a bad decision on my part.
 
-Editing a note and running `node build.js next` used to rebuild **`assets`**.
+Editing a note and running `node build.js step` used to rebuild **`assets`**.
 Here's the chain: the edit makes the manifest stale, so `render` re-scans; the
 re-scan sees a new fingerprint and clears the checkpoint (correct — the old
-progress described different inputs); `next` therefore sees all ten groups
+progress described different inputs); `step` therefore sees all ten groups
 pending and takes the first one; and the first one, in presentation order, is
 `assets`. The CSS bundle gets rewritten and the note doesn't. You'd have to run
-`next` three more times to reach it, with nothing in the output saying so.
+`step` three more times to reach it, with nothing in the output saying so.
 
 Presentation order — assets, homepage, sections, feeds — is right for a cold
 build. It's wrong for the case I'm in most of the time, which is "I changed one
@@ -331,7 +331,7 @@ means the page, not the digest. `notes` reads one section, `home` reads three,
 `feeds` reads nine, so `notes` wins.
 
 Two deliberate exceptions. On a **cold build** there's no diff, so the order is
-unchanged — ten `next` runs still walk assets → … → feeds and still produce a
+unchanged — ten `step` runs still walk assets → … → feeds and still produce a
 byte-identical site. And when a **layout or site-wide config** moves, every group
 is affected, so there's no "the page you edited" to surface and it stays in
 presentation order too.
@@ -354,7 +354,7 @@ build status — 2026-09-23 22:44
   pending  (none)
   10 of 10 groups, 64 files written
   dist     STALE — sources changed since that build: notes
-  next     node build.js next   (renders notes first)
+  next     node build.js step   (renders notes first)
 ```
 
 or, when there's nothing to do:
@@ -376,16 +376,20 @@ file, and nothing used to say so.
 | `node build.js scan` | gather inputs into `.cache/manifest.json` |
 | `node build.js render` | render the manifest into `dist/` |
 | `node build.js clean` | prune `dist/` against the last complete build |
-| `node build.js next` | render the next pending group, then stop |
+| `node build.js step` | render the next pending group, then stop |
 | `node build.js resume` | continue an interrupted run |
 | `node build.js status` | what's done and what's left, without building |
 | `node build.js doctor` | write a diagnostic report to `build-doctor.txt` |
+
+`step` used to be called `next`. That was a bad name in a JavaScript project —
+it reads as Next.js at a glance, which this has nothing to do with. `next` still
+works as an undocumented alias so nothing already typed breaks.
 | `node serve.js` | dev server with live reload |
 
 | Flag | What it does |
 | ---- | ------------ |
 | `--group <id>` | render one group only (or just `render <id>`) |
-| `--next` | render only the next pending group |
+| `--step` | render only the next pending group |
 | `--resume` | skip groups a previous run finished |
 | `--list` | print the groups and stop |
 | `--verbose` | log every path, not just per-group counts |
@@ -432,7 +436,7 @@ the flow for the first time: `build.js` → `lib/commands/build.js` →
 
 `inputs` lists the manifest sections the group reads — the nine content
 collection keys plus `layouts`, `components`, `css`, `js`, `data`, `assets`.
-Getting it right is what lets `next` pick this group when the relevant source
+Getting it right is what lets `step` pick this group when the relevant source
 changes; getting it wrong only costs targeting, never correctness, since a full
 build renders everything regardless.
 
