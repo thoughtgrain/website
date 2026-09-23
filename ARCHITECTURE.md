@@ -145,6 +145,12 @@ Walks the group registry in `lib/pages/index.js`, checkpointing to
 
 Order is presentation order, not dependency order — it only buys a readable log.
 
+Each group also declares an `inputs` array naming the manifest sections it reads
+(`['notes']`, `['articles']`, `['css', 'js', 'assets']`, …). That's what lets
+`node build.js next` rebuild the group your edit actually touched rather than
+restarting at the top; `lib/pages/index.js` maps changed sections to affected
+groups, treating `layouts`, `components` and `data` as affecting everything.
+
 Outputs go through the writer in `lib/fsx.js`, which skips files whose bytes
 already match and records everything it wrote. Stale files are pruned at the end,
 and only when every group finished.
@@ -473,6 +479,7 @@ Tunables at the top of `src/js/texture.js`: `MIN_OPACITY`, `VEL_TO_FADE`, `SMOOT
 - **A module that runs work at import time will run it twice.** `build.js` used to call `build()` on load *and* export it, so `serve.js`'s `require('./build')` started one build and its explicit call started another — both deleting `dist/`. Anything with side effects needs a `require.main === module` guard.
 - **`fs.watch(… { recursive: true })` is not universally available.** It throws `ERR_FEATURE_UNAVAILABLE_ON_PLATFORM` or `ENOSYS` where the platform can't back it. `serve.js` catches that and falls back to mtime polling over the manifest.
 - **A CLI that only accepts characters the user's keyboard won't produce has a bug.** iOS autocorrect turns `--` into an em dash, so every flag typed on a phone was silently dropped — `render --group notes` became a full 64-file build with no indication anything had gone wrong. `lib/args.js` normalises the Unicode dashes, the run log names any non-ASCII character by codepoint, and the common commands (`next`, `resume`, `render <group>`) need no flag at all.
+- **An incremental command has to rebuild what you changed, not what comes first.** `next` originally walked the registry in presentation order, so editing a note rebuilt the CSS bundle and left the note alone. Each group in `lib/pages/` now declares an `inputs` array naming the manifest sections it reads, and `next` renders the most specific affected group first (fewest inputs wins, so `notes` beats `home`, which merely digests notes).
 - **Don't hide diagnostic files in a dot-directory.** `build.log` and `build-status.txt` started life in `.cache/`, where a file browser hid them — so the fallback channel added for a broken terminal was itself invisible. They live at the repo root now; `.cache/` keeps only machine state.
 - **Nested `{{#if}}` and `{{#each}}` need innermost-first matching.** A negative lookahead `(?:(?!\{\{#if\s)[\s\S])*?` in the body of the regex pattern restricts each match to a block without further nesting; loop until stable.
 - **CSS grid `1fr` carries implicit `min-width: min-content`.** An image inside a grid cell expands the cell to the image's intrinsic width unless you use `minmax(0, 1fr)` and put `min-width: 0` on the body cell. This bit the image-note row.

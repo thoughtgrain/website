@@ -286,6 +286,88 @@ for `--group` runs. Now it rides on the final `done` line, for any incomplete ru
 
 If the terminal shows you one line, that's the line worth having.
 
+## `next` rebuilds what you changed
+
+The first version of `next` had a flaw worth writing down, because the symptom
+was "I edited a file, ran the build, and `dist/` didn't change" — which sounds
+like a broken build and was actually a bad decision on my part.
+
+Editing a note and running `node build.js next` used to rebuild **`assets`**.
+Here's the chain: the edit makes the manifest stale, so `render` re-scans; the
+re-scan sees a new fingerprint and clears the checkpoint (correct — the old
+progress described different inputs); `next` therefore sees all ten groups
+pending and takes the first one; and the first one, in presentation order, is
+`assets`. The CSS bundle gets rewritten and the note doesn't. You'd have to run
+`next` three more times to reach it, with nothing in the output saying so.
+
+Presentation order — assets, homepage, sections, feeds — is right for a cold
+build. It's wrong for the case I'm in most of the time, which is "I changed one
+file and want to see it".
+
+So each group now declares what it reads:
+
+```js
+module.exports = {
+  id: 'notes',
+  label: '/notes/ and note permalinks',
+  inputs: ['notes'],
+  run: function (ctx) { … },
+};
+```
+
+`render` diffs the old manifest against the new one (both are already in hand
+during a re-scan, so this costs nothing), works out which groups are affected,
+and renders the most specific one first:
+
+```
+[render] sources changed: notes
+[render] next up: notes — 3 of 10 groups affected
+[render] notes      4 files     2ms
+```
+
+"Most specific" means fewest declared inputs. Editing a note affects `notes`,
+but also `home` (it digests the latest four) and `feeds` — and "show me my note"
+means the page, not the digest. `notes` reads one section, `home` reads three,
+`feeds` reads nine, so `notes` wins.
+
+Two deliberate exceptions. On a **cold build** there's no diff, so the order is
+unchanged — ten `next` runs still walk assets → … → feeds and still produce a
+byte-identical site. And when a **layout or site-wide config** moves, every group
+is affected, so there's no "the page you edited" to surface and it stays in
+presentation order too.
+
+One more thing that used to be silent: clearing the checkpoint. It now says so,
+and says what caused it, because a run that was nine-tenths finished quietly
+becoming zero-tenths finished deserves a line:
+
+```
+[scan] sources changed (notes) — previous build progress reset
+```
+
+## Is dist up to date?
+
+`node build.js status` answers it directly now:
+
+```
+build status — 2026-09-23 22:44
+  done     assets, home, notes, writing, series, projects, flat, enjoying, products, feeds
+  pending  (none)
+  10 of 10 groups, 64 files written
+  dist     STALE — sources changed since that build: notes
+  next     node build.js next   (renders notes first)
+```
+
+or, when there's nothing to do:
+
+```
+  dist     current
+```
+
+"Which groups finished" and "is what I'm looking at current" are different
+questions, and only the second one matters when you've just edited something and
+can't see your change. A complete build goes stale the moment you touch a source
+file, and nothing used to say so.
+
 ## Command reference
 
 | Command | What it does |
@@ -345,8 +427,14 @@ the flow for the first time: `build.js` → `lib/commands/build.js` →
 
 ## Adding a page group
 
-1. Write `lib/pages/<name>.js` exporting `{ id, label, run(ctx) }`.
+1. Write `lib/pages/<name>.js` exporting `{ id, label, inputs, run(ctx) }`.
 2. Add `require('./<name>')` to the array in `lib/pages/index.js`.
+
+`inputs` lists the manifest sections the group reads — the nine content
+collection keys plus `layouts`, `components`, `css`, `js`, `data`, `assets`.
+Getting it right is what lets `next` pick this group when the relevant source
+changes; getting it wrong only costs targeting, never correctness, since a full
+build renders everything regardless.
 
 That's it. It gets a checkpoint, a progress line, and `--group` support for free.
 `ctx.emit(relPath, layoutName, data)` renders through the inner layout and
