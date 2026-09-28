@@ -286,6 +286,63 @@ for `--group` runs. Now it rides on the final `done` line, for any incomplete ru
 
 If the terminal shows you one line, that's the line worth having.
 
+## Every run picks up where the last one stopped
+
+This is the one that mattered most on the phone, and I got it wrong the first
+time.
+
+The whole point of the checkpoint was that a killed build could be continued. But
+`node build.js` — the default, the command you'd actually type — passed no
+`--resume`, so `render` built a **fresh** checkpoint every time and started at
+group one. On a device that kills the process after three groups, that means
+every invocation renders the same three groups and dies in the same place. Five
+runs get you exactly as far as one, `dist/` sits half-built, and nothing looks
+like it's happening. I reproduced it here with `timeout`: five runs, plateaued at
+six files.
+
+So resuming is the default now, not an opt-in:
+
+```
+run 1: dist=34 files
+run 2: dist=35 files
+run 3: dist=64 files   ← done
+```
+
+Three kills, same command each time, and it finishes. That's the loop the phone
+needs: **run it again until it stops saying "left".**
+
+```
+[render] done   34 files   2.1s  (34 written, 0 unchanged)  — 6 left, run `node build.js` again to continue
+```
+
+Resuming by default is safe because a checkpoint has to survive two tests before
+it's trusted: `scan` deletes it the moment any source file moves, and
+`loadResumable` refuses one whose fingerprint doesn't match the current inputs,
+or one that already completed. What's left describes an unfinished run over
+exactly these sources.
+
+Two consequences worth knowing:
+
+**Re-running a finished build does nothing.** If the checkpoint is complete, the
+inputs haven't moved, and every file it recorded is still on disk, you get:
+
+```
+[render] already current — nothing to rebuild
+```
+
+That last condition is load-bearing — a checkpoint knows what a run *wrote*, not
+whether you deleted `dist/` afterwards. Delete `dist/` and it rebuilds properly.
+
+**To force a full re-render**, ignore the checkpoint:
+
+```sh
+node build.js rebuild      # flagless
+node build.js --fresh      # same thing
+```
+
+Neither deletes `dist/` — write-then-prune still applies, so even a forced
+rebuild that dies partway leaves a working site.
+
 ## `step` rebuilds what you changed
 
 The first version of `step` had a flaw worth writing down, because the symptom
@@ -378,6 +435,7 @@ file, and nothing used to say so.
 | `node build.js clean` | prune `dist/` against the last complete build |
 | `node build.js step` | render the next pending group, then stop |
 | `node build.js resume` | continue an interrupted run |
+| `node build.js rebuild` | re-render every group, ignoring past progress |
 | `node build.js status` | what's done and what's left, without building |
 | `node build.js doctor` | write a diagnostic report to `build-doctor.txt` |
 
@@ -390,7 +448,8 @@ works as an undocumented alias so nothing already typed breaks.
 | ---- | ------------ |
 | `--group <id>` | render one group only (or just `render <id>`) |
 | `--step` | render only the next pending group |
-| `--resume` | skip groups a previous run finished |
+| `--resume` | now the default; kept so existing commands still work |
+| `--fresh` | ignore the checkpoint and render everything |
 | `--list` | print the groups and stop |
 | `--verbose` | log every path, not just per-group counts |
 | `--quiet` | warnings and errors only |

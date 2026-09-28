@@ -68,6 +68,7 @@ const COMMANDS = {
  *
  *   node build.js step     render the next pending group, then stop
  *   node build.js resume   continue an interrupted run
+ *   node build.js rebuild  re-render everything, ignoring past progress
  *
  * Each maps to the `render` command with the flag already set.
  *
@@ -80,6 +81,7 @@ const ALIASES = {
   step: { command: 'render', flags: { step: true } },
   next: { command: 'render', flags: { step: true } },
   resume: { command: 'render', flags: { resume: true } },
+  rebuild: { command: 'render', flags: { fresh: true } },
 };
 
 /**
@@ -159,6 +161,7 @@ function printUsage() {
     '  render [group]  render the manifest into dist/',
     '  step            render the next pending group, then stop',
     '  resume          continue an interrupted run',
+    '  rebuild         re-render every group, ignoring past progress',
     '  status          what is done and what is left, without building',
     '  clean           prune dist/ against the last complete build',
     '  doctor          write a diagnostic report to build-doctor.txt',
@@ -167,14 +170,17 @@ function printUsage() {
     '  --group <id>    render a single group (--list to see them)',
     '  --resume        skip groups already checkpointed as done',
     '  --step          render only the next pending group',
+    '  --fresh         ignore the checkpoint and render everything',
     '  --list          list the groups and exit',
     '  --verbose       log every path written',
     '  --quiet         warnings and errors only',
     '  --fetch-images  allow network fetches for product images',
     '  --no-prune      keep files this build did not write',
     '',
-    'On a phone, skip the flags — `step` and `resume` need none, and',
-    '`render notes` works as well as `render --group notes`.',
+    'Every run picks up where the last one stopped, so if the process gets',
+    'killed partway, just run it again — progress adds up. On a phone, skip',
+    'the flags: `step`, `resume` and `rebuild` need none, and `render notes`',
+    'works as well as `render --group notes`.',
     '',
     'Progress is also written to build.log and build-status.txt in this',
     'directory, which are readable when a terminal is not.',

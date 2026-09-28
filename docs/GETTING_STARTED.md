@@ -21,9 +21,15 @@ node build.js step      # render the next pending group, then stop
 ```
 
 Run `step` until it says nothing is pending — ten short commands, and the result
-is byte-identical to a single `node build.js`. `node build.js status` says how
-far you got, `node build.js resume` continues an interrupted run, and
-`node build.js doctor` writes a diagnostic if something looks wrong.
+is byte-identical to a single `node build.js`.
+
+Or just run `node build.js` repeatedly: every run picks up where the last one
+stopped, so if the process gets killed partway, running it again carries on
+rather than starting over. It's done when it stops saying "left".
+
+`node build.js status` says how far you got, `node build.js rebuild` forces a
+full re-render, and `node build.js doctor` writes a diagnostic if something looks
+wrong.
 
 None of these need flags, which matters more than it sounds: iOS autocorrect
 turns `--` into an em dash, so flags are a fight on a phone keyboard. (The parser
