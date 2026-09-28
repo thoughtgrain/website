@@ -343,6 +343,43 @@ node build.js --fresh      # same thing
 Neither deletes `dist/` — write-then-prune still applies, so even a forced
 rebuild that dies partway leaves a working site.
 
+## Why change detection hashes contents
+
+I edited a note on the phone, rebuilt, and the page didn't update. Not a kill,
+not a crash — the build genuinely concluded nothing had changed.
+
+Staleness used to be a size-and-mtime comparison: cheap, one `stat` per file, and
+fine on a laptop. The phone's repo lives under **File Provider Storage**, where
+modification times aren't dependable. If mtime doesn't move and the edit happens
+not to change the file's length — swapping a word for one the same length will do
+it — the old check saw two identical numbers and reported no change. The build
+then short-circuited, and nothing re-rendered.
+
+A staleness check that can silently answer "nothing moved" when something did is
+worse than no check at all, so it hashes contents now:
+
+```json
+{ "path": "src/content/notes/01-your-first-note.mdx", "size": 480, "hash": "472e8e1f…" }
+```
+
+Size stays as a fast path — a different length is a change without reading the
+file — and the hash is the authority. All 73 inputs hash in about 5ms against a
+~55ms build, which is not a trade worth thinking about. Verified against the
+hard case: edit a file to the *same length* and restore its old mtime, and the
+build still catches it.
+
+Dropping mtime has a second benefit I didn't expect. It was part of the manifest
+fingerprint, so a fresh `git checkout` — which rewrites mtimes but not content —
+used to invalidate the checkpoint and force a full rebuild. Identical content now
+fingerprints identically however it arrived on disk.
+
+The poll-based watcher in `lib/watch-poll.js` had exactly the same assumption and
+gets the same fix, so `serve.js` notices saved edits on that filesystem too.
+
+`node build.js doctor` now reports whether mtime is trustworthy where you're
+running, plus the current content hashes of the first few notes — so "did my edit
+reach the file Node reads?" is answerable by comparing one line before and after.
+
 ## `step` rebuilds what you changed
 
 The first version of `step` had a flaw worth writing down, because the symptom
