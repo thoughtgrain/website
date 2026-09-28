@@ -518,6 +518,30 @@ So `already current` now reads:
 An assertion you can't check is worse than no assertion, because it stops you
 looking.
 
+### The short circuit that had to go
+
+There used to be one more optimisation: if the checkpoint's fingerprint matched
+the sources, skip the render entirely and print `already current — nothing to
+rebuild`.
+
+Measured, it saved **45ms out of 125** — most of a build is Node starting up.
+In exchange it produced the most confusing symptom in this project's history:
+*"it builds the first time, then nothing."* Twice.
+
+It's gone. A completed run is simply redone, because `loadResumable` refuses a
+checkpoint that already finished, which lands on a fresh one with every group
+pending. Rebuilding 64 files from 23 sources is cheap; being unable to trust that
+running the build builds is not.
+
+Two things that skip work still exist, and neither can make a change disappear,
+because both recompute the content first:
+
+- **Resuming an interrupted run** skips groups the checkpoint already finished.
+  That's what makes repeated runs add up when the process keeps getting killed.
+- **`writeOut` compares bytes** before writing, so a page that renders identically
+  costs no disk write and keeps its mtime — which is why `git status` stays quiet
+  on a no-op rebuild. You'll see it in the summary as `(4 written, 60 unchanged)`.
+
 ## One scan, not two ways of guessing
 
 Staleness used to be an optimisation: compare the stored manifest against disk,
