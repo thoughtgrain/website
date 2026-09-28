@@ -462,6 +462,80 @@ questions, and only the second one matters when you've just edited something and
 can't see your change. A complete build goes stale the moment you touch a source
 file, and nothing used to say so.
 
+## When something doesn't update: `why`
+
+Three rounds of debugging went into "I edited a note and the page didn't update",
+and every one was lost to inference — guessing between a build that couldn't see
+the change, an editor that hadn't written it, and a viewer showing something
+stale. So there's a command that prints all three layers at once:
+
+```sh
+node build.js why src/content/notes/01-your-first-note.mdx
+```
+
+```
+src/content/notes/01-your-first-note.mdx
+  on disk      511 bytes   75e8024c0a8d   mtime 2026-09-28 21:14:16
+  in manifest  480 bytes   472e8e1fc7c3   → DIFFERS, the build should re-render this
+  affects      home, notes, feeds
+  renders to   dist/notes/your-first-note/index.html
+  output       8346 bytes   written 2026-09-28 21:13:44
+  body as Node reads it:
+    "A note is a short fragment, usually one paragraph…"
+```
+
+That last pair of lines is the point. Printing the text **as Node reads it**
+settles "the editor shows my edit but the file doesn't have it" by looking, not
+by deducing — and on a syncing filesystem that is a real failure mode.
+
+With no argument it lists every content file as `same`, `CHANGED` or `new`.
+
+`node build.js doctor` does the same comparison for the manifest as a whole,
+disk against cache, side by side.
+
+## No silent decisions
+
+A theme, earned the hard way. Every round of debugging this build was lost to a
+decision it made without saying so:
+
+| decision | used to say | now says |
+| --- | --- | --- |
+| checkpoint discarded | nothing | `sources changed (notes) — previous build progress reset` |
+| flag not recognised | nothing | the run log records argv with `U+2014` named |
+| terminal write failed | nothing | falls back to console, and the log always has it |
+| nothing to rebuild | one bare line | the fingerprint it matched and the file count it verified |
+
+So `already current` now reads:
+
+```
+[render] already current — nothing to rebuild
+[render]   fingerprint  9a78d1945fab matches the last complete build
+[render]   outputs      all 64 files present in dist/
+[render]   if that is wrong, `node build.js why <file>` shows what it read
+[render]   to render anyway: node build.js rebuild
+```
+
+An assertion you can't check is worse than no assertion, because it stops you
+looking.
+
+## One scan, not two ways of guessing
+
+Staleness used to be an optimisation: compare the stored manifest against disk,
+and only re-scan if something looked different. That had a hole I didn't see for
+three rounds — `staleness()` walks the entries already **in** the manifest, so a
+file **added or deleted** since the last scan was invisible to it. Add a note,
+run `step`, and nothing happened: the manifest didn't list the file, so there was
+no entry to find a difference in.
+
+`node build.js` avoided this only by accident, because it ran a separate scan
+first. `step`, `resume` and `rebuild` went straight to render and stayed blind.
+A bug that hides on one path and not another is the worst kind to chase.
+
+So there's one path now: **scan, always.** It costs about 6ms against a ~50ms
+build, which is not worth a second code path and a class of silent staleness bug.
+The implicit scan prints one line; `node build.js scan` still prints the full
+per-collection breakdown.
+
 ## Command reference
 
 | Command | What it does |
@@ -475,6 +549,7 @@ file, and nothing used to say so.
 | `node build.js rebuild` | re-render every group, ignoring past progress |
 | `node build.js status` | what's done and what's left, without building |
 | `node build.js doctor` | write a diagnostic report to `build-doctor.txt` |
+| `node build.js why [file]` | what the build reads, remembers and produced for a file |
 
 `step` used to be called `next`. That was a bad name in a JavaScript project —
 it reads as Next.js at a glance, which this has nothing to do with. `next` still

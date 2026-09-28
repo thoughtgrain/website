@@ -14,6 +14,7 @@
  *   node build.js render             iterate the manifest → dist/
  *   node build.js clean              prune dist/ against the last complete build
  *   node build.js status             what's done and what's left, no building
+ *   node build.js why <file>         disk vs manifest vs output, for one file
  *
  * ## Flags
  *
@@ -57,6 +58,7 @@ const COMMANDS = {
   clean: require('./lib/commands/clean'),
   status: require('./lib/commands/status'),
   doctor: require('./lib/commands/doctor'),
+  why: require('./lib/commands/why'),
 };
 
 /**
@@ -165,6 +167,7 @@ function printUsage() {
     '  status          what is done and what is left, without building',
     '  clean           prune dist/ against the last complete build',
     '  doctor          write a diagnostic report to build-doctor.txt',
+    '  why [file]      what the build reads, remembers and produced for a file',
     '',
     'Flags:',
     '  --group <id>    render a single group (--list to see them)',
