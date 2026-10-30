@@ -245,7 +245,15 @@ async function prerender(routes, entryFile, outDir = OUT_DIR) {
     done += 1;
   }
 
-  console.log(`[prerender] ${done} routes rendered to HTML`);
+  // Says where, not just how many. When this runs on someone else's builder
+  // the interesting question is never the count, it's whether the directory it
+  // filled is the directory that gets served.
+  const sample = path.join(outDir, 'index.html');
+  const bytes = existsSync(sample) ? readFileSync(sample, 'utf8').length : 0;
+  console.log(
+    `[prerender] ${done} routes rendered into ${path.relative(ROOT, outDir) || '.'}`
+    + ` (index.html is now ${bytes} bytes)`,
+  );
 }
 
 /**
@@ -519,8 +527,22 @@ export default defineConfig(() => {
         apply: 'build',
         applyToEnvironment: (env) => env.name !== 'ssr',
         async closeBundle() {
-          if (usingBuilder) return;
+          if (usingBuilder) {
+            console.log('[prerender] buildApp handled it; fallback standing down');
+            return;
+          }
+
           const configured = this.environment?.config?.build?.outDir;
+          const outDir = configured ? path.resolve(ROOT, configured) : OUT_DIR;
+
+          // Loud, on every branch, via console rather than this.warn.
+          //
+          // A silent skip is indistinguishable from a silent success from the
+          // outside: both give you a build that passes and pages that look
+          // fine in a browser. That ambiguity cost a round trip, so this says
+          // which path it took whether or not anything went wrong, and says it
+          // through a channel the host's log level can't filter out.
+          console.log(`[prerender] buildApp was not called; running fallback -> ${outDir}`);
 
           // Never fail the host's build from in here.
           //
@@ -530,15 +552,15 @@ export default defineConfig(() => {
           // whole deploy down with it is a worse outcome than one that
           // quietly does less, and the first version of this could, and did.
           try {
-            await buildSsrAndPrerender(
-              routes,
-              configured ? path.resolve(ROOT, configured) : OUT_DIR,
-            );
+            await buildSsrAndPrerender(routes, outDir);
           } catch (err) {
-            this.warn(
-              `[prerender] skipped: ${err.message}\n`
-              + 'Pages will render client-side. The build is otherwise complete.',
+            console.warn(
+              `\n[prerender] SKIPPED: ${err.message}\n`
+              + '[prerender] Pages will render client-side. The build is '
+              + 'otherwise complete.\n'
+              + `[prerender] ${err.stack?.split('\n').slice(1, 4).join('\n') || ''}\n`,
             );
+            this.warn(`[prerender] skipped: ${err.message}`);
           }
         },
       },
