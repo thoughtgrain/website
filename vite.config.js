@@ -248,12 +248,50 @@ async function prerender(routes, entryFile, outDir = OUT_DIR) {
   // Says where, not just how many. When this runs on someone else's builder
   // the interesting question is never the count, it's whether the directory it
   // filled is the directory that gets served.
-  const sample = path.join(outDir, 'index.html');
-  const bytes = existsSync(sample) ? readFileSync(sample, 'utf8').length : 0;
-  console.log(
-    `[prerender] ${done} routes rendered into ${path.relative(ROOT, outDir) || '.'}`
-    + ` (index.html is now ${bytes} bytes)`,
-  );
+  note(`${done} routes rendered into ${path.relative(ROOT, outDir) || '.'}`);
+}
+
+/**
+ * What happened during this build, written somewhere a browser can reach.
+ *
+ * `console.log` assumes someone can see the build log. On a hosted builder
+ * that may not be true, and then a silent skip and a silent success are
+ * indistinguishable from the outside: both give a passing build and pages that
+ * look fine in a browser. So the same lines also go to a file in the output,
+ * servable at `/build-report.txt`.
+ *
+ * Deliberately last, and deliberately unable to fail the build: a diagnostic
+ * that breaks the thing it is diagnosing is worse than no diagnostic.
+ */
+const reportLines = [];
+
+function note(line) {
+  reportLines.push(line);
+  console.log(`[prerender] ${line}`);
+}
+
+function writeReport(outDir) {
+  try {
+    const sample = path.join(outDir, 'index.html');
+    const html = existsSync(sample) ? readFileSync(sample, 'utf8') : '';
+    const empty = /<div id="root"[^>]*><\/div>/.test(html);
+
+    mkdirSync(outDir, { recursive: true });
+    writeFileSync(path.join(outDir, 'build-report.txt'), `${[
+      `built:    ${new Date().toISOString()}`,
+      `outDir:   ${outDir}`,
+      '',
+      ...reportLines.map((l) => `  ${l}`),
+      '',
+      `index.html is ${html.length} bytes`,
+      `index.html #root is ${empty ? 'EMPTY, so this build did NOT prerender' : 'FILLED, so this build prerendered'}`,
+      '',
+      'If the page a browser receives disagrees with those two lines, then',
+      'something replaced the output after this build finished.',
+    ].join('\n')}\n`);
+  } catch {
+    // Never let the report be the reason a build fails.
+  }
 }
 
 /**
@@ -489,10 +527,14 @@ export default defineConfig(() => {
         // environment's closeBundle fires.
         usingBuilder = true;
 
+        note('buildApp ran; the fallback is not needed');
+
         const ssr = await builder.build(builder.environments.ssr);
         const entry = [ssr].flat()[0].output.find((c) => c.isEntry);
         await builder.build(builder.environments.client);
         await prerender(routes, entry.fileName);
+
+        writeReport(OUT_DIR);
       },
     },
 
@@ -527,10 +569,7 @@ export default defineConfig(() => {
         apply: 'build',
         applyToEnvironment: (env) => env.name !== 'ssr',
         async closeBundle() {
-          if (usingBuilder) {
-            console.log('[prerender] buildApp handled it; fallback standing down');
-            return;
-          }
+          if (usingBuilder) return;
 
           const configured = this.environment?.config?.build?.outDir;
           const outDir = configured ? path.resolve(ROOT, configured) : OUT_DIR;
@@ -542,7 +581,7 @@ export default defineConfig(() => {
           // fine in a browser. That ambiguity cost a round trip, so this says
           // which path it took whether or not anything went wrong, and says it
           // through a channel the host's log level can't filter out.
-          console.log(`[prerender] buildApp was not called; running fallback -> ${outDir}`);
+          note('buildApp was not called by this host; running the fallback');
 
           // Never fail the host's build from in here.
           //
@@ -554,14 +593,24 @@ export default defineConfig(() => {
           try {
             await buildSsrAndPrerender(routes, outDir);
           } catch (err) {
-            console.warn(
-              `\n[prerender] SKIPPED: ${err.message}\n`
-              + '[prerender] Pages will render client-side. The build is '
-              + 'otherwise complete.\n'
-              + `[prerender] ${err.stack?.split('\n').slice(1, 4).join('\n') || ''}\n`,
-            );
-            this.warn(`[prerender] skipped: ${err.message}`);
+            // A bundler error arrives wrapped in colour codes and twenty
+            // frames of backtrace, none of which says anything. The useful
+            // line is usually the resolver's, so keep the prose and drop the
+            // machinery.
+            const detail = String(err.message || err)
+              // eslint-disable-next-line no-control-regex
+              .replace(/\u001b\[[0-9;]*m/g, '')
+              .split('\n')
+              .map((l) => l.trimEnd())
+              .filter((l) => l && !/^\s*\d+:|^Stack backtrace|^\s+at /.test(l))
+              .slice(0, 6);
+
+            note('SKIPPED, so these pages render client-side:');
+            detail.forEach((l) => note(`  ${l}`));
+            this.warn(`[prerender] skipped: ${detail[0] || err.message}`);
           }
+
+          writeReport(outDir);
         },
       },
 
