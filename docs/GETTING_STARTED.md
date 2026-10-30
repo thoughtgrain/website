@@ -8,30 +8,28 @@ files at `src/content/**` show every supported shape — read alongside this doc
 ```sh
 npm install        # once
 npm run dev        # dev server with hot reload
-npm run build      # bundle → dist/
+npm run build      # static site → dist/
 npm run preview    # serve the built site
 ```
 
 Requires Node 20.19+ or 22.12+ — Vite 8's floor.
 
-`npm run build` produces a client-side React app: one `index.html`, one JS
-bundle, one stylesheet, plus the eleven Atom feeds and `feed.xsl`. The pages
-themselves are drawn in the browser by react-router.
+`npm run build` is one command doing three things: it builds a server renderer,
+builds the fifty pages, then renders each route into its page. The output in
+`dist/` is plain files — every route is a real `index.html` with the content
+already in it, so it works with JavaScript disabled, needs no rewrite rules, and
+can be hosted anywhere that serves static files.
 
 Content is real MDX — CommonMark plus JSX — so ordered lists, nested lists,
 tables and images all work. The five components content may use are exported
 from `src/app/components/mdx.jsx`.
 
-**The host must rewrite unknown paths to `index.html`.** `dist/` has exactly one
-HTML file, so without that rewrite only `/` resolves and every other URL 404s
-before any JavaScript runs. `ARCHITECTURE.md` §3.1 has the full list of what
-client-side rendering costs here.
-
 ## Putting it on CodePen
 
 Upload the repo contents to a Pen made from the React/Vite template.
-`.codepen/pen.config.json` and `index.html` have to sit at the top level — that
-is where the block's entry discovery looks. `package.json` should stay free of
+`.codepen/pen.config.json` and the generated entries sit at the top level — a
+recursive glob for `.html` is how the block finds pages, and there are fifty of
+them. `package.json` should stay free of
 build tooling: CodePen turns each dependency there into an `esm.sh` URL, and
 `vite` can't become one.
 

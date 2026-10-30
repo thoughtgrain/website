@@ -1,103 +1,303 @@
+/**
+ * vite.config.js — the whole build, in one file and one command.
+ *
+ * The repo root is the Vite root, and it is also what gets uploaded to a
+ * CodePen Pen: the generated entries at the top level, `.codepen/pen.config.json`
+ * beside them, source under `src/`. CodePen runs a bare `vite build` with no
+ * npm scripts of its own, so everything the site needs happens inside that one
+ * invocation — and its own entry discovery is a recursive glob for `.html`,
+ * which is exactly what fifty entries at the root give it.
+ *
+ * What a `vite build` does here:
+ *
+ *   1. Reads src/content with readdirSync, in Node, at config time, and derives
+ *      the route list.
+ *   2. Writes one HTML entry per route, at the path it's served from.
+ *   3. Builds the `ssr` environment — a Node-loadable render function.
+ *   4. Builds the `client` environment — the entries from step 2 plus the app.
+ *   5. Prerenders every route and injects the markup into its shell.
+ *
+ * Steps 3–5 are sequenced by `builder.buildApp`. The output is fifty real HTML
+ * files with the words already in them: no router, no rewrite rules, nothing
+ * that has to run before a reader sees the page.
+ */
+
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'node:fs';
+import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import mdx from '@mdx-js/rollup';
 import remarkFrontmatter from 'remark-frontmatter';
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter';
-
-import { readdirSync, readFileSync } from 'node:fs';
-import path from 'node:path';
 import { defineConfig } from 'vite';
 
+import { buildContent, routesFor } from './src/app/lib/content-model.js';
 import { renderFeeds } from './src/app/lib/feeds.js';
 import { readContent, readData } from './src/app/lib/node-loader.js';
-import { buildContent } from './src/app/lib/content-model.js';
+
+const ROOT = import.meta.dirname;
+
+/** Output: Vite's default, `dist` inside the root. */
+const OUT_DIR = path.join(ROOT, 'dist');
 
 /**
- * vite.config.js — a standard Vite app, shaped the way CodePen's blocks expect.
- *
- * `readdirSync` runs in Node at config time and collects every HTML file as an
- * entry. Today that's just `index.html` at the root: the site is a client-side
- * SPA, so one shell serves every route and react-router decides what to draw.
- * The glob is kept rather than hard-coding `index.html` because it's the shape
- * CodePen's own template uses, and because adding a second page later should
- * need no config change.
- *
- * https://rolldown.rs/reference/InputOptions.input
+ * The SSR bundle. Inside the root rather than beside it: a sandboxed builder is
+ * likelier to permit writes under the directory it was handed than outside it,
+ * and this is scratch output read once and never shipped.
  */
-const input = readdirSync(process.cwd(), { recursive: true })
-  .filter(
-    (file) =>
-      file.endsWith('.html')
-      && !file.split(path.sep).includes('node_modules')
-      && !file.split(path.sep).includes('dist')
-      // Only real pages. src/layouts holds the previous generator's templates:
-      // .html, but not pages, and a recursive glob happily turns them into
-      // entries.
-      && !file.split(path.sep).includes('layouts'),
-  )
-  .map((file) => `./${file}`);
+const SSR_DIR = '.ssr';
 
-if (input.length === 0) {
-  throw new Error('No entry point files found.');
+/**
+ * Generated entries live at the root, in the folder each route is served from —
+ * `notes/your-first-note/index.html` and so on. The bundler derives an output
+ * path from where its input sits, so entries parked in a `pages/` folder would
+ * come out at `dist/pages/…`. Putting them where they belong is what makes the
+ * output paths right, and it's also what lets CodePen's recursive `.html` glob
+ * find all fifty of them.
+ *
+ * The list of what was generated is kept in this file so cleanup removes
+ * exactly what the last run created, rather than deleting by guessed name.
+ */
+const GENERATED_MANIFEST = path.join(ROOT, '.generated-routes.json');
+
+/**
+ * Directories generation must never create or delete.
+ *
+ * It writes and removes directories at the repo root, which is the kind of code
+ * that eats a project if a content slug ever collides with a real folder. This
+ * is cheap insurance: a route that would collide fails the build loudly.
+ *
+ * It earned its keep immediately. The output directory used to be called
+ * `build/`, and the build-series posts route at `/build/<slug>/` — so
+ * generation wrote entries into the output directory and cleaned them away on
+ * the next run. Hence `dist`, listed here, and `build` deliberately not listed.
+ */
+const RESERVED = new Set([
+  'src', 'dist', 'docs', 'node_modules', '.codepen', '.git', '.github', SSR_DIR,
+]);
+
+/** Remove only the directories the previous run created. */
+function cleanGenerated() {
+  if (!existsSync(GENERATED_MANIFEST)) return;
+  let previous = [];
+  try { previous = JSON.parse(readFileSync(GENERATED_MANIFEST, 'utf8')); } catch { return; }
+  previous
+    .filter((dir) => !RESERVED.has(dir))
+    .forEach((dir) => rmSync(path.join(ROOT, dir), { recursive: true, force: true }));
 }
 
-export default defineConfig({
-  plugins: [
-    /**
-     * Content is real MDX: the .mdx files compile to React components and
-     * their tags — <Pullquote>, <Dropcap> — resolve against the map in
-     * app/components/mdx.jsx.
-     *
-     * Both remark plugins are required, not optional. Without them the
-     * frontmatter block isn't metadata at all: MDX reads `---` as a thematic
-     * break and the slug, title and toc render as visible body text.
-     *
-     * `enforce: 'pre'` so this runs before the React plugin, which needs JSX
-     * rather than MDX.
-     */
-    {
-      enforce: 'pre',
-      ...mdx({
-        remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter],
-      }),
-    },
-    react(),
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
-    /**
-     * The eleven Atom feeds.
-     *
-     * These are the one thing a client-rendered SPA genuinely cannot produce:
-     * a feed reader asks for /feed.xml and gets whatever the server has, with
-     * no chance to run JavaScript first. So they're generated at build time
-     * from the same content model the app renders, and emitted as assets.
-     */
-    {
-      name: 'site-feeds',
-      apply: 'build',
-      generateBundle() {
-        const content = buildContent(readContent(), readData());
-        renderFeeds(content).forEach(({ fileName, source }) => {
-          this.emitFile({ type: 'asset', fileName, source });
-        });
-        // Every feed opens with <?xml-stylesheet href="/feed.xsl"?>, so the
-        // stylesheet has to ship too or a browser rendering a feed 404s.
-        this.emitFile({
-          type: 'asset',
-          fileName: 'feed.xsl',
-          source: readFileSync(path.join(import.meta.dirname, 'src', 'feed.xsl'), 'utf8'),
-        });
+/** The `../` prefix a page at this route needs to reach the site root. */
+const baseFor = (segments) => (segments.length ? '../'.repeat(segments.length) : './');
+
+/** Route string to path segments — "/notes/x/" to ["notes", "x"]. */
+const segmentsFor = (route) => (route === '/' ? [] : route.slice(1, -1).split('/'));
+
+/**
+ * Write one HTML entry per route and return the bundler's `input` map.
+ *
+ * Every entry is the same shell. The only things that differ are `data-route`,
+ * which tells the app which page it is, and `data-base`, the depth prefix links
+ * need to climb back to the root.
+ */
+function generateEntries(routes, site) {
+  cleanGenerated();
+
+  const input = {};
+  const topLevel = new Set();
+
+  routes.forEach((route) => {
+    const segments = segmentsFor(route);
+
+    if (segments.length) {
+      const top = segments[0];
+      if (RESERVED.has(top)) {
+        throw new Error(
+          `route "${route}" would write into "${top}/", which is a project directory. `
+          + 'Rename the content slug.',
+        );
+      }
+      topLevel.add(top);
+    }
+
+    const abs = path.join(ROOT, ...segments, 'index.html');
+    mkdirSync(path.dirname(abs), { recursive: true });
+
+    // `base` does double duty: the prefix the app hands to Link, and how the
+    // module script finds itself. That src has to be RELATIVE — a root-absolute
+    // path resolves fine under a plain `vite build` but not under CodePen's,
+    // which doesn't map `/` to the Vite root. That mismatch is what produced
+    // fifty identical "Failed to resolve /app/main.jsx" errors.
+    const base = baseFor(segments);
+
+    writeFileSync(abs, `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${escapeHtml(site.title || 'Site')}</title>
+    <meta name="description" content="${escapeHtml(site.description || '')}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="alternate" type="application/atom+xml" title="${escapeHtml(site.title || '')}, all updates" href="${base}feed.xml" />
+  </head>
+  <body>
+    <div id="root" data-route="${route}" data-base="${base}"></div>
+    <script type="module" src="${base}src/app/main.jsx"></script>
+  </body>
+</html>
+`);
+
+    input[route === '/' ? 'index' : route.slice(1, -1)] = abs;
+  });
+
+  writeFileSync(GENERATED_MANIFEST, `${JSON.stringify([...topLevel].sort(), null, 2)}\n`);
+  return input;
+}
+
+/**
+ * Put the content into the HTML.
+ *
+ * Runs after both environments: the client build has written one shell per
+ * route, and the SSR build has produced a Node-loadable render function. This
+ * walks the routes, renders each, and injects the markup into its shell.
+ *
+ * It has to come after the client build rather than live in a plugin hook,
+ * because it needs the finished HTML on disk — the version with the asset links
+ * Vite injected, which only exists once every other hook has run.
+ *
+ * `entryFile` comes from the SSR build's own output rather than being spelled
+ * out, since Vite names it `.js` or `.mjs` depending on the nearest
+ * package.json.
+ */
+async function prerender(routes, entryFile) {
+  const { render } = await import(path.join(ROOT, SSR_DIR, entryFile));
+  let done = 0;
+
+  for (const route of routes) {
+    const segments = segmentsFor(route);
+    const file = path.join(OUT_DIR, ...segments, 'index.html');
+
+    const shell = readFileSync(file, 'utf8');
+    const html = render(route, baseFor(segments));
+
+    // The shell's root div is empty; fill it in place so every other attribute
+    // Vite put on the page (asset links, meta) survives untouched.
+    const filled = shell.replace(
+      /(<div id="root"[^>]*>)(<\/div>)/,
+      (_, open, close) => open + html + close,
+    );
+
+    if (filled === shell) throw new Error(`could not inject into ${file} — root div not found`);
+
+    writeFileSync(file, filled);
+    done += 1;
+  }
+
+  console.log(`[prerender] ${done} routes rendered to HTML`);
+}
+
+/**
+ * Read the content and write the entries — once per process, however many times
+ * the config is evaluated.
+ */
+let prepared;
+function prepare() {
+  if (prepared) return prepared;
+
+  const raw = readContent();
+  const content = buildContent(raw, readData());
+  const routes = routesFor(content);
+  const input = generateEntries(routes, content.data.site || {});
+
+  console.log(`[site] ${routes.length} routes from ${Object.keys(raw).length} content files`);
+
+  prepared = { content, routes, input };
+  return prepared;
+}
+
+export default defineConfig(() => {
+  const { content, routes, input } = prepare();
+
+  return {
+    root: ROOT,
+    appType: 'mpa',
+
+    // Relative asset URLs. Vite defaults to `/`, which only works when the site
+    // is served from a domain root — a page opened from any subpath asks for
+    // /assets/main-<hash>.js and gets a 404. Every other path in this build is
+    // resolved relative to the file that wants it; this is the last one.
+    base: './',
+
+    environments: {
+      client: {
+        build: { outDir: OUT_DIR, emptyOutDir: true, rolldownOptions: { input }, target: 'esnext' },
+      },
+      ssr: {
+        build: {
+          ssr: path.join(ROOT, 'src', 'app', 'entry-server.jsx'),
+          outDir: SSR_DIR,
+          emptyOutDir: true,
+          copyPublicDir: false,
+          target: 'esnext',
+        },
       },
     },
-  ],
 
-  build: {
-    rolldownOptions: { input },
-    target: 'esnext',
-  },
-
-  resolve: {
-    alias: {
-      // import.meta.dirname, not __dirname — this file is an ES module.
-      '@': path.resolve(import.meta.dirname, './src'),
+    // Defining this is what makes a plain `vite build` build both environments
+    // instead of just the client. The order matters: prerender reads the SSR
+    // bundle and writes into the client output, so it goes last.
+    builder: {
+      // One resolved config for both environments, so prepare()'s memo holds
+      // and the entries aren't deleted and rewritten three times a build.
+      sharedConfigBuild: true,
+      async buildApp(builder) {
+        const ssr = await builder.build(builder.environments.ssr);
+        const entry = [ssr].flat()[0].output.find((c) => c.isEntry);
+        await builder.build(builder.environments.client);
+        await prerender(routes, entry.fileName);
+      },
     },
-  },
+
+    plugins: [
+      /**
+       * Content is real MDX. Both remark plugins are required: without them the
+       * frontmatter block isn't metadata at all — MDX reads `---` as a thematic
+       * break and the slug, title and toc render as visible body text.
+       *
+       * `enforce: 'pre'` so this runs before the React plugin, which needs JSX
+       * rather than MDX.
+       */
+      { enforce: 'pre', ...mdx({ remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter] }) },
+      react(),
+
+      /**
+       * The eleven Atom feeds plus the stylesheet they point at. They need real
+       * files at real URLs, which no amount of client rendering provides.
+       *
+       * Scoped to the client: with the Environment API a plugin runs in every
+       * environment by default, which had the SSR pass emitting its own useless
+       * copy of all twelve into .ssr/.
+       */
+      {
+        name: 'site-feeds',
+        apply: 'build',
+        applyToEnvironment: (env) => env.name === 'client',
+        generateBundle() {
+          renderFeeds(content).forEach(({ fileName, source }) => {
+            this.emitFile({ type: 'asset', fileName, source });
+          });
+          this.emitFile({
+            type: 'asset',
+            fileName: 'feed.xsl',
+            source: readFileSync(path.join(ROOT, 'src', 'feed.xsl'), 'utf8'),
+          });
+        },
+      },
+    ],
+  };
 });

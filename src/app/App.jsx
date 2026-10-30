@@ -11,7 +11,7 @@
  * icons used once each, and a sprite would be indirection for its own sake.
  */
 
-import { useRoute } from './base.js';
+import { BaseContext } from './base.js';
 import { site, nav } from './content.js';
 import Link from './Link.jsx';
 import { pageFor } from './routes.jsx';
@@ -79,12 +79,11 @@ function FooterNav() {
   });
 }
 
-export default function App() {
-  const route = useRoute();
+export default function App({ route, base }) {
   const Page = pageFor(route);
 
   return (
-    <>
+    <BaseContext.Provider value={{ route, base }}>
       <a href="#main" className="skip-link">Skip to content</a>
 
       <nav className="site-nav site-nav--drawer" aria-label="Primary">
@@ -138,6 +137,6 @@ export default function App() {
           <span>Set in Newsreader &amp; Inter</span>
         </div>
       </footer>
-    </>
+    </BaseContext.Provider>
   );
 }

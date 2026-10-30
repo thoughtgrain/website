@@ -1,24 +1,18 @@
 /**
- * main.jsx — mount the app.
+ * main.jsx — mount one page.
  *
- * One root, one shell, one bundle. The site is a client-side SPA now: a single
- * index.html loads this, react-router reads the address bar, and App draws
- * whichever page matches. Navigation between pages never touches the network.
+ * Every generated HTML entry loads this same module; the only thing that
+ * differs is `data-route` on #root, which says which page this file is. That's
+ * what makes it a multi-page build: fifty real HTML files at fifty real URLs,
+ * each rendering one route, rather than one page swapping content on the
+ * client.
  *
- * Worth being clear about the trade, because it's the whole architecture:
- * nothing is prerendered any more. The HTML that arrives is an empty div, and
- * every page's content exists only after this module has run. A reader with
- * JavaScript off, a crawler that doesn't execute it, and a link preview all get
- * the empty div. The eleven Atom feeds are generated at build time precisely
- * because they can't depend on any of this.
- *
- * Deep links need the host to serve index.html for unknown paths. Without that
- * rewrite only `/` resolves; everything else 404s before this file ever runs.
+ * There is no router. The server already resolved which page this is — a router
+ * here would re-implement what the filesystem is doing, and cost 50 KB to do it.
  */
 
 import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { createRoot, hydrateRoot } from 'react-dom/client';
 
 // Cascade order is load-bearing: tokens define the variables, kit styles the
 // components that use them, site handles per-page work. Alphabetical would
@@ -29,16 +23,24 @@ import '../css/site.css';
 
 import App from './App.jsx';
 
-const container = document.getElementById('app');
+const rootEl = document.getElementById('root');
+const route = rootEl.dataset.route || '/';
+const base = rootEl.dataset.base || './';
 
-if (container) {
-  createRoot(container).render(
-    <StrictMode>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </StrictMode>,
-  );
+const tree = (
+  <StrictMode>
+    <App route={route} base={base} />
+  </StrictMode>
+);
+
+// Pages ship prerendered, so the markup is already here and React only has to
+// attach to it. `createRoot` would throw it away and rebuild from scratch,
+// which flashes and wastes the work. The empty-root fallback keeps `vite dev`
+// working, where nothing has been prerendered.
+if (rootEl.firstChild) {
+  hydrateRoot(rootEl, tree);
+} else {
+  createRoot(rootEl).render(tree);
 }
 
 // The progressive enhancers (theme toggle, drawer, paper grain) query the DOM,

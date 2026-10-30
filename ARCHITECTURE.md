@@ -33,31 +33,31 @@ components.
 
 ## 2. Repository layout
 
-A standard client-side Vite app. Config and entry HTML at the root, source under
-`src/`, output to `dist/` — the shape CodePen's `react-vite` block expects, and
-the shape its own template uses.
+A Vite multi-page app. The repo root is the Vite root, which is also what gets
+uploaded to a Pen: the generated entries at the top level, `.codepen/` beside
+them, source under `src/`.
 
 ```
 website/
-  index.html                   the only page; everything else is a route
-  vite.config.js               entry discovery + the feeds plugin
+  vite.config.js               the entire build — see §3
   package.json
   .codepen/pen.config.json     which CodePen blocks the Pen runs
+  index.html                   generated — one per route, see §3.1
   dist/                        build output, gitignored
 
   src/
     app/
-      main.jsx                 mounts the app; imports the CSS in cascade order
+      main.jsx                 mounts one page; imports the CSS in cascade order
       App.jsx                  the shell: nav, drawer, footer
       routes.jsx               route string → page component
-      base.js                  the current route, read from react-router
-      Link.jsx                 wraps react-router's Link
+      base.js, Link.jsx        depth-prefix handling for relative links
       content.js               import.meta.glob → parsed collections
       enhancers.js             re-exports the js/ progressive enhancers
+      entry-server.jsx         the SSR entry the prerender step calls
       lib/
         content-model.js       derive the collections + the route list
         feeds.js               the eleven Atom feeds
-        node-loader.js         the same content map, read from disk for feeds
+        node-loader.js         the same content map, read from disk
       components/              Html, FeedLink, NoteList, TagFilter
                                mdx.jsx — the components content may use
       pages/                   one component per page type
@@ -73,40 +73,65 @@ website/
   .github/workflows/pages.yml  npm ci && npm run build → Pages
 ```
 
+Generated at build time and gitignored: `index.html`, one directory per route
+at the root, `.generated-routes.json`, `.ssr/`, `dist/`.
+
 ---
 
-## 3. How it renders
+## 3. The build pipeline
 
-Client-side. `index.html` ships an empty `<div id="app">`, `main.jsx` mounts
-React into it, and react-router matches the address bar against the table in
-`routes.jsx`. Navigation between pages is entirely in the browser.
+One command, `vite build`, doing five things — because a bare `vite build` is
+all CodePen runs. Vite 8's Environment API is what makes that possible.
 
-### 3.1 What that costs
+All of it lives in `vite.config.js`.
 
-This is the trade the architecture makes, and it should be stated plainly rather
-than discovered later.
+### 3.1 Config time — content and entries
 
-**Nothing is prerendered.** The HTML that arrives is an empty div. A reader with
-JavaScript off, a crawler that doesn't execute it, and a link preview all get
-the empty div and nothing else.
+Runs in Node, before any bundling. `readdirSync` reads every `.mdx` and `.json`
+under `src/content/`, `buildContent` derives the collections, and `routesFor`
+produces the route list. Then one HTML entry is written per route, at the path
+it will be served from, and handed to `rolldownOptions.input`.
 
-**`dist/` contains exactly one HTML file.** Every route resolves through the
-router, which only runs once the page has loaded. So the host must rewrite
-unknown paths to `index.html`. Without that rewrite only `/` works and every
-other URL 404s before any JavaScript runs.
+Fifty entries at the root is also what CodePen's own entry discovery expects —
+its config is a recursive glob for `.html`. There is no single-page shell and
+no router: the filesystem resolves which page you asked for, and each entry
+carries `data-route` to tell the app which one it is.
 
-**Every href is root-absolute.** The router matches on pathname, so a relative
-href would resolve against whatever page the reader is standing on. The output
-therefore has to be served from a domain root — not a subdirectory, not
-`file://`.
+The module script's `src` is **relative** to each entry's depth — `./` at the
+root, `../../../` three levels down. A root-absolute path works under a plain
+`vite build` and not under CodePen's, which doesn't map `/` to the Vite root.
+That one mismatch produced fifty identical `Failed to resolve /app/main.jsx`
+errors.
 
-### 3.2 The feeds
+Entry generation writes directories at the repo root, so it refuses any route
+whose first segment collides with a project directory, and removes only what it
+recorded creating. That guard caught a real collision on its first run.
 
-The eleven Atom feeds are the one thing a client-rendered app cannot produce: a
-feed reader asks for `/feed.xml` and gets whatever the server has, with no
-chance to run JavaScript first. So a Vite plugin generates them at build time
-from the same content model the app renders, and emits them as assets along with
-`feed.xsl`.
+### 3.2 The two environments
+
+```js
+environments: {
+  client: { build: { outDir: 'dist', rolldownOptions: { input } } },
+  ssr:    { build: { ssr: 'src/app/entry-server.jsx', outDir: '.ssr' } },
+}
+```
+
+`builder.buildApp` sequences them: SSR first, then the client, then the
+prerender. Defining `builder` at all is what makes a plain `vite build` build
+both.
+
+### 3.3 Prerender
+
+With the SSR bundle built and the client HTML on disk, `prerender()` walks the
+routes, calls `renderToString` for each, and injects the markup into that
+route's shell. The words end up in the HTML: the site works with JS disabled,
+crawlers and link previews see real content, and the output is genuinely
+static — fifty files you can drop on any host, with no rewrite rules.
+
+### 3.4 The feeds
+
+A Vite plugin emits the eleven Atom feeds and `feed.xsl` at build time, from
+the same content model the pages render.
 
 That's why `node-loader.js` exists. The browser fills the content map with
 `import.meta.glob`; the build fills the same shape with `readdirSync`, because
@@ -114,7 +139,7 @@ inside the config there's no module graph to glob. Both hand it to the same
 `buildContent`, which is what stops the feeds and the pages describing different
 sites.
 
-### 3.3 One content model, two loaders
+### 3.5 One content model, two loaders
 
 `src/app/lib/content-model.js` takes a `{ path: module }` map and returns the
 collections and the route list. It does no I/O at all — no `fs`, no Node
@@ -386,14 +411,14 @@ Build series posts (`kind: "Build series"`) all set `series: "Building this site
 `npm ci`, then `npm run build`, then uploads `dist/` to Pages. Node 22 — Vite 8
 needs 20.19+ or 22.12+.
 
-GitHub Pages does not rewrite unknown paths to `index.html`, so deep links will
-404 there (see §3.1). Only `/` resolves.
+Every URL in the output is relative, assets included (`base: './'`), so it works
+from a domain root, a project-pages subpath or a `file://` URL without change.
 
 ### CodePen
 
 Upload the repo contents to a Pen created from the React/Vite template.
-`.codepen/pen.config.json` and `index.html` sit at the top level because that's
-where the block's entry discovery looks.
+`.codepen/pen.config.json` and the generated entries sit at the top level,
+which is where the block's recursive `.html` discovery looks.
 
 ---
 
