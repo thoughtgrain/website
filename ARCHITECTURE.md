@@ -34,20 +34,21 @@ components.
 ## 2. Repository layout
 
 `src/` is the Vite root, and it is also the folder that gets uploaded to a
-CodePen Pen. Everything the build touches lives inside it; `dist/` is its
-sibling. That shape isn't arbitrary — it's CodePen's, and matching it is what
-lets one `vite build` produce the same site in both places.
+CodePen Pen. Everything the build touches lives inside it, output included —
+`src/dist/`, which is Vite's default and where CodePen's build looks. That
+shape isn't arbitrary, and matching it is what lets one `vite build` produce
+the same site in both places.
 
 ```
 website/
   package.json                 LOCAL/CI ONLY — vite, react, the npm scripts
   package-lock.json
-  dist/                        build output, gitignored
 
   src/                         <-- the Vite root; upload THIS to a Pen
     package.json               CodePen's manifest: no dependencies
     .codepen/pen.config.json   which CodePen blocks the Pen runs
     vite.config.js             the entire build — see §3
+    dist/                      build output, gitignored
 
     app/
       main.jsx                 mounts one page; imports the CSS in cascade order
@@ -98,7 +99,7 @@ starts. We have no packages CodePen needs to fetch, so the list is empty — the
 `app/lib/*.js` modules directly, and they are ES modules.
 
 Generated at build time and gitignored: `src/index.html`, one directory per
-route under `src/`, `src/.generated-routes.json`, `src/.ssr/`, `dist/`.
+route under `src/`, `src/.generated-routes.json`, `src/.ssr/`, `src/dist/`.
 
 ---
 
@@ -139,7 +140,7 @@ build.
 
 ```js
 environments: {
-  client: { build: { outDir: '../dist', rolldownOptions: { input } } },
+  client: { build: { outDir: 'dist', rolldownOptions: { input } } },
   ssr:    { build: { ssr: 'app/entry-server.jsx', outDir: '.ssr' } },
 }
 ```
@@ -277,7 +278,9 @@ What it doesn't handle: ordered lists, nested lists, tables, images, footnotes (
 
 ## 8. CSS architecture
 
-Three files, concatenated into `dist/css/style.css` at build time.
+Three files, imported in cascade order by `app/main.jsx` and bundled into one
+stylesheet. Every page links the same one — including `/styles/`, so the
+specimen is rendered by exactly the CSS that renders the real pages.
 
 ### 8.1 `tokens.css` — foundations
 
@@ -315,7 +318,16 @@ Two fixed full-viewport layers behind everything, `body::before` (broad grain) a
 
 ## 9. JavaScript
 
-Each file is wrapped in an IIFE, attaches its listeners on `DOMContentLoaded`, and bails early if the elements it expects aren't on the page. All files are concatenated into `dist/js/main.js` at build time.
+Each file is wrapped in an IIFE and bails early if the elements it expects
+aren't on the page. `app/enhancers.js` imports them all, and `app/main.jsx`
+imports that *after* the first React render, so they enhance markup that already
+exists.
+
+That import order is why they call `ready()` from `js/ready.js` rather than
+listening for `DOMContentLoaded` directly: by the time a dynamically imported
+module runs, that event has long since fired, and a listener registered for it
+never runs at all. Every control on the site was silently dead for exactly this
+reason until it was caught.
 
 ### 9.1 `theme.js`
 
@@ -408,12 +420,17 @@ Build series posts (`kind: "Build series"`) all set `series: "Building this site
 ### GitHub Pages
 
 `.github/workflows/pages.yml` runs on push to `main` and `claude/**`:
-`npm ci`, then `npm run build`, then uploads `dist/` to Pages. `npm ci` rather
+`npm ci`, then `npm run build`, then uploads `src/dist/` to Pages. `npm ci` rather
 than `npm install` so the lockfile is authoritative and CI can't quietly build a
 different dependency tree than local. Node 22 — Vite 8 needs 20.19+ or 22.12+.
 
-`dist/` is not committed. It was, under the old generator, which meant every
-commit carried a diff of the built site.
+`src/dist/` is not committed. It was, under the old generator, which meant
+every commit carried a diff of the built site.
+
+Every URL the output contains is relative — assets included, via `base: './'`.
+Vite defaults that to `/`, which only works when the site is served from a
+domain root; a page opened from any subpath asks for `/assets/main-<hash>.js`
+and gets a 404, which is a blank page with no error to explain it.
 
 ### CodePen
 

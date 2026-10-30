@@ -32,8 +32,17 @@ import { renderFeeds } from './app/lib/feeds.js';
 const ROOT = import.meta.dirname;
 const CONTENT = path.join(ROOT, 'content');
 
-/** Output, a sibling of this folder — the layout CodePen's own builds use. */
-const OUT_DIR = path.join(ROOT, '..', 'dist');
+/**
+ * Output. Vite's default — `dist` INSIDE the root — and deliberately so.
+ *
+ * It used to be `../dist`, on the reading that CodePen's exported zip shows
+ * `src/` and `dist/` as siblings. That export is packaging: the Pen's own files
+ * come back wrapped in `src/`, and the build output beside it. During the build
+ * they're nested, which is why the CodePen template sets no outDir at all.
+ * Writing to `../dist` put the whole site outside the Pen root, where nothing
+ * served it.
+ */
+const OUT_DIR = path.join(ROOT, 'dist');
 
 /**
  * The SSR bundle. Inside the root rather than beside it: a sandboxed builder is
@@ -65,12 +74,12 @@ const GENERATED_MANIFEST = path.join(ROOT, '.generated-routes.json');
  * It earned its keep immediately. The output directory used to be called
  * `build/`, and the build-series posts are routed at `/build/<slug>/` — so
  * generation wrote entries into the output directory and cleaned them away on
- * the next run. `build` is deliberately absent from this list; the output lives
- * outside the root now, so there is nothing left for it to collide with.
+ * the next run. Hence `dist` for output, listed here, and `build` deliberately
+ * not listed so the build-series routes still work.
  */
 const RESERVED = new Set([
   'app', 'content', 'css', 'js', 'components', 'layouts', 'assets',
-  'node_modules', '.codepen', '.git', SSR_DIR,
+  'node_modules', '.codepen', '.git', 'dist', SSR_DIR,
 ]);
 
 /**
@@ -293,12 +302,17 @@ export default defineConfig(() => {
     root: ROOT,
     appType: 'mpa',
 
+    // Relative asset URLs. Vite defaults to `/`, which only works when the site
+    // is served from a domain root — a page opened from any subpath (a CodePen
+    // preview, a project Pages URL, file://) asks for /assets/main-<hash>.js and
+    // gets a 404. Every other path in this build is already resolved relative to
+    // the file that wants it; this is the last one that wasn't.
+    base: './',
+
     environments: {
       client: {
         build: {
           outDir: OUT_DIR,
-          // The output directory is outside the root, so Vite asks before
-          // emptying it. It only ever holds our own build.
           emptyOutDir: true,
           // rolldownOptions, not rollupOptions: Vite 8 bundles with rolldown.
           // The old name still works as a deprecated alias, but CodePen's own

@@ -1,8 +1,9 @@
 # Dependencies
 node_modules/
 
-# Build output
-dist/
+# Build output. Inside the Vite root, which is where Vite puts it by default
+# and where CodePen's build expects to find it.
+src/dist/
 
 # The SSR bundle, written inside the Vite root and read once by the prerender
 # step. Scratch output — never shipped, never uploaded to a Pen.

@@ -8,7 +8,7 @@ files at `src/content/**` show every supported shape — read alongside this doc
 ```sh
 npm install        # once
 npm run dev        # dev server with hot reload
-npm run build      # static site → dist/
+npm run build      # static site → src/dist/
 npm run preview    # serve the built site
 ```
 
@@ -16,7 +16,7 @@ Requires Node 20.19+ or 22.12+ — Vite 8's floor.
 
 `npm run build` is one command doing three things: it builds a server renderer,
 builds the fifty pages, then renders each route into its page. The output in
-`dist/` is plain files — every route is a real `index.html` with the content
+`src/dist/` is plain files — every route is a real `index.html` with the content
 already in it, so it works with JavaScript disabled and can be hosted anywhere
 that serves static files.
 
@@ -192,7 +192,7 @@ Optional longer commentary.
 
 ### How the image works
 
-On every build, `build.js` walks each product MDX file and tries, in order:
+On every build, `Products.jsx` resolves each product’s image and tries, in order:
 
 1. **A cached image on disk.** If `src/assets/products/<slug>.<ext>` already
    exists (committed alongside the rest of the site), use it. Skip the fetch.
@@ -272,9 +272,10 @@ deploying — feed-reader behaviour depends on stable `<id>` values.
 
 ## Deploy
 
-`.github/workflows/pages.yml` runs `node build.js` on every push to `main` (and
-to any `claude/**` branch) and uploads `dist/` to GitHub Pages. The site has a
-single live deploy — whichever branch finished last is what's live.
+`.github/workflows/pages.yml` runs `npm ci && npm run build` on every push to
+`main` (and to any `claude/**` branch) and uploads `src/dist/` to GitHub Pages.
+The site has a single live deploy — whichever branch finished last is what's
+live.
 
 If you don't want feature-branch deploys to clobber `main`, remove
 `'claude/**'` from the workflow's `branches:` list.
