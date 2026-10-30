@@ -1,0 +1,116 @@
+---
+slug: one-command-three-phases
+kind: "Build series"
+series: "Building this site"
+seriesPart: 5
+title: "One command, three phases"
+summary: "How a client build, a server build and a prerender pass fit inside a single `vite build`, and the one config key whose position decides whether anything happens at all."
+date: "28 October 2026"
+read: "7 min"
+tag1: "Build series"
+tag2: "Static sites"
+toc:
+  - id: "why-it-has-to-be-one"
+    label: "Why it has to be one"
+  - id: "two-environments"
+    label: "Two environments"
+  - id: "the-prerender"
+    label: "The prerender"
+  - id: "the-key-that-has-to-be-top-level"
+    label: "The key that has to be top-level"
+  - id: "designing-the-failure"
+    label: "Designing the failure"
+---
+
+<Dropcap text="For a while the build was three commands chained with &&. It worked perfectly on my machine and did nothing at all anywhere that just runs the standard one." />
+
+## Why it has to be one
+
+The old `build` script:
+
+```
+vite build && vite build --ssr app/entry-server.jsx --outDir .ssr && node prerender.mjs
+```
+
+Client bundle, server bundle, then a Node script to stitch them together. Three invocations, two of them with flags, one of them not Vite at all.
+
+That's fine when you control the command. It stops being fine the moment something else builds your project — a CI template, a hosted builder, anything that runs `vite build` and nothing else. All it gets is the first third: fifty pages with empty divs in them.
+
+So it all had to move inside one `vite build`.
+
+<BuildStepper />
+
+## Two environments
+
+Vite's Environment API is the thing that makes this possible rather than hacky. The config declares both builds:
+
+```js
+environments: {
+  ssr: { build: { ssr: 'src/app/entry-server', outDir: '.ssr' } },
+},
+builder: {
+  sharedConfigBuild: true,
+  async buildApp(builder) {
+    const ssr = await builder.build(builder.environments.ssr);
+    await builder.build(builder.environments.client);
+    await prerender(routes, entryFileOf(ssr));
+  },
+},
+```
+
+Defining `builder` at all is what makes a plain `vite build` build both. Vite picks the Environment API path when the config has one.
+
+`sharedConfigBuild: true` is there for an unglamorous reason: without it Vite resolves the config once per environment, so the content got read — and every generated entry deleted and rewritten — three times per build. Harmless, but deleting files three times as often as necessary is not a habit worth keeping.
+
+## The prerender
+
+The last step reads the finished client HTML off disk, runs each route through the SSR bundle, and injects the result:
+
+```js
+const filled = shell.replace(
+  /(<div id="root"[^>]*>)(<\/div>)/,
+  (_, open, close) => open + render(route, base) + close,
+);
+```
+
+It has to come after the client build rather than live in a plugin hook, because it needs the version of the HTML that has the asset links in it — and that only exists once every other hook has run.
+
+One small thing I got right by accident: it takes the SSR entry's filename from the build result rather than hardcoding it. Vite names it `.js` or `.mjs` depending on the nearest `package.json`, and that package.json later changed. Nothing broke, because nothing was asserting the name.
+
+## The key that has to be top-level
+
+Then the build succeeded somewhere else and every page was white.
+
+Not a rendering failure — *no bundle at all*. The output had fifty HTML files, a copied-through source tree, and no `assets/` directory. The HTML was byte-for-byte the shell, so what reached the browser was:
+
+```js
+import { StrictMode } from 'react';   // bare specifier, nothing to resolve it
+import App from './App';               // extensionless, not fetchable
+import '../css/tokens.css';            // not a module
+```
+
+All perfectly fine for a bundler. All impossible for a browser.
+
+The cause was one key in the wrong place. I'd declared the inputs here:
+
+```js
+environments: { client: { build: { rolldownOptions: { input } } } }
+```
+
+A build driven through Vite's legacy path rather than the Environment API builder never looks there. It reads top-level `build`, found nothing to bundle, and emitted nothing.
+
+## Designing the failure
+
+Moving `build` to the top level fixes that case, and the client environment inherits it, so the good path is unchanged.
+
+But the real lesson was about the *shape* of the failure, not the fix. I now test the degraded path deliberately — build with the `builder` key removed, which simulates a host that doesn't support the Environment API, and check what comes out:
+
+| | before | after |
+| --- | --- | --- |
+| HTML files | 50, unprocessed | 50, bundled |
+| hashed assets | 0 | 3 |
+| a page three levels deep | white | renders |
+
+Unprerendered and client-rendered rather than static — degraded, but *working*.
+
+A build that can fail should fail into something usable. Mine was failing into a blank screen with a zero exit code, which is the worst of both.

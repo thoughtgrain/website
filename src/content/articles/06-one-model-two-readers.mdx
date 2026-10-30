@@ -1,0 +1,89 @@
+---
+slug: one-model-two-readers
+kind: "Build series"
+series: "Building this site"
+seriesPart: 4
+title: "One model, two readers"
+summary: "The content model does no I/O at all, which is the only reason two completely different loaders can feed it without drifting apart."
+date: "27 October 2026"
+read: "8 min"
+tag1: "Build series"
+tag2: "Content"
+toc:
+  - id: "the-thing-in-the-middle"
+    label: "The thing in the middle"
+  - id: "two-readers"
+    label: "Two readers"
+  - id: "why-the-keys-have-to-match"
+    label: "Why the keys have to match"
+  - id: "switching-to-real-mdx"
+    label: "Switching to real MDX"
+  - id: "seven-ghosts"
+    label: "Seven ghosts"
+---
+
+<Dropcap text="There is a module in this build that has no imports from Node, no filesystem access, and no idea where its input came from. That constraint is load-bearing, and it took losing three rounds of debugging to learn why." />
+
+## The thing in the middle
+
+`content-model.js` takes a map and returns collections:
+
+```js
+buildContent({ '../content/notes/01-your-first-note.mdx': { frontmatter, default } })
+```
+
+Out comes `notes`, `essays`, `studies`, `buildSeries`, `seriesGroups`, `notesGroups`, plus `routesFor()` which turns all of that into the list of fifty routes.
+
+What it does *not* do is read anything. No `fs`, no `node:path`, nothing that assumes a runtime. Hand it a map and it derives; that's the entire contract.
+
+## Two readers
+
+Which matters because two completely different things need to fill that map.
+
+<LoaderCompare />
+
+The app uses `import.meta.glob`, which the bundler expands at compile time into real imports of compiled MDX modules. The feeds can't — they're generated inside the Vite config, where there is no module graph to glob, only a filesystem. So `node-loader.js` walks `src/content/` with `readdirSync` and produces the same shape.
+
+Both hand their map to the same `buildContent`. Neither knows about the other.
+
+## Why the keys have to match
+
+Exactly, character for character.
+
+The previous build had two different ways of answering "what content exists", and the gap between them cost me three rounds of debugging on a bug that only appeared for some files. The versions I have now produce identical keys by construction — `../content/<dir>/<file>.mdx` — because that's what Vite's glob emits and the Node loader is written to match it.
+
+The same reasoning applies one level down. Both loaders now parse frontmatter with the *same YAML engine*: the browser gets it from `remark-mdx-frontmatter`, and `node-loader.js` calls `yaml` directly. Before that, there were two hand-written parsers that agreed on most fields and disagreed on types — one returned `"1"` where the other returned `1`. Nothing downstream cared, right up until something would have.
+
+<PullquoteNoCite text="Two implementations that agree today are two implementations that will disagree eventually. The only reliable fix is to have one." />
+
+## Switching to real MDX
+
+The content was always `.mdx`, but for a long time it wasn't really MDX. It was raw text run through a markdown parser I'd written, with a regex pass that expanded `<Pullquote text="…" />` by substituting into an HTML template.
+
+Now it's compiled by `@mdx-js/mdx`, with `remark-frontmatter` and `remark-mdx-frontmatter` for the metadata. Content gets CommonMark plus JSX: ordered lists, nested lists, tables, images — none of which my parser supported.
+
+The components are real React components now. `<Pullquote>` resolves against a map passed to every body, and MDX throws at render for any name it can't resolve, so a typo in a content file fails loudly instead of silently rendering as text.
+
+Switching also let me delete `content-model.js` down from 274 lines to 193. The markdown pass, the component resolver, the footnote extractor and both lede splits all went, because there is no HTML string in the middle any more for them to operate on.
+
+## Seven ghosts
+
+Here's the part I didn't expect.
+
+My old parser emitted inline code without escaping `<`. So a span like this in a post:
+
+```md
+It'll appear at `/essays/<slug>/` automatically.
+```
+
+…produced this in the HTML:
+
+```html
+<code>/essays/<slug>/</code>
+```
+
+Which the browser parsed as a real `<slug>` element. Readers saw `/essays//`.
+
+One essay page had seven of these — `dropcap`, `pullquote`, `pullquotenocite`, `marginaliapin`, and two `slug`s — all sitting in the DOM as unknown elements, invisible unless you went looking. MDX escapes correctly, and all seven are gone.
+
+I found them by diffing the computed styles of every element on every page between the old output and the new one, looking for regressions. They turned up as elements present in the old build and absent from the new, which looked like a regression and was in fact the fix.

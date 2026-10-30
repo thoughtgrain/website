@@ -18,6 +18,8 @@
  * attribute.
  */
 
+import { demoComponents } from './demos';
+
 export function Dropcap({ text }) {
   return <p className="dropcap">{text}</p>;
 }
@@ -63,7 +65,14 @@ export function Footnote({ id }) {
   );
 }
 
-/** Passed to every MDX body as its `components` prop. */
+/**
+ * Passed to every MDX body as its `components` prop.
+ *
+ * The demos are the interactive figures the build series uses. They're the only
+ * stateful components in the app — see demos.jsx for the three rules that come
+ * with that.
+ */
 export const mdxComponents = {
   Dropcap, Pullquote, PullquoteNoCite, MarginaliaPin, Footnote,
+  ...demoComponents,
 };

@@ -1,0 +1,93 @@
+---
+slug: two-feeds-and-a-stylesheet
+kind: "Build series"
+series: "Building this site"
+seriesPart: 6
+title: "Two feeds and a stylesheet that isn't CSS"
+summary: "Twenty-two feeds from one ordering function, an XSLT file that makes a feed readable in a browser, and the content-type that quietly decides whether any of it works."
+date: "29 October 2026"
+read: "7 min"
+tag1: "Build series"
+tag2: "Feeds"
+toc:
+  - id: "twenty-two-feeds"
+    label: "Twenty-two feeds"
+  - id: "one-ordering-function"
+    label: "One ordering function"
+  - id: "a-stylesheet-that-isnt-css"
+    label: "A stylesheet that isn't CSS"
+  - id: "the-content-type-that-decides"
+    label: "The content-type that decides"
+  - id: "what-json-cant-do"
+    label: "What JSON can't do"
+---
+
+<Dropcap text="Feeds are the one part of this site that a client-rendered page genuinely cannot produce. A reader asks for /feed.xml and gets whatever the server has, with no chance to run anything first." />
+
+## Twenty-two feeds
+
+Eleven sections — the whole site, plus essays, studies, notes, projects, products, and each of the five cultural collections — each published twice. Atom at `feed.xml`, [JSON Feed](https://jsonfeed.org/version/1.1) at `feed.json`.
+
+<FeedFormats />
+
+A Vite plugin emits them during the client build, from the same content model the pages render. Not a separate script, not a separate pass over the content: the same `buildContent` output, serialised.
+
+## One ordering function
+
+Both serialisers call the same thing:
+
+```js
+function orderEntries(entries) {
+  return entries.slice()
+    .sort((a, b) => b.updated.localeCompare(a.updated))
+    .slice(0, MAX_ENTRIES);
+}
+```
+
+That's deliberate, and it's the same instinct as the content model having one implementation rather than two. Two formats describing the same feed must list the same items in the same order, and duplicating a four-line sort is exactly how that quietly stops being true six months later.
+
+I check it rather than trust it. The build output gets compared pairwise — all eleven, same item ids, same order.
+
+## A stylesheet that isn't CSS
+
+Open `/feed.xml` in a browser and you don't get raw XML. You get a readable page: the site's own type and colour, a short explanation of what a feed is, the entry list with dates and summaries.
+
+That's XSLT. A processing instruction at the top of the feed:
+
+```xml
+<?xml-stylesheet type="text/xsl" href="feed-style.xml"?>
+```
+
+…points at a transform that turns the Atom document into HTML, which the browser then renders. The feed stays a completely valid feed; a reader pointed at it sees XML and doesn't care.
+
+Two details worth having.
+
+**It's named `.xml`, not `.xsl`.** The processing instruction references a *URL*, and the browser decides from the `type` attribute, not the filename. So when I needed to host it somewhere that wouldn't accept a `.xsl` file, renaming it was the whole fix.
+
+**There's a copy beside every feed.** Not one shared file at the root. The `<link>` and `<a href>` the transform emits resolve against the *feed's* URL, not the stylesheet's — so the paths inside have to match the depth of the feed that used it. Eleven small copies is the cheap way to be correct at every depth.
+
+While restoring it I found it had been broken for months anyway: it linked `/css/style.css`, a path that stopped existing when I replaced the old generator, so the preview had been styling itself with a 404. It also loaded three fonts the site no longer uses.
+
+## The content-type that decides
+
+Here's the part I'd never have guessed. Whether the preview works at all depends on how the host serves the feed — not on anything in the file.
+
+| feed served as | stylesheet as | result |
+| --- | --- | --- |
+| `application/atom+xml` | `text/xsl` | raw XML |
+| `text/xml` | `text/xsl` | **transformed** |
+| `application/xml` | `text/xsl` | **transformed** |
+| `text/xml` | `text/xml` | **transformed** |
+| `application/rss+xml` | `text/xsl` | raw XML |
+
+Served as `application/atom+xml` — which is the *more correct* type for a feed — Chromium ignores the stylesheet entirely and shows you the XML.
+
+Most static hosts serve `.xml` as `text/xml` by default, which is why this works. But it's the host's call, not mine, and there is nothing I can put in the file to change it.
+
+## What JSON can't do
+
+The JSON feeds are not styled, and can't be.
+
+There is no `<?json-stylesheet?>`. A JSON document cannot reference one. Open `feed.json` in a browser and you get raw JSON, or whatever viewer your browser ships.
+
+That's worth stating plainly because it's a real asymmetry, and when I added JSON Feed I was briefly asked to make both look nice. Half of that is achievable and half of it isn't — JSON Feed earns its place with readers that prefer it, not in a browser window.

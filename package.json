@@ -4,12 +4,15 @@
   "type": "module",
   "scripts": {
     "setup": "npm i --no-save --no-package-lock vite@8.3.5 @vitejs/plugin-react@6.1.2 react@19.2.0 react-dom@19.2.0",
+    "predev": "npm run setup --silent",
+    "prebuild": "npm run setup --silent",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
     "@mdx-js/mdx": "^3.1.1",
+    "rehype-slug": "^6.0.0",
     "remark-frontmatter": "^5.0.0",
     "remark-mdx-frontmatter": "^6.0.0",
     "yaml": "^2.9.1"

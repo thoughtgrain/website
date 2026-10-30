@@ -1,0 +1,88 @@
+---
+slug: what-data-route-is-for
+kind: "Build series"
+series: "Building this site"
+seriesPart: 2
+title: "What data-route is for"
+summary: "One div, two attributes, and the question they answer: how does a file that was written by a build script know which page it is?"
+date: "25 October 2026"
+read: "7 min"
+tag1: "Build series"
+tag2: "Static sites"
+toc:
+  - id: "the-line"
+    label: "The line"
+  - id: "which-page-am-i"
+    label: "Which page am I?"
+  - id: "how-deep-am-i"
+    label: "How deep am I?"
+  - id: "written-not-authored"
+    label: "Written, not authored"
+  - id: "the-guard-that-earned-its-keep"
+    label: "The guard that earned its keep"
+---
+
+<Dropcap text="Every page on this site contains one line that looks like configuration left in by mistake. It isn't. It's the entire mechanism by which a static file knows what it's supposed to be." />
+
+Here it is, from `/about/`:
+
+```html
+<div id="root" data-route="/about/" data-base="../"></div>
+```
+
+Two attributes. Let me take them one at a time.
+
+## The line
+
+That div is empty when the build writes it. By the time you load the page it is full of markup, because a later phase renders the page and injects it. But the div itself — the attributes — is written first, and the attributes are what make the rendering possible.
+
+<RouteExplorer />
+
+Change the route in that figure and watch both values move. They're the only things that differ between the fifty files.
+
+## Which page am I?
+
+`data-route="/about/"`.
+
+The app is one bundle, shared by every page. `main.jsx` reads the attribute and hands it to the route table:
+
+```js
+const rootEl = document.getElementById('root');
+const route  = rootEl.dataset.route || '/';
+```
+
+`routes.jsx` is an ordered list of regular expressions. `/^\/about\/$/` matches `About`. `/^\/notes\/[^/]+\/$/` matches `Note`. First match wins, which is why the patterns with a fixed second segment come before the ones that would swallow it — `/essays/tag/x/` has to be tested before `/essays/:slug/`.
+
+That's the whole router. No history API, no link interception, no fallback route. The server already decided which page this is; the attribute just tells the client what the server decided.
+
+The alternative would be to bake a different entry module per page, or to read `window.location`. The first means fifty bundles. The second means the page can't be rendered during the build, because there's no `window` in Node — and rendering during the build is the point.
+
+## How deep am I?
+
+`data-base="../"`.
+
+`/about/` is one directory down, so everything it links to has to climb one level first. `/projects/cat/code/` is three down and climbs three. The root page climbs none, and writes `./`.
+
+That's what makes the output portable. There is not a single root-absolute path in any of the fifty files — no `/assets/main.js`, no `/notes/`. Drop the whole directory on a domain root, in a subfolder, in a preview URL with a random path prefix, or open it off a USB stick with `file://`, and every link still points at the right thing.
+
+I learned the value of this the tedious way. An earlier version used root-absolute paths, which worked perfectly until it was served from anywhere other than a domain root, at which point every stylesheet and script 404'd and the site rendered as unstyled text with no error to explain why.
+
+<MarginaliaPin text="The link resolution itself is more interesting than the prefix — see part three." rotate="-2" />
+
+## Written, not authored
+
+Worth being clear that nobody types these files.
+
+`vite.config.js` reads `src/content/`, derives the route list, and writes one HTML shell per route before the bundler starts. They're gitignored. Delete all fifty and the next build recreates them.
+
+That's why the attributes can be trusted: they're computed from the same route list that produced the filename. The file at `notes/your-first-note/index.html` carries `data-route="/notes/your-first-note/"` because both came out of the same loop.
+
+## The guard that earned its keep
+
+Generating directories at the root of your own repository is the kind of code that eats a project. So the generator keeps a list of names it will never create or delete — `src`, `dist`, `docs`, `node_modules`, `.git` — and throws if a content slug would collide with one.
+
+It caught something real on its first run. The output directory was called `build/`. The build-series posts you are reading route at `/build/<slug>/`.
+
+Generation would have written entries into the output directory, and then deleted them on the next run while cleaning up after itself. The guard turned a confusing intermittent failure into an error message with a slug name in it.
+
+The output directory is called `dist/` now.

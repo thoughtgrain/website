@@ -28,6 +28,7 @@ import react from '@vitejs/plugin-react';
 import { compile as compileMdx } from '@mdx-js/mdx';
 import remarkFrontmatter from 'remark-frontmatter';
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter';
+import rehypeSlug from 'rehype-slug';
 import { defineConfig } from 'vite';
 
 import { buildContent, routesFor } from './src/app/lib/content-model.js';
@@ -359,7 +360,14 @@ export default defineConfig(() => {
           if (!id.endsWith('.mdx')) return null;
           const compiled = await compileMdx(
             { value: code, path: id },
-            { remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter] },
+            {
+              remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter],
+              // Heading ids, which the `toc:` frontmatter links to. The old
+              // markdown parser slugified them; MDX doesn't, and nothing
+              // replaced it — so every in-page anchor on the site pointed at
+              // an id that was never emitted.
+              rehypePlugins: [rehypeSlug],
+            },
           );
           return { code: String(compiled), map: null };
         },

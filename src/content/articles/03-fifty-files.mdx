@@ -1,0 +1,73 @@
+---
+slug: fifty-files
+kind: "Build series"
+series: "Building this site"
+seriesPart: 1
+title: "Fifty files, not one app"
+summary: "Why this site is fifty separate HTML documents instead of one application that swaps its own contents, and what it cost me to find out."
+date: "24 October 2026"
+read: "6 min"
+tag1: "Build series"
+tag2: "Static sites"
+toc:
+  - id: "what-actually-arrives"
+    label: "What actually arrives"
+  - id: "the-detour-i-took"
+    label: "The detour I took"
+  - id: "what-that-cost"
+    label: "What that cost"
+  - id: "the-shape-it-settled-into"
+    label: "The shape it settled into"
+---
+
+<Dropcap text="Open the network tab on any page of this site and you will see one HTML document, one stylesheet, one script. The document already contains every word on the page. Nothing has to run before you can read it." />
+
+That sounds unremarkable. It took me three rewrites to get there.
+
+## What actually arrives
+
+Ask for `/about/` and the server hands you a file that lives at `about/index.html`. Ask for `/projects/cat/code/` and you get `projects/cat/code/index.html`. There are fifty of these. The filesystem is the router.
+
+No rewrite rules. No `try_files`. No catch-all that serves one page and lets JavaScript sort out which one you meant. Each URL is a path, each path is a directory, each directory has an `index.html` in it with the words already inside.
+
+<BuildStepper />
+
+React is still here — it renders those fifty files during the build, and it hydrates them in the browser so the drawer and the tag filter work. But if the script fails to load, you still get the site. You get a slightly less interactive version of exactly the thing you asked for.
+
+## The detour I took
+
+Partway through, I converted the whole thing to a single-page app. One `index.html`, react-router reading the address bar, every page drawn in the browser.
+
+It was a reasonable-sounding suggestion and I followed it further than I should have. Here is what the build produced:
+
+```
+dist/
+  index.html          ← one file
+  assets/index.js
+  assets/index.css
+  feed.xml …
+```
+
+One HTML file. Fifty routes.
+
+## What that cost
+
+Three things, and I only really felt the first one when I tried to host it somewhere ordinary.
+
+**The host has to be in on it.** Every URL except `/` resolves through the router, and the router only runs after the page has loaded. So the host must rewrite unknown paths to `index.html`. GitHub Pages doesn't. Without that rewrite, `/notes/your-first-note/` is a 404 before any JavaScript has had a chance to exist.
+
+**Everything else gets an empty div.** The HTML that arrives is `<div id="app"></div>`. That is what a crawler indexes, what a link preview quotes, and what someone with JavaScript disabled reads. The words only exist after React runs.
+
+**Every link has to be absolute.** A router matches on pathname, so a relative href would resolve against whatever page you happened to be standing on. Which means the output can only be served from a domain root — not a subdirectory, not `file://`.
+
+None of those are bugs. They're the deal you make. I just didn't want to make it for a site whose entire job is to hold words that should still be there in ten years.
+
+## The shape it settled into
+
+So: fifty files, each one a real document, each one prerendered.
+
+<PathResolver />
+
+The interesting problem that falls out of this isn't rendering. It's addressing. If `/projects/cat/code/index.html` is a real file three directories deep, and it wants to link to `/notes/`, what exactly goes in the `href`?
+
+That's the next post.
