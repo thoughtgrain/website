@@ -219,6 +219,10 @@ The first time I ran it, it failed with `React is not defined` before I'd upload
 
 Babel goes into the throwaway copy rather than into `package.json`, because that file is something the host reads and installs from, and a local test tool is not its business. The one thing that caught me: `npm install` prunes anything not in `package.json`, so installing Babel after the toolchain silently removed Vite again.
 
+It paid for itself a second time almost immediately. The host scans the project for npm imports and writes an esm.sh importmap into every page, and it finds `node-loader.js`, which parses frontmatter with `yaml`. So fifty-one pages shipped a line offering the browser a YAML parser, for a package that only ever runs in Node and whose work is finished before a page exists. Harmless, since nothing imports it and an importmap is a lookup table rather than a preload, but wrong in a way worth fixing.
+
+The fix is not to hide the import. Whatever decides to write that importmap is plausibly the same thing deciding what gets installed, and trading a build that works for a few hundred bytes is a poor deal. Instead the prerender pass, which already has the finished output in its hands, drops importmap entries that no emitted module imports, and removes the block entirely when nothing is left. By name would have been easier and worse; by evidence means an entry the app genuinely needs survives. The simulation now injects the host's importmap so that pruning is actually exercised, and asserts a used entry lives while an unused one doesn't.
+
 ## Failing softly
 
 The real lesson from that round, though, is the one I should have applied from the start: a build step I added should never be able to take the deploy down. The fallback is wrapped now.

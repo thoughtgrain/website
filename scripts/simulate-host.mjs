@@ -88,16 +88,45 @@ const config = await factory({ command: 'build', mode: 'production' });
 delete config.builder;
 delete config.environments;
 
+// The host's packages block scans for npm imports and writes an esm.sh
+// importmap into the top of every page. It finds `yaml` in node-loader.js,
+// which is build-time Node code the browser never runs. Reproduced here so
+// the pruning that removes it again is actually exercised.
+config.plugins = [...(config.plugins || []), {
+  name: 'simulate-host-importmap',
+  transformIndexHtml(html) {
+    return html.replace('<head>', `<head>\n<script type="importmap">
+{
+  "imports": {
+    "yaml": "https://esm.sh/yaml@^2.9.1",
+    "yaml/": "https://esm.sh/yaml@^2.9.1/"
+  }
+}
+</script>\n`);
+  },
+}];
+
 await build({ ...config, configFile: false, logLevel: 'warn' });
 
 const report = path.join(work, 'dist', 'build-report.txt');
 console.log(`\n${readFileSync(report, 'utf8')}`);
 
 const prerendered = readFileSync(report, 'utf8').includes('#root is FILLED');
+
+// The injected importmap is for a package only the build uses, so no page
+// should still be carrying it.
+const page = readFileSync(path.join(work, 'dist', 'index.html'), 'utf8');
+const stillMapped = page.includes('importmap');
+console.log(`[sim] importmap left in the output: ${stillMapped ? 'YES' : 'no'}`);
+
 rmSync(work, { recursive: true, force: true });
 
 if (!prerendered) {
   console.error('[sim] FAILED: the host would not prerender this build');
+  process.exit(1);
+}
+if (stillMapped) {
+  console.error('[sim] FAILED: an unused importmap survived into the output');
   process.exit(1);
 }
 console.log('[sim] passed');

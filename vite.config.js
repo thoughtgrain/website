@@ -250,6 +250,97 @@ async function prerender(routes, entryFile, outDir = OUT_DIR) {
   // the interesting question is never the count, it's whether the directory it
   // filled is the directory that gets served.
   note(`${done} routes rendered into ${path.relative(ROOT, outDir) || '.'}`);
+
+  pruneImportmaps(outDir);
+}
+
+/** Every bare specifier the emitted JavaScript actually imports. */
+function specifiersImportedBy(dir) {
+  const found = new Set();
+  const pattern = /(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^."'][^"']*)["']/g;
+
+  const walk = (d) => {
+    for (const entry of readdirSync(d, { withFileTypes: true })) {
+      const file = path.join(d, entry.name);
+      if (entry.isDirectory()) { walk(file); continue; }
+      if (!/\.m?js$/.test(entry.name)) continue;
+      const code = readFileSync(file, 'utf8');
+      for (const m of code.matchAll(pattern)) found.add(m[1]);
+    }
+  };
+
+  if (existsSync(dir)) walk(dir);
+  return found;
+}
+
+/**
+ * Drop importmap entries nothing imports.
+ *
+ * CodePen's packages block scans the project for npm imports and writes an
+ * esm.sh importmap into every page. It finds `node-loader.js`, which reads
+ * `src/content` with `readdirSync` and parses frontmatter with `yaml`, and
+ * concludes the browser needs a YAML parser:
+ *
+ *   { "yaml": "https://esm.sh/yaml@^2.9.1", "yaml/": "..." }
+ *
+ * It doesn't. That file is build-time Node code; by the time a page exists the
+ * YAML has long since been parsed into the HTML. Nothing in the client bundle
+ * imports `yaml`, so the entry is inert, but it is inert in fifty-one pages
+ * and it reads as though a reader's browser is about to fetch a parser.
+ *
+ * Pruned here rather than at the source, deliberately. Hiding the import from
+ * that scanner would also hide it from whatever decides what gets installed
+ * for the build, and a config that can't load is a much worse outcome than a
+ * few hundred stray bytes. By this point the static output exists and is
+ * finished, so anything no emitted module imports is provably unreachable.
+ *
+ * Entries are kept or dropped on that evidence rather than by name, so an
+ * entry the app genuinely does import survives untouched.
+ */
+export function pruneImportmaps(outDir) {
+  const imported = specifiersImportedBy(outDir);
+  let pruned = 0;
+  let cleared = 0;
+
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) { walk(file); continue; }
+      if (entry.name !== 'index.html') continue;
+
+      const html = readFileSync(file, 'utf8');
+      const next = html.replace(
+        /\n?[ \t]*<script\s+type="importmap"[^>]*>([\s\S]*?)<\/script>/i,
+        (whole, body) => {
+          let map;
+          // Anything unparseable is left exactly as it is: this is a tidying
+          // pass, not a parser, and it has no business guessing.
+          try { map = JSON.parse(body); } catch { return whole; }
+          if (!map || typeof map.imports !== 'object') return whole;
+
+          const kept = Object.fromEntries(
+            Object.entries(map.imports).filter(([key]) => {
+              const bare = key.endsWith('/') ? key.slice(0, -1) : key;
+              return [...imported].some((s) => s === bare || s.startsWith(`${bare}/`));
+            }),
+          );
+
+          const before = Object.keys(map.imports).length;
+          const after = Object.keys(kept).length;
+          if (after === before) return whole;
+
+          pruned += before - after;
+          if (!after) { cleared += 1; return ''; }
+          return whole.replace(body, `\n${JSON.stringify({ ...map, imports: kept }, null, 2)}\n`);
+        },
+      );
+
+      if (next !== html) writeFileSync(file, next);
+    }
+  };
+
+  if (existsSync(outDir)) walk(outDir);
+  if (pruned) note(`pruned ${pruned} unused importmap entries, emptying ${cleared} maps`);
 }
 
 /**
