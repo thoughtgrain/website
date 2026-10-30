@@ -134,17 +134,14 @@ select.input {
    Title + date + dek as a plain list item with a top rule. No frame,
    no shadow, no padding box. */
 .essay-card {
-  display: block;
   padding: var(--s-6) 0;
   background: none;
   border: 0;
   border-top: 1px solid var(--rule);
   border-radius: 0;
   box-shadow: none;
-  text-decoration: none;
   color: inherit;
   transition: color var(--dur-fast) var(--ease-out);
-  max-width: 640px;
 }
 .essay-card:hover,
 .essay-card__link:hover { box-shadow: none; transform: none; text-decoration: none; }
@@ -177,21 +174,6 @@ select.input {
 }
 
 /* ---- Notes ---- */
-.note-list { list-style: none; margin: 0; padding: 0; }
-.note-item {
-  display: grid;
-  grid-template-columns: 68px 1fr;
-  gap: 16px;
-  padding: var(--s-4) 0;
-  border-bottom: 1px solid var(--rule);
-}
-.note-item:last-child { border-bottom: 0; }
-.note-item__date {
-  font-family: var(--font-mono); font-size: 11px;
-  color: var(--fg-subtle); letter-spacing: 0; text-transform: lowercase;
-  padding-top: 4px;
-}
-.note-item__body { margin: 0; font-size: var(--t-body); line-height: 1.6; max-width: 56ch; }
 
 /* ---- Pull quote ---- */
 .pullquote {
@@ -321,18 +303,6 @@ mark {
 }
 .site-nav__brand:hover { text-decoration: none; color: var(--accent); }
 .site-nav__brand img { display: block; height: 24px; }
-.site-title,
-.brand-name {
-  font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 17px;
-  letter-spacing: -0.005em;
-  color: var(--ink-900);
-  line-height: 1;
-  text-decoration: none;
-}
-[data-theme="dark"] .site-title,
-[data-theme="dark"] .brand-name { color: var(--fg); }
 
 .site-footer .site-title { font-size: 22px; display: inline-block; }
 .site-nav__links { display: flex; gap: 18px; align-items: center; }
@@ -365,9 +335,6 @@ mark {
 /* ---- Footer ----
    A single quiet row: wordmark, link cluster, credit. */
 .site-footer {
-  margin-top: 96px;
-  padding: var(--s-7) var(--gutter) var(--s-6);
-  border-top: 1px solid var(--rule);
   font-size: 14px;
   max-width: var(--container);
   margin-left: auto;
@@ -383,25 +350,6 @@ mark {
 .site-footer a:hover { color: var(--fg); text-decoration: underline; }
 
 /* ---- Subscribe card ---- */
-.subscribe-card {
-  background: none;
-  border: 0;
-  border-top: 1px solid var(--rule);
-  border-bottom: 1px solid var(--rule);
-  border-radius: 0;
-  padding: var(--s-6) 0;
-  max-width: 560px;
-  position: relative;
-  box-shadow: none;
-}
-.subscribe-card h3 {
-  font-family: var(--font-display); font-weight: 500;
-  font-size: 22px; margin-bottom: 4px; color: var(--ink-900);
-  letter-spacing: var(--tracking-tight);
-}
-[data-theme="dark"] .subscribe-card h3 { color: var(--fg); }
-.subscribe-card p { margin-bottom: 16px; color: var(--fg-muted); font-size: 15px; }
-.subscribe-card form { display: flex; gap: 8px; align-items: flex-end; }
 .subscribe-card .input { flex: 1; }
 
 /* ---- Container / layout ----
@@ -410,12 +358,6 @@ mark {
 .container--narrow { max-width: var(--container); margin: 0 auto; padding: 0 var(--gutter); }
 
 /* ---- Page hero (legacy) ---- */
-.hero {
-  padding: var(--s-8) 0 var(--s-6);
-  border-bottom: 0;
-  position: relative;
-}
-.hero__eyebrow { margin-bottom: 12px; }
 .hero__title {
   font-family: var(--font-display);
   font-weight: 500;
@@ -430,32 +372,17 @@ mark {
 .hero__dek { font-size: var(--t-lead); line-height: 1.5; color: var(--fg-muted); max-width: 56ch; margin: 0; }
 
 /* ---- Reader view ---- */
-.reader {
-  max-width: var(--container);
-  margin: 0 auto;
-  padding: var(--s-8) var(--gutter) var(--s-9);
-}
 .reader h1 {
-  font-size: clamp(2.25rem, 1.4rem + 2.5vw, 3.25rem);
-  line-height: 1.06;
-  letter-spacing: -0.022em;
   margin-bottom: var(--s-4);
 }
 .reader .reader__meta { display: flex; gap: 14px; margin-bottom: var(--s-6); color: var(--fg-subtle); }
 .reader p { font-size: 1.0625rem; line-height: 1.7; max-width: none; }
 .reader h2 {
-  font-family: var(--font-display);
   font-weight: 500;
-  font-size: 1.5rem;
   letter-spacing: var(--tracking-tight);
-  margin-top: var(--s-7);
-  margin-bottom: var(--s-3);
 }
 
 /* ---- TOC sticky (desktop) ---- */
-.reader-with-toc { display: grid; grid-template-columns: 1fr min(var(--container), 100%) 1fr; gap: 0; padding: var(--s-8) var(--gutter) var(--s-9); }
-.reader-with-toc .reader { margin: 0; padding: 0; grid-column: 2; }
-.reader-with-toc .toc { grid-column: 3; padding-left: var(--s-5); position: sticky; top: 96px; align-self: start; max-width: 200px; min-width: 0; }
 .toc__title {
   font-family: var(--font-mono); font-size: 11px;
   letter-spacing: 0; text-transform: none;
@@ -465,4 +392,3 @@ mark {
 .toc a { color: var(--fg-muted); text-decoration: none; font-size: 13px; line-height: 1.4; display: block; }
 .toc a:hover { color: var(--fg); }
 .toc a.is-current { color: var(--accent); }
-@media (max-width: 1099px) { .reader-with-toc .toc { display: none; } }

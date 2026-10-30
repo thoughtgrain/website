@@ -59,13 +59,11 @@
   --bg-raised:    var(--paper-50);        /* same as bg, no raised plate */
   --bg-sunken:    var(--paper-100);
   --bg-code:      oklch(92% 0.020 80);     /* code surface, light */
-  --bg-inverse:   var(--ink-900);
 
   --fg:           var(--ink-900);         /* body. ~16:1 on bg AAA */
   --fg-muted:     var(--ink-600);         /* ~7.5:1 AA+ */
   --fg-subtle:    var(--ink-500);         /* ~5:1 AA */
   --fg-faint:     var(--ink-400);
-  --fg-inverse:   var(--paper-50);
 
   --border:        var(--paper-300);
   --border-strong: var(--paper-400);
@@ -79,22 +77,15 @@
   --marginalia:    var(--rust-700);
   --marginalia-2:  var(--moss-700);
 
-  --success:  var(--moss-700);
-  --warning:  oklch(58% 0.150 70);
-  --danger:   var(--rust-700);
-  --info:     oklch(48% 0.090 240);
-
   /* ---------- Type ---------- */
   --font-display: 'Newsreader', 'Source Serif Pro', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
   --font-body:    'Inter', 'InterVariable', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-serif:   'Newsreader', 'Source Serif Pro', Georgia, serif;
   --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-  --font-hand:    'Newsreader', Georgia, serif;
 
   /* Sizes: body type is bigger; display is restrained, almost lowercase. */
   --t-micro:   0.75rem;     /* 12px */
   --t-small:   0.8125rem;   /* 13px */
-  --t-base:    1rem;        /* 16px */
   --t-body:    1.0625rem;   /* 17px */
   --t-lead:    1.1875rem;   /* 19px */
   --t-h6:      0.9375rem;
@@ -106,21 +97,14 @@
   --t-display: clamp(2.75rem, 1.6rem + 4.5vw, 5rem);
   --t-hero:    clamp(3.25rem, 2rem + 7vw, 6.5rem);
 
-  --lh-tight:    1.05;
   --lh-display:  1.04;
   --lh-heading:  1.18;
   --lh-body:     1.65;
-  --lh-loose:    1.78;
 
   --tracking-display: -0.018em;
   --tracking-tight:   -0.005em;
-  --tracking-normal:  0;
-  --tracking-wide:    0.04em;
-  --tracking-caps:    0.08em;
 
   /* ---------- Spacing (8pt with 4pt half-step) ---------- */
-  --s-0:  0;
-  --s-1:  4px;
   --s-2:  8px;
   --s-3:  12px;
   --s-4:  16px;
@@ -129,40 +113,27 @@
   --s-7:  48px;
   --s-8:  64px;
   --s-9:  96px;
-  --s-10: 128px;
-  --s-11: 192px;
 
   /* Content column rhythm, narrower, more reading-site */
-  --measure-narrow: 32ch;
   --measure:        62ch;
   --measure-wide:   72ch;
 
   /* ---------- Radii (low, paper-like, not card-like) ---------- */
-  --r-0:    0;
-  --r-1:    2px;
   --r-2:    3px;
   --r-3:    4px;
   --r-4:    8px;
-  --r-5:    12px;
   --r-pill: 999px;
   --r-card: 4px;
 
   /* ---------- Shadows, almost none ---------- */
-  --sh-0: none;
   --sh-1: none;
   --sh-2: none;
   --sh-3: 0 4px 16px oklch(18% 0.010 60 / 0.08);
   --sh-4: 0 10px 30px oklch(18% 0.010 60 / 0.12);
-  --sh-inset: none;
-  --sh-press: inset 0 1px 2px oklch(18% 0.010 60 / 0.15);
 
   /* ---------- Motion ---------- */
   --ease-out:   cubic-bezier(0.2, 0.7, 0.1, 1);
-  --ease-in:    cubic-bezier(0.6, 0.0, 0.9, 0.3);
-  --ease-paper: cubic-bezier(0.32, 0.72, 0.2, 1);
   --dur-fast:   120ms;
-  --dur-med:    220ms;
-  --dur-slow:   420ms;
 
   /* ---------- Layout ---------- */
   /* One page frame. There used to be a second, narrower one, which meant
@@ -171,7 +142,6 @@
      edges for one site. The reading measure is what keeps text readable, so
      the frame does not need to vary to do that job. */
   --container:        720px;
-  --container-narrow: var(--container);
   --gutter:           var(--s-5);
 
   --paper-noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch' seed='3'/><feColorMatrix type='matrix' values='0 0 0 0 0.20  0 0 0 0 0.15  0 0 0 0 0.11  0 0 0 1 0'/><feComponentTransfer><feFuncA type='discrete' tableValues='0 0 0 0 0.05 0 0 0.07 0 0 0.04 0 0 0.06 0 0'/></feComponentTransfer></filter><rect width='100%25' height='100%25' filter='url(%23g)'/></svg>");
@@ -179,18 +149,16 @@
 }
 
 /* ---------- Semantic: Dark (warm, near-black) ---------- */
-[data-theme="dark"], .theme-dark {
+[data-theme="dark"] {
   --bg:          oklch(15% 0.010 60);
   --bg-raised:   oklch(15% 0.010 60);
   --bg-sunken:   oklch(11% 0.008 60);
   --bg-code:     oklch(22% 0.012 60);       /* code surface, dark */
-  --bg-inverse:  var(--paper-50);
 
   --fg:          oklch(93% 0.012 80);
   --fg-muted:    oklch(78% 0.014 80);
   --fg-subtle:   oklch(62% 0.014 80);
   --fg-faint:    oklch(48% 0.012 80);
-  --fg-inverse:  var(--ink-900);
 
   --border:      oklch(28% 0.014 60);
   --border-strong: oklch(38% 0.016 60);
@@ -203,11 +171,6 @@
 
   --marginalia:    oklch(72% 0.150 32);
   --marginalia-2:  oklch(76% 0.110 130);
-
-  --success: oklch(76% 0.110 130);
-  --warning: oklch(78% 0.130 80);
-  --danger:  oklch(72% 0.150 32);
-  --info:    oklch(70% 0.090 240);
 
   --cocoa-700: var(--accent);
   --cocoa-600: var(--accent-hover);
@@ -240,15 +203,13 @@ body {
 }
 
 /* Paper texture, explicit opt-in only. */
-.paper-noise { position: relative; isolation: isolate; }
-.paper-noise::before {
-  content: ""; position: absolute; inset: 0;
-  background-image: var(--paper-noise);
-  pointer-events: none;
-}
 
-/* Headings, Newsreader serif, low-tracking, restrained weight. */
-h1, .h1, .t-h1 {
+/* Headings,
+Newsreader serif,
+low-tracking,
+restrained weight. */
+h1,
+.h1 {
   font-family: var(--font-display);
   font-weight: 500;
   font-size: var(--t-h1);
@@ -260,7 +221,7 @@ h1, .h1, .t-h1 {
 }
 [data-theme="dark"] h1 { color: var(--fg); }
 
-h2, .h2, .t-h2 {
+h2, .h2 {
   font-family: var(--font-display);
   font-weight: 500;
   font-size: var(--t-h2);
@@ -272,7 +233,7 @@ h2, .h2, .t-h2 {
 }
 [data-theme="dark"] h2 { color: var(--fg); }
 
-h3, .h3, .t-h3 {
+h3, .h3 {
   font-family: var(--font-display);
   font-weight: 500;
   font-size: var(--t-h3);
@@ -293,14 +254,14 @@ h4, .h4 {
 }
 [data-theme="dark"] h4 { color: var(--fg); }
 
-h5, .h5 {
+h5 {
   font-family: var(--font-body);
   font-weight: 600;
   font-size: var(--t-h5);
   line-height: var(--lh-heading);
   margin: 0 0 var(--s-2);
 }
-h6, .h6 {
+h6 {
   font-family: var(--font-body);
   font-weight: 500;
   font-size: var(--t-h6);
@@ -317,13 +278,6 @@ h6, .h6 {
   letter-spacing: var(--tracking-display);
   font-weight: 500;
 }
-.t-hero {
-  font-family: var(--font-display);
-  font-size: var(--t-hero);
-  line-height: 1.02;
-  letter-spacing: -0.025em;
-  font-weight: 500;
-}
 
 /* Body */
 p { margin: 0 0 var(--s-4); max-width: var(--measure); text-wrap: pretty; }
@@ -336,7 +290,6 @@ p { margin: 0 0 var(--s-4); max-width: var(--measure); text-wrap: pretty; }
   color: var(--fg-muted);
 }
 .t-small { font-size: var(--t-small); }
-.t-micro { font-size: var(--t-micro); letter-spacing: 0; }
 .t-caps {
   text-transform: none;
   letter-spacing: 0;
@@ -345,9 +298,7 @@ p { margin: 0 0 var(--s-4); max-width: var(--measure); text-wrap: pretty; }
   color: var(--fg-subtle);
 }
 
-.font-hand { font-family: var(--font-display); font-style: italic; }
 .font-mono { font-family: var(--font-mono); }
-.font-serif { font-family: var(--font-display); }
 
 /* Links: prose-style by default. Always underlined, accent on hover. */
 a {
@@ -474,5 +425,3 @@ hr {
   letter-spacing: -0.02em;
 }
 
-.num-tab { font-variant-numeric: tabular-nums; }
-.num-old { font-variant-numeric: oldstyle-nums; }
