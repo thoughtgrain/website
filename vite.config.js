@@ -32,7 +32,7 @@ import { defineConfig } from 'vite';
 
 import { buildContent, routesFor } from './src/app/lib/content-model.js';
 import { renderFeeds } from './src/app/lib/feeds.js';
-import { readContent, readData } from './src/app/lib/node-loader.js';
+import { readContent, readData } from './node-loader.js';
 
 const ROOT = import.meta.dirname;
 
@@ -240,10 +240,29 @@ export default defineConfig(() => {
     // resolved relative to the file that wants it; this is the last one.
     base: './',
 
+    /**
+     * Declared at the TOP level, not inside environments.client.
+     *
+     * The client environment inherits this, so it reads the same either way
+     * here — but it does not read the same everywhere. A pipeline that drives
+     * Vite through the legacy build path rather than the Environment API
+     * builder only ever looks at this key. With `input` nested under
+     * `environments`, such a build finds nothing to bundle and emits no assets
+     * at all: the HTML ships untouched, its bare `react` imports and
+     * extensionless paths unresolvable, and every page renders white.
+     *
+     * That is exactly what CodePen produced. Keeping the build declared here
+     * means the worst case is fifty bundled pages without prerendered markup,
+     * rendering client-side — degraded, but working.
+     */
+    build: {
+      outDir: OUT_DIR,
+      emptyOutDir: true,
+      rolldownOptions: { input },
+      target: 'esnext',
+    },
+
     environments: {
-      client: {
-        build: { outDir: OUT_DIR, emptyOutDir: true, rolldownOptions: { input }, target: 'esnext' },
-      },
       ssr: {
         build: {
           // Extensionless, like every other specifier here: a pipeline that

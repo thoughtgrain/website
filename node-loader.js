@@ -1,6 +1,13 @@
 /**
  * node-loader.js — fill the content map from disk, in Node.
  *
+ * Lives beside vite.config.js rather than under src/app/, and that placement is
+ * deliberate. This is build-time code: it imports `yaml` and reads the
+ * filesystem, neither of which means anything in a browser. When it sat in the
+ * app tree, CodePen scanned it as app code and put `yaml` into the page's
+ * runtime importmap — a Node parser shipped to the browser for no reason.
+ * Build-time code belongs beside the build.
+ *
  * The app loads content with `import.meta.glob` over the compiled MDX modules.
  * The feeds can't: they're generated inside the Vite config, where there's no
  * module graph to glob — just a filesystem.
@@ -24,7 +31,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parse as parseYaml } from 'yaml';
 
-const SRC = path.resolve(import.meta.dirname, '..', '..');
+const SRC = path.join(import.meta.dirname, 'src');
 const CONTENT = path.join(SRC, 'content');
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---/;
