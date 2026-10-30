@@ -1,18 +1,15 @@
 /**
- * Link.jsx — an anchor that respects how deep the current page is.
+ * Link.jsx — an anchor that works out its own href from where the page lives.
  *
  * Pages are real files at real paths, so a link out of /notes/your-first-note/
- * needs to climb two levels. Taking a root-relative `to` and prefixing the
- * page's own base means every page can write `/notes/` and get a correct
- * relative href — which keeps the build working from a subdirectory or a
- * file:// URL, not just the domain root.
+ * has to climb two levels. Every call site writes the root-relative path it
+ * means — `to="/notes/"` — and this resolves it against the current route, so
+ * no component has to know its own depth.
  */
 
-import { useBase } from './base.js';
+import { relativeHref, useRoute } from './base.js';
 
 export default function Link({ to, children, ...rest }) {
-  const base = useBase();
-  // Strip the leading slash; `base` already ends in one (or is './').
-  const href = to === '/' ? base : base + to.replace(/^\//, '');
+  const href = relativeHref(useRoute(), to);
   return <a href={href} {...rest}>{children}</a>;
 }

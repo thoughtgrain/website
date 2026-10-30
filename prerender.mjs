@@ -39,9 +39,19 @@ function readData() {
   return data;
 }
 
+/** The MDX component templates, same as vite.config.js reads. */
+function readComponents() {
+  const dir = path.join(ROOT, 'src', 'components');
+  const out = {};
+  readdirSync(dir).filter((f) => f.endsWith('.html')).forEach((file) => {
+    out[file.replace(/\.html$/, '')] = readFileSync(path.join(dir, file), 'utf8');
+  });
+  return out;
+}
+
 const { render } = await import('./.ssr/entry-server.js');
 
-const routes = routesFor(buildContent(readContent(), readData()));
+const routes = routesFor(buildContent(readContent(), readData(), readComponents()));
 let done = 0;
 
 for (const route of routes) {

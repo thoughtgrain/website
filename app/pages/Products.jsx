@@ -10,7 +10,6 @@
  */
 
 import { content } from '../content.js';
-import { useBase } from '../base.js';
 import Link from '../Link.jsx';
 import Html from '../components/Html.jsx';
 import FeedLink from '../components/FeedLink.jsx';

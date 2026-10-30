@@ -1,8 +1,10 @@
 /* Drawer dialog — full-screen menu */
+import { ready } from './ready.js';
+
 (function () {
   'use strict';
 
-  document.addEventListener('DOMContentLoaded', function () {
+  ready(function () {
     var openBtn = document.getElementById('menu-open');
     var closeBtn = document.getElementById('menu-close');
     var dialog = document.getElementById('site-menu-dialog');
@@ -11,10 +13,18 @@
 
     var inertEls = [];
 
+    // Everything beside the drawer gets `inert` while it's open, so the page
+    // behind can't be tabbed into or read by a screen reader.
+    //
+    // Walk the dialog's OWN siblings, not document.body's children: the shell
+    // is a React tree under #root now, so the dialog's siblings are the nav,
+    // the page and the footer, while body's only child is #root — which
+    // contains the dialog, is skipped by the guard below, and would leave
+    // nothing marked at all.
     function markBackgroundInert() {
       inertEls = [];
-      var body = document.body;
-      Array.prototype.forEach.call(body.children, function (el) {
+      var siblings = dialog.parentElement ? dialog.parentElement.children : [];
+      Array.prototype.forEach.call(siblings, function (el) {
         if (el === dialog) return;
         if (el.contains(dialog)) return;
         el.setAttribute('inert', '');

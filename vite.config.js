@@ -63,6 +63,25 @@ function readContent() {
   return raw;
 }
 
+/**
+ * The MDX component templates from src/components/.
+ *
+ * Content writes `<Pullquote text="…" />`; these supply the markup it expands
+ * to. They have to reach `buildContent` the same way the content does, or the
+ * tags survive into the output as literal text — which is exactly what happened
+ * when this step was first left out of the port.
+ */
+function readComponents() {
+  const dir = path.join(ROOT, 'src', 'components');
+  const out = {};
+  readdirSync(dir)
+    .filter((f) => f.endsWith('.html'))
+    .forEach((file) => {
+      out[file.replace(/\.html$/, '')] = readFileSync(path.join(dir, file), 'utf8');
+    });
+  return out;
+}
+
 /** The structured JSON that configures the site rather than filling it. */
 function readData() {
   const data = {};
@@ -152,7 +171,7 @@ function generateEntries(routes, site) {
 
 export default defineConfig(() => {
   const raw = readContent();
-  const content = buildContent(raw, readData());
+  const content = buildContent(raw, readData(), readComponents());
   const routes = routesFor(content);
   const input = generateEntries(routes, content.data.site || {});
 

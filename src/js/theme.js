@@ -1,4 +1,6 @@
 /* Theme toggle — warm light / warm dark */
+import { ready } from './ready.js';
+
 (function () {
   'use strict';
 
@@ -24,7 +26,7 @@
     return 'light';
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
+  ready(function () {
     applyTheme(currentTheme());
     var btn = document.getElementById('theme-toggle');
     if (!btn) return;

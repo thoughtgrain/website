@@ -25,12 +25,25 @@ const jsonFiles = import.meta.glob('/src/content/*.json', {
   eager: true,
 });
 
+// The MDX component templates. Same shape the Node loaders build with
+// readdirSync, so buildContent can't tell the two apart.
+const componentFiles = import.meta.glob('/src/components/*.html', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+
+const components = {};
+Object.keys(componentFiles).forEach((p) => {
+  components[p.replace(/^.*\/([^/]+)\.html$/, '$1')] = componentFiles[p];
+});
+
 // site.json, nav.json, … keyed by name rather than path.
 const data = {};
 Object.keys(jsonFiles).forEach((p) => {
   data[p.replace(/^.*\/([^/]+)\.json$/, '$1')] = jsonFiles[p];
 });
 
-export const content = buildContent(rawFiles, data);
+export const content = buildContent(rawFiles, data, components);
 export const site = content.data.site || {};
 export const nav = content.data.nav || { groups: [] };

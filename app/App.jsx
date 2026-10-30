@@ -83,7 +83,7 @@ export default function App({ route, base }) {
   const Page = pageFor(route);
 
   return (
-    <BaseContext.Provider value={base}>
+    <BaseContext.Provider value={{ route, base }}>
       <a href="#main" className="skip-link">Skip to content</a>
 
       <nav className="site-nav site-nav--drawer" aria-label="Primary">

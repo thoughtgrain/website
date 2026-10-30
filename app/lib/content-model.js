@@ -57,13 +57,56 @@ function extractFootnotes(raw) {
   return footnotes;
 }
 
+/**
+ * Expand MDX-style component tags using the templates from src/components/.
+ *
+ * Content can write `<Pullquote text="…" cite="…" />` and get the markup from
+ * Pullquote.html, with `{{prop}}` slots filled from the tag's attributes. Not
+ * real MDX: no JSX, no evaluation, no nesting — a regex over a handful of
+ * hand-written templates.
+ *
+ * The `[A-Z]` is load-bearing. Restricting the match to capitalised names stops
+ * it running across a neighbouring lowercase HTML tag, while still letting
+ * attribute VALUES contain inline markup like `<code>` or `<em>`, because those
+ * tag names can't start a new match.
+ *
+ * @param {string} html Output of the markdown pass.
+ * @param {object} templates name → template HTML.
+ */
+function resolveComponents(html, templates) {
+  return html.replace(/<([A-Z]\w*)\s+([\s\S]*?)\/>/g, (match, name, attrsStr) => {
+    const template = templates[name];
+    // Unknown component: leave the source text alone rather than deleting it,
+    // so a typo in a content file is visible in the page.
+    if (!template) return match;
+
+    const attrs = {};
+    const attrRegex = /(\w+)=(?:"([^"]*?)"|'([^']*?)')/g;
+    let m;
+    while ((m = attrRegex.exec(attrsStr)) !== null) {
+      attrs[m[1]] = m[2] !== undefined ? m[2] : m[3];
+    }
+
+    // Values pass through raw: component attributes are authored by me in my own
+    // content files, not by visitors, and several intentionally carry markup.
+    return Object.keys(attrs).reduce(
+      (out, key) => out.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), attrs[key]),
+      template,
+    );
+  });
+}
+
 /** Parse one file's raw text into an entry. */
-function parseEntry(raw) {
+function parseEntry(raw, components) {
   const parsed = parseFrontmatter(raw);
+  // Markdown first, then components: the resolver needs the tags intact, and
+  // the markdown pass leaves unknown inline HTML alone.
+  const bodyHtml = resolveComponents(parseMarkdown(parsed.content), components);
+  const footnotes = extractFootnotes(raw);
   return {
     ...parsed.data,
-    bodyHtml: parseMarkdown(parsed.content),
-    footnotes: extractFootnotes(raw).length ? extractFootnotes(raw) : (parsed.data.footnotes || []),
+    bodyHtml,
+    footnotes: footnotes.length ? footnotes : (parsed.data.footnotes || []),
   };
 }
 
@@ -81,15 +124,19 @@ function splitLede(entries) {
  *
  * Keys are sorted before parsing: content files are numbered (01-, 02-, …) and
  * that filename order IS their display order.
+ *
+ * @param {object} rawMap     path → raw .mdx text
+ * @param {object} jsonMap    name → parsed JSON config
+ * @param {object} components name → component template HTML, for the MDX tags
  */
-export function buildContent(rawMap, jsonMap = {}) {
+export function buildContent(rawMap, jsonMap = {}, components = {}) {
   const collections = {};
 
   Object.keys(rawMap).sort().forEach((filePath) => {
     const m = filePath.match(/\/content\/([^/]+)\/[^/]+\.mdx$/);
     if (!m) return;
     const key = m[1];
-    (collections[key] = collections[key] || []).push(parseEntry(rawMap[filePath]));
+    (collections[key] = collections[key] || []).push(parseEntry(rawMap[filePath], components));
   });
 
   // Make every collection exist, so pages never guard against undefined.

@@ -248,6 +248,22 @@ export function KindIndex({ route }) {
   return <Component />;
 }
 
+/**
+ * The modifier class on a reader `<article>`, per kind.
+ *
+ * Deliberately a lookup rather than `${kind}-reader`: two of the collection
+ * keys are plural but their CSS hooks are singular (`movie-reader__year` in
+ * site.css is the one with rules behind it today). Interpolating the key
+ * directly silently renames those hooks, so the table is the contract.
+ */
+const READER_CLASS = {
+  reading: 'reading-reader',
+  music: 'music-reader',
+  movies: 'movie-reader',
+  podcasts: 'podcast-reader',
+  bookshelf: 'bookshelf-reader',
+};
+
 /** The kind-specific kickers, title, meta line and cover of a reader page. */
 function readerHead(kind, e) {
   if (kind === 'reading') {
@@ -366,7 +382,7 @@ export function KindReader({ route }) {
 
   return (
     <main id="main">
-      <article className={`container--narrow section reader reader--wide ${kind}-reader`}>
+      <article className={`container--narrow section reader reader--wide ${READER_CLASS[kind]}`}>
         <Link className="btn btn--link reader__back" to="/enjoying/">
           <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12,19 5,12 12,5" /></svg>
           <span className="reader__back-label">All enjoying</span>

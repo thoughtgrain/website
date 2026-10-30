@@ -24,10 +24,12 @@
  *     <p class="empty-state" data-tag-empty hidden>…</p>
  *   </div>
  */
+import { ready } from './ready.js';
+
 (function () {
   'use strict';
 
-  document.addEventListener('DOMContentLoaded', function () {
+  ready(function () {
     var filter = document.querySelector('[data-tag-filter]');
     var list = document.querySelector('[data-tag-target]');
     if (!filter || !list) return;

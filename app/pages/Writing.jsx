@@ -77,7 +77,7 @@ export default function Writing({ route }) {
 
         <TagFilter items={items} kindLabel={meta.kindLabel} dir={dir} activeTag={activeTag} />
 
-        <div className="essay-list" data-tag-target>
+        <div className="essay-list" data-tag-target="">
           {items.map((item) => (
             <Card item={item} hidden={!matches(item)} key={item.slug} />
           ))}
@@ -86,8 +86,8 @@ export default function Writing({ route }) {
               {activeTag ? `No ${meta.kindLabel} tagged ${activeTag}.` : meta.empty}
             </p>
           )}
-          <p className="empty-state" data-tag-empty hidden>
-            No items match that tag. <a className="btn btn--link" data-tag-reset href="">Show all</a>
+          <p className="empty-state" data-tag-empty="" hidden>
+            No items match that tag. <a className="btn btn--link" data-tag-reset="" href="">Show all</a>
           </p>
         </div>
       </div>

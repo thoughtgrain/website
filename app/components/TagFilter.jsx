@@ -12,7 +12,7 @@
  * you're looking at.
  */
 
-import { useBase } from '../base.js';
+import { relativeHref, useRoute } from '../base.js';
 import { collectTags, slugifyTag } from '../lib/content-model.js';
 
 function Chip({ href, label, tag, active }) {
@@ -34,20 +34,23 @@ export default function TagFilter({ items, kindLabel, dir, activeTag }) {
   const tags = collectTags(items);
   if (!tags.length) return null;
 
-  const base = useBase();
-  const kindRoot = `${base}${dir}/`;
+  const route = useRoute();
+  // Every chip is resolved from the page it sits on, so the bar links correctly
+  // from /essays/ and from /essays/tag/<slug>/ alike — the two sit at different
+  // depths and a single shared prefix can only be right on one of them.
+  const kindHref = (path) => relativeHref(route, `/${dir}/${path}`);
   const labelId = `tag-filter-label-${kindLabel.toLowerCase()}`;
   const liveId = `tag-filter-live-${kindLabel.toLowerCase()}`;
 
   return (
-    <div className="filter-row" data-tag-filter>
+    <div className="filter-row" data-tag-filter="">
       <span id={labelId} className="filter-row__label">Filter {kindLabel} by tag</span>
       <div className="filter-bar filter-bar--tags" role="group" aria-labelledby={labelId}>
-        <Chip href={kindRoot} label="All" tag="all" active={!activeTag} />
+        <Chip href={kindHref('')} label="All" tag="all" active={!activeTag} />
         {tags.map((t) => (
           <Chip
             key={t}
-            href={`${kindRoot}tag/${slugifyTag(t)}/`}
+            href={kindHref(`tag/${slugifyTag(t)}/`)}
             label={t}
             tag={t}
             active={activeTag === t}

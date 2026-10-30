@@ -15,8 +15,9 @@ import { useBase } from '../base.js';
 import Html from '../components/Html.jsx';
 
 export default function Styles() {
-  const base = useBase();
-  // The one substitution the old template engine did for this page.
-  const html = specimen.replaceAll('{{basePath}}', base);
+  // The one substitution the old template engine did for this page. The raw
+  // template writes `{{basePath}}foo/`, so it wants the depth prefix, not a
+  // resolved href — Link's relative-path logic has nothing to work with here.
+  const html = specimen.replaceAll('{{basePath}}', useBase());
   return <Html html={html} />;
 }
