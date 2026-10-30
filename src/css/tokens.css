@@ -354,15 +354,23 @@ a {
   transition: color var(--dur-fast) var(--ease-out),
               text-decoration-color var(--dur-fast) var(--ease-out);
 }
-a:hover,
-a:focus-visible {
+/* Accent-tinting on hover and focus is for links that look like links. A
+   button is an anchor too, and `.btn--primary` paints light text on near
+   black, so tinting it accent took that label from 12:1 down to 2.45:1 on
+   keyboard focus alone. Mouse users never saw it, because `.btn--primary:hover`
+   put the colour back. */
+a:not(.btn):not(.skip-link):hover,
+a:not(.btn):not(.skip-link):focus-visible {
   color: var(--accent);
   text-decoration-color: currentColor;
 }
+/* No border-radius here. An outline already follows the element's own
+   corners, so setting one flattened every pill and every card to 3px for as
+   long as it held focus: the indicator changed the shape of the thing it was
+   pointing at. */
 a:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
-  border-radius: var(--r-2);
 }
 
 /* Wrapping anchors, anchors around a whole card, row, or list item should
