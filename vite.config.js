@@ -25,7 +25,7 @@
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
-import mdx from '@mdx-js/rollup';
+import { compile as compileMdx } from '@mdx-js/mdx';
 import remarkFrontmatter from 'remark-frontmatter';
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter';
 import { defineConfig } from 'vite';
@@ -265,14 +265,35 @@ export default defineConfig(() => {
 
     plugins: [
       /**
-       * Content is real MDX. Both remark plugins are required: without them the
+       * Content is real MDX, compiled on the way through.
+       *
+       * This is @mdx-js/mdx directly rather than @mdx-js/rollup, which is a
+       * thin wrapper over it. The wrapper declares a non-optional `rollup`
+       * peerDependency, npm installs it, and `rollup` is one of only two
+       * packages in the tree that pull `fsevents` — which Yarn Berry rewrites
+       * to a `patch:` source, which CodePen rejects because it can't become an
+       * esm.sh URL. Dropping the wrapper drops that whole chain. Same compiler,
+       * same remark plugins, same output.
+       *
+       * Both remark plugins are required, not optional: without them the
        * frontmatter block isn't metadata at all — MDX reads `---` as a thematic
        * break and the slug, title and toc render as visible body text.
        *
        * `enforce: 'pre'` so this runs before the React plugin, which needs JSX
        * rather than MDX.
        */
-      { enforce: 'pre', ...mdx({ remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter] }) },
+      {
+        name: 'site-mdx',
+        enforce: 'pre',
+        async transform(code, id) {
+          if (!id.endsWith('.mdx')) return null;
+          const compiled = await compileMdx(
+            { value: code, path: id },
+            { remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter] },
+          );
+          return { code: String(compiled), map: null };
+        },
+      },
       react(),
 
       /**

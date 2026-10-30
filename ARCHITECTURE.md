@@ -416,9 +416,17 @@ from a domain root, a project-pages subpath or a `file://` URL without change.
 
 ### CodePen
 
-Upload the repo contents to a Pen created from the React/Vite template.
-`.codepen/pen.config.json` and the generated entries sit at the top level,
-which is where the block's recursive `.html` discovery looks.
+Upload `vite.config.js`, `package.json`, `.codepen/pen.config.json` and `src/`
+to a Pen created from the React/Vite template — not the whole repo. The
+generated entries sit at the top level, which is where the block's recursive
+`.html` discovery looks, but they don't need uploading: the config writes them.
+
+`package.json` deliberately declares no bundler. CodePen turns every dependency
+into an `esm.sh` URL and rejects anything that can't become one; `vite` and
+`rollup` are the only two packages that pull `fsevents`, Yarn rewrites that to a
+`patch:` source, and `patch:` has no esm.sh URL. The block supplies vite, the
+React plugin, react and react-dom. `npm run setup` installs them locally and in
+CI instead. See `docs/GETTING_STARTED.md` for the full table.
 
 ---
 

@@ -31,6 +31,12 @@ jobs:
       # CI can't quietly build against a different dependency tree than local.
       - run: npm ci
 
+      # The bundler isn't in package.json — CodePen's block supplies it, and
+      # declaring `vite` there drags in fsevents, which CodePen rejects. So CI
+      # installs it out of band, with exact pins since the lockfile no longer
+      # covers it.
+      - run: npm run setup
+
       # One `vite build` doing all of it — SSR build, client build, prerender.
       # See vite.config.js; the same command is what CodePen runs.
       - run: npm run build

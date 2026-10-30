@@ -2,21 +2,15 @@
   "name": "website",
   "private": true,
   "type": "module",
-  "packageManager": "npm@10.9.4",
   "scripts": {
+    "setup": "npm i --no-save --no-package-lock vite@8.3.5 @vitejs/plugin-react@6.1.2 react@19.2.0 react-dom@19.2.0",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^6.1.2",
-    "remark-frontmatter": "^5.0.0",
-    "remark-mdx-frontmatter": "^6.0.0",
-    "vite": "^8.3.5"
-  },
   "dependencies": {
-    "@mdx-js/rollup": "^3.1.1",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "@mdx-js/mdx": "^3.1.1",
+    "remark-frontmatter": "^5.0.0",
+    "remark-mdx-frontmatter": "^6.0.0"
   }
 }

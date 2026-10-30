@@ -7,6 +7,7 @@ files at `src/content/**` show every supported shape — read alongside this doc
 
 ```sh
 npm install        # once
+npm run setup      # once — installs the bundler, see below
 npm run dev        # dev server with hot reload
 npm run build      # static site → dist/
 npm run preview    # serve the built site
@@ -26,12 +27,38 @@ from `src/app/components/mdx.jsx`.
 
 ## Putting it on CodePen
 
-Upload the repo contents to a Pen made from the React/Vite template.
-`.codepen/pen.config.json` and the generated entries sit at the top level — a
-recursive glob for `.html` is how the block finds pages, and there are fifty of
-them. `package.json` should stay free of
-build tooling: CodePen turns each dependency there into an `esm.sh` URL, and
-`vite` can't become one.
+Upload these four things to a Pen made from the React/Vite template:
+
+| Upload | Leave out |
+| --- | --- |
+| `vite.config.js` | `node_modules/`, `dist/`, `.ssr/` |
+| `package.json` | `.generated-routes.json` |
+| `.codepen/pen.config.json` | `.github/`, `docs/`, `ARCHITECTURE.md` |
+| `src/` | `package-lock.json` |
+
+Not the whole repo. The generated route directories are optional —
+`vite.config.js` writes them at config time, before any bundling.
+
+### Why `package.json` has no bundler in it
+
+CodePen turns every declared dependency into an `esm.sh` URL, and rejects
+anything whose source can't become one. `vite` has `fsevents` as an optional
+dependency; Yarn Berry rewrites `fsevents` to a `patch:` source; `patch:` has no
+esm.sh URL. The result is:
+
+```
+build-time dependency rejected: fsevents uses unsupported source
+"fsevents@patch:fsevents@npm%3A2.3.3#optional!builtin<compat/fsevents>..."
+```
+
+Exactly two packages pull `fsevents`: `vite` and `rollup`. Neither is declared.
+`vite`, `@vitejs/plugin-react`, `react` and `react-dom` all come from the Pen's
+`react-vite-19` block, which is why the template's own manifest declares none of
+them either. `rollup` used to arrive as a peer of `@mdx-js/rollup`, which is why
+the MDX compile is a small inline plugin over `@mdx-js/mdx` instead.
+
+That's what `npm run setup` is for: it installs the toolchain locally and in CI,
+with exact pins, without putting it in the manifest CodePen reads.
 
 Adding content needs none of that detail: drop a file in `src/content/`, and the
 route, the page and the feeds all follow. See `ARCHITECTURE.md` if you want to
