@@ -14,7 +14,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -25,15 +25,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: npm
 
-      - name: Build static site
-        run: node build.js
+      # `npm ci` rather than `npm install` so the lockfile is authoritative and
+      # CI can't quietly build against a different dependency tree than local.
+      - run: npm ci
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
+      # Runs the client build, the SSR pass, and the prerender step — see the
+      # build script in package.json.
+      - run: npm run build
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
 
@@ -44,6 +47,5 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - id: deployment
         uses: actions/deploy-pages@v4
