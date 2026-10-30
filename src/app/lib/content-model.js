@@ -190,3 +190,78 @@ export function routesFor(content) {
 
   return [...new Set(routes)].sort();
 }
+
+const KIND_LABELS = {
+  reading: 'Reading', music: 'Music', movies: 'Movies', podcasts: 'Podcasts', bookshelf: 'Bookshelf',
+};
+const FLAT_LABELS = {
+  now: 'Now', about: 'About', learning: 'Learning', gear: 'Gear', colophon: 'Colophon', styles: 'Styles',
+};
+
+/**
+ * The <title> and meta description for a route.
+ *
+ * Lives here, beside routesFor, for the same reason routesFor does: it is a
+ * pure function of the content, so the build can call it with no React and no
+ * DOM, and it cannot disagree with the pages about what exists. Every branch
+ * mirrors one in routesFor.
+ *
+ * Pages are titled "Page · Site". The home page is just the site. Descriptions
+ * come from whatever the item already has for the purpose (a note's lede, an
+ * article's summary, a category's dek) and fall back to the site's.
+ */
+export function metaFor(route, content) {
+  const site = content.data.site || {};
+  const siteTitle = site.title || 'Site';
+  const page = (title, description) => ({
+    title: title ? `${title} · ${siteTitle}` : siteTitle,
+    description: description || site.description || '',
+  });
+  const find = (list, slug) => (list || []).find((x) => x.slug === slug);
+
+  const seg = route === '/' ? [] : route.slice(1, -1).split('/');
+  if (!seg.length) return page(null);
+  const [a, b, c] = seg;
+
+  if (a === 'notes') {
+    if (!b) return page('Notes');
+    const n = find(content.notes, b);
+    return page(n?.title, n?.lede);
+  }
+  if (a === 'essays' || a === 'studies') {
+    const label = a === 'essays' ? 'Essays' : 'Studies';
+    if (!b) return page(label);
+    if (b === 'tag' && c) {
+      const tag = collectTags(content[a]).find((t) => slugifyTag(t) === c) || c;
+      return page(`${label} tagged ${tag}`);
+    }
+    const it = find(content[a], b);
+    return page(it?.title, it?.summary);
+  }
+  if (a === 'build') {
+    const it = find(content.buildSeries, b);
+    return page(it?.title, it?.summary);
+  }
+  if (a === 'projects') {
+    if (!b) return page('Projects');
+    if (b === 'cat' && c) {
+      const cat = MAKING_CATEGORIES.find((x) => x.slug === c);
+      return page(cat ? `${cat.label} projects` : 'Projects', cat?.dek);
+    }
+    const p = find(content.projects, b);
+    return page(p?.title, p?.summary);
+  }
+  if (a === 'products') {
+    if (!b) return page('Products');
+    const p = find(content.products, b);
+    return page(p?.title, p?.note);
+  }
+  if (a === 'enjoying') return page(b ? `Enjoying, page ${b}` : 'Enjoying');
+  if (KIND_LABELS[a]) {
+    if (!b) return page(KIND_LABELS[a]);
+    const e = find(content[a], b);
+    return page(e?.title, e?.note);
+  }
+  if (FLAT_LABELS[a]) return page(FLAT_LABELS[a]);
+  return page(null);
+}

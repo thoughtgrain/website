@@ -31,7 +31,7 @@ import remarkFrontmatter from 'remark-frontmatter';
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter';
 import { defineConfig } from 'vite';
 
-import { buildContent, routesFor } from './src/app/lib/content-model.js';
+import { buildContent, metaFor, routesFor } from './src/app/lib/content-model.js';
 import { renderFeeds } from './src/app/lib/feeds.js';
 import { readContent, readData } from './node-loader.js';
 
@@ -185,11 +185,15 @@ function generateEntries(routes, site) {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>try{var t=localStorage.getItem('dwt-theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script>
     <title>${escapeHtml(site.title || 'Site')}</title>
     <meta name="description" content="${escapeHtml(site.description || '')}" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="oklch(98.5% 0.01 80)" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="oklch(15% 0.01 60)" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2315110d'/%3E%3Ctext x='16' y='23' text-anchor='middle' font-family='Georgia,serif' font-size='20' fill='%23fefaf3'%3ET%3C/text%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Inter:ital,wght@0,400;0,500;0,700;1,400&family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
     <link rel="alternate" type="application/atom+xml" title="${escapeHtml(site.title || '')}, all updates" href="${base}feed.xml" />
     <link rel="alternate" type="application/feed+json" title="${escapeHtml(site.title || '')}, all updates" href="${base}feed.json" />
   </head>
@@ -242,7 +246,16 @@ async function prerender(routes, entryFile, outDir = OUT_DIR) {
 
     if (filled === shell) throw new Error(`could not inject into ${file}, root div not found`);
 
-    writeFileSync(file, filled);
+    // The shell was written before anything knew which page it would become,
+    // so every one carries the site's title. Fifty-one tabs, history entries
+    // and link previews all reading "Thought Grain" is a WCAG 2.4.2 failure as
+    // well as useless. Now that the route is known, name the page.
+    const meta = metaFor(route, prepared.content);
+    const titled = filled
+      .replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(meta.title)}</title>`)
+      .replace(/(<meta name="description" content=")[^"]*(")/, `$1${escapeHtml(meta.description)}$2`);
+
+    writeFileSync(file, titled);
     done += 1;
   }
 

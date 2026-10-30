@@ -7,7 +7,7 @@ import { ready } from './ready.js';
   var STORAGE_KEY = 'dwt-theme';
   var root = document.documentElement;
 
-  function applyTheme(theme) {
+  function applyTheme(theme, persist) {
     if (theme === 'dark') {
       root.setAttribute('data-theme', 'dark');
     } else {
@@ -15,7 +15,11 @@ import { ready } from './ready.js';
     }
     // Sun/moon visibility is driven by CSS based on the data-theme attribute
     // (.theme-toggle__sun / .theme-toggle__moon rules in site.css).
-    try { localStorage.setItem(STORAGE_KEY, theme); } catch (e) {}
+    //
+    // Only an explicit click is remembered. Writing the system preference
+    // into storage on first visit would freeze it there, and a reader who
+    // later flips their OS to dark would keep getting light from us.
+    if (persist) { try { localStorage.setItem(STORAGE_KEY, theme); } catch (e) {} }
   }
 
   function currentTheme() {
@@ -23,7 +27,9 @@ import { ready } from './ready.js';
       var stored = localStorage.getItem(STORAGE_KEY);
       if (stored === 'dark' || stored === 'light') return stored;
     } catch (e) {}
-    return 'light';
+    // No choice made: follow the system. The inline script in <head> makes the
+    // same decision before first paint; this keeps the toggle in agreement.
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
 
   ready(function () {
@@ -32,7 +38,7 @@ import { ready } from './ready.js';
     if (!btn) return;
     btn.addEventListener('click', function () {
       var next = currentTheme() === 'dark' ? 'light' : 'dark';
-      applyTheme(next);
+      applyTheme(next, true);
     });
   });
 
