@@ -11,9 +11,9 @@
  * colour scheme, so it goes first to avoid a flash of the wrong theme.
  */
 
-import '../src/js/theme.js';
-import '../src/js/accessibility.js';
-import '../src/js/nav.js';
-import '../src/js/texture.js';
-import '../src/js/floorboards.js';
-import '../src/js/tag-filter.js';
+import '../js/theme.js';
+import '../js/accessibility.js';
+import '../js/nav.js';
+import '../js/texture.js';
+import '../js/floorboards.js';
+import '../js/tag-filter.js';

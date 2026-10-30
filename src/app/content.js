@@ -14,20 +14,20 @@
 
 import { buildContent } from './lib/content-model.js';
 
-const rawFiles = import.meta.glob('/src/content/**/*.mdx', {
+const rawFiles = import.meta.glob('/content/**/*.mdx', {
   query: '?raw',
   import: 'default',
   eager: true,
 });
 
-const jsonFiles = import.meta.glob('/src/content/*.json', {
+const jsonFiles = import.meta.glob('/content/*.json', {
   import: 'default',
   eager: true,
 });
 
 // The MDX component templates. Same shape the Node loaders build with
 // readdirSync, so buildContent can't tell the two apart.
-const componentFiles = import.meta.glob('/src/components/*.html', {
+const componentFiles = import.meta.glob('/components/*.html', {
   query: '?raw',
   import: 'default',
   eager: true,

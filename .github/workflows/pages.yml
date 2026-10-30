@@ -31,8 +31,8 @@ jobs:
       # CI can't quietly build against a different dependency tree than local.
       - run: npm ci
 
-      # Runs the client build, the SSR pass, and the prerender step — see the
-      # build script in package.json.
+      # One `vite build` doing all of it — SSR build, client build, prerender.
+      # See src/vite.config.js; the same command is what CodePen runs.
       - run: npm run build
 
       - uses: actions/configure-pages@v5

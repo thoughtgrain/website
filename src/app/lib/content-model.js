@@ -120,7 +120,7 @@ function splitLede(entries) {
 }
 
 /**
- * Turn `{ 'src/content/notes/01-x.mdx': '---\n…' }` into derived collections.
+ * Turn `{ '/content/notes/01-x.mdx': '---\n…' }` into derived collections.
  *
  * Keys are sorted before parsing: content files are numbered (01-, 02-, …) and
  * that filename order IS their display order.

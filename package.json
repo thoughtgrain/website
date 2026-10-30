@@ -4,9 +4,9 @@
   "type": "module",
   "packageManager": "npm@10.9.4",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build && vite build --ssr app/entry-server.jsx --outDir .ssr && node prerender.mjs",
-    "preview": "vite preview"
+    "dev": "vite --config src/vite.config.js",
+    "build": "vite build --config src/vite.config.js",
+    "preview": "vite preview --config src/vite.config.js"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.1.2",

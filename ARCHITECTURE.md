@@ -33,91 +33,152 @@ components.
 
 ## 2. Repository layout
 
+`src/` is the Vite root, and it is also the folder that gets uploaded to a
+CodePen Pen. Everything the build touches lives inside it; `dist/` is its
+sibling. That shape isn't arbitrary — it's CodePen's, and matching it is what
+lets one `vite build` produce the same site in both places.
+
 ```
 website/
-  vite.config.js               scans content, generates entries, emits feeds
-  prerender.mjs                renders each route to static HTML
-  package.json
-  index.html                   generated — the home entry
+  package.json                 LOCAL/CI ONLY — vite, react, the npm scripts
+  package-lock.json
+  dist/                        build output, gitignored
 
-  app/
-    main.jsx                   mounts one page; imports the CSS in cascade order
-    App.jsx                    the shell: nav, drawer, footer
-    routes.jsx                 route string → page component
-    content.js                 import.meta.glob → parsed collections
-    base.js, Link.jsx          depth-prefix handling for relative links
-    enhancers.js               re-exports the src/js progressive enhancers
-    entry-server.jsx           the SSR entry prerender.mjs calls
-    lib/
-      frontmatter.js           YAML-lite parser
-      markdown.js              markdown → HTML
-      content-model.js         parse + derive + the route list
-      feeds.js                 the eleven Atom feeds
-    components/                Html, FeedLink, NoteList, TagFilter
-    pages/                     one component per page type
+  src/                         <-- the Vite root; upload THIS to a Pen
+    package.json               CodePen's manifest: no dependencies
+    .codepen/pen.config.json   which CodePen blocks the Pen runs
+    vite.config.js             the entire build — see §3
 
-  src/
+    app/
+      main.jsx                 mounts one page; imports the CSS in cascade order
+      App.jsx                  the shell: nav, drawer, footer
+      routes.jsx               route string → page component
+      content.js               import.meta.glob → parsed collections
+      base.js, Link.jsx        relative-link resolution
+      enhancers.js             re-exports the js/ progressive enhancers
+      entry-server.jsx         the SSR entry the prerender step calls
+      lib/
+        frontmatter.js         YAML-lite parser
+        markdown.js            markdown → HTML
+        content-model.js       parse + derive + the route list
+        feeds.js               the eleven Atom feeds
+      components/              Html, FeedLink, NoteList, TagFilter
+      pages/                   one component per page type
+
     content/                   the site: .mdx entries + JSON config
     css/                       tokens.css, kit.css, site.css
     js/                        progressive enhancers
+    components/                the MDX component templates
+    assets/                    product images
+    feed.xsl                   stylesheet every feed points at
     layouts/                   the OLD templates — kept as reference only,
                                except styles.html, which /styles/ still renders
 
   .github/workflows/pages.yml  npm ci && npm run build → Pages
 ```
 
-Generated at build time and gitignored: `index.html`, one directory per route at
-the repo root, `.generated-routes.json`, `dist/`, `.ssr/`.
+### Why two package.json files
+
+They answer different questions, and conflating them is what broke the CodePen
+build for a week.
+
+The **root** one says what a developer needs installed: `vite`,
+`@vitejs/plugin-react`, `react`, `react-dom`, and the npm scripts. It never
+reaches CodePen.
+
+**`src/package.json`** is CodePen's. CodePen doesn't bundle what you declare
+there — it rewrites each dependency into an `esm.sh` importmap entry and leaves
+it external at runtime. Its own React/Vite toolchain comes from the
+`react-vite-19` block in `.codepen/pen.config.json`, so declaring any of it is
+both unnecessary and actively harmful: CodePen resolves the manifest with Yarn
+Berry, Yarn rewrites `vite`'s optional `fsevents` dependency to a `patch:`
+source, and a `patch:` source has no esm.sh URL. The build is rejected before it
+starts. We have no packages CodePen needs to fetch, so the list is empty — the
+`"type": "module"` is there because Node loads `vite.config.js` and the four
+`app/lib/*.js` modules directly, and they are ES modules.
+
+Generated at build time and gitignored: `src/index.html`, one directory per
+route under `src/`, `src/.generated-routes.json`, `src/.ssr/`, `dist/`.
 
 ---
 
 ## 3. The build pipeline
 
-Three passes, wired together by `npm run build`.
+One command, `vite build`, doing five things. It used to be three chained
+commands in `package.json`; CodePen runs a bare `vite build` with no scripts of
+its own, so everything had to move inside that single invocation. Vite 8's
+Environment API is what makes it possible, and it reads better than the chain
+did.
 
-### 3.1 Config — `vite.config.js`
+All of it lives in `src/vite.config.js`.
 
-Runs in Node. `readdirSync` reads every `.mdx` and `.json` under `src/content/`
-into a `{ path: rawText }` map, `buildContent` derives the collections, and
-`routesFor` produces the route list. Then one HTML entry is written per route, at
-the path it will be served from, and handed to `rollupOptions.input`.
+### 3.1 Config time — content and entries
+
+Runs in Node, before any bundling. `readdirSync` reads every `.mdx` and `.json`
+under `content/` into a `{ path: rawText }` map, `buildContent` derives the
+collections, and `routesFor` produces the route list. Then one HTML entry is
+written per route, at the path it will be served from, and handed to
+`rolldownOptions.input`.
 
 Each entry is the same shell. The only things that differ are `data-route`,
 which tells the app which page it is, and `data-base`, the prefix links need to
 climb back to the root.
 
-Entry generation writes directories at the repo root, so it refuses any route
-whose first segment collides with a project directory and removes only what it
-recorded creating. That guard caught a real collision on its first run: the
-output directory was `build/` and the build-series posts route at `/build/<slug>/`.
-Output is `dist/`.
+Entry generation writes directories into the Vite root — which also holds all
+the source — so it refuses any route whose first segment collides with a project
+directory, and removes only what it recorded creating. That guard caught a real
+collision on its first run: the output directory was `build/` and the
+build-series posts route at `/build/<slug>/`.
 
-### 3.2 Client build
+`prepare()` memoises all of this, and `builder.sharedConfigBuild` keeps the
+config to one resolution. Without them Vite re-imports the config per
+environment and every generated entry gets deleted and rewritten three times a
+build.
 
-Vite builds all fifty entries, bundling `app/` and the CSS. A plugin emits the
-eleven Atom feeds — they need real files at real URLs, which no amount of client
-rendering provides.
+### 3.2 The two environments
 
-### 3.3 Prerender — `prerender.mjs`
+```js
+environments: {
+  client: { build: { outDir: '../dist', rolldownOptions: { input } } },
+  ssr:    { build: { ssr: 'app/entry-server.jsx', outDir: '.ssr' } },
+}
+```
 
-A second Vite pass builds `app/entry-server.jsx` for Node, then this walks the
-routes, calls `renderToString` for each, and injects the markup into that route's
-shell. The words end up in the HTML: the site works with JS disabled, crawlers
-and link previews see real content, and the output is genuinely static. React
-hydrates rather than re-rendering.
+`builder.buildApp` sequences them: SSR first, then the client, then the
+prerender. Defining `builder` at all is what makes a plain `vite build` build
+both — Vite picks the Environment API path when the config has one, and falls
+back to a client-only build when it doesn't.
+
+The client pass builds all fifty entries, bundling `app/` and the CSS. A plugin
+emits the eleven Atom feeds plus `feed.xsl` — they need real files at real URLs,
+which no amount of client rendering provides. It's scoped with
+`applyToEnvironment` to the client, or the SSR pass emits its own useless copy
+of all twelve.
+
+### 3.3 Prerender
+
+With the SSR bundle built and the client HTML on disk, `prerender()` walks the
+routes, calls `renderToString` for each, and injects the markup into that
+route's shell. The words end up in the HTML: the site works with JS disabled,
+crawlers and link previews see real content, and the output is genuinely static.
+React hydrates rather than re-rendering.
+
+It takes the SSR entry's filename from the build result rather than spelling it
+out, because Vite names it `.js` or `.mjs` depending on the nearest
+package.json — and that package.json is CodePen's.
 
 ### 3.4 One content model, two loaders
 
 `app/lib/content-model.js` takes a `{ path: rawText }` map and returns the
 collections and the route list. It does no I/O at all, which is the point:
 
-- `vite.config.js` and `prerender.mjs` fill that map with `readdirSync`;
+- `vite.config.js` fills that map with `readdirSync`;
 - `app/content.js` fills the same shape with `import.meta.glob`.
 
-Both call `buildContent`, so the routes the config generates and the pages the
-app renders cannot drift apart. The previous build had two different ways of
-answering "what changed" and lost three rounds of debugging to the gap between
-them.
+Both call `buildContent` with identical keys, so the routes the config generates
+and the pages the app renders cannot drift apart. The previous build had two
+different ways of answering "what changed" and lost three rounds of debugging to
+the gap between them.
 
 ---
 
@@ -344,13 +405,23 @@ Build series posts (`kind: "Build series"`) all set `series: "Building this site
 
 ## 12. Deploy
 
+### GitHub Pages
+
 `.github/workflows/pages.yml` runs on push to `main` and `claude/**`:
 `npm ci`, then `npm run build`, then uploads `dist/` to Pages. `npm ci` rather
 than `npm install` so the lockfile is authoritative and CI can't quietly build a
-different dependency tree than local.
+different dependency tree than local. Node 22 — Vite 8 needs 20.19+ or 22.12+.
 
 `dist/` is not committed. It was, under the old generator, which meant every
 commit carried a diff of the built site.
+
+### CodePen
+
+Upload the contents of `src/` to a Pen created from the React/Vite template. Do
+not upload the repo root: its `package.json` declares `vite`, and that is the
+one thing CodePen cannot accept (§2). CodePen then runs its own `vite build`,
+which is the same single command used here, so it produces the same fifty
+prerendered pages.
 
 ---
 

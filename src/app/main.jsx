@@ -13,9 +13,9 @@ import { createRoot, hydrateRoot } from 'react-dom/client';
 // Cascade order is load-bearing: tokens define the variables, kit styles the
 // components that use them, site handles per-page work. Alphabetical would
 // break it, which is why these are three explicit imports.
-import '../src/css/tokens.css';
-import '../src/css/kit.css';
-import '../src/css/site.css';
+import '../css/tokens.css';
+import '../css/kit.css';
+import '../css/site.css';
 
 import App from './App.jsx';
 

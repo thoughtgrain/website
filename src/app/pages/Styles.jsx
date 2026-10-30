@@ -10,7 +10,7 @@
  * If the specimen ever grows real behaviour, that's the moment to convert it.
  */
 
-import specimen from '../../src/layouts/styles.html?raw';
+import specimen from '../../layouts/styles.html?raw';
 import { useBase } from '../base.js';
 import Html from '../components/Html.jsx';
 

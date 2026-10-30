@@ -3,31 +3,34 @@ node_modules/
 
 # Build output
 dist/
-.ssr/
 
-# Generated route entries. vite.config.js writes one index.html per route at the
-# repo root, and records which top-level directories it created so cleanup only
-# removes its own work. All derived from src/content — never edit by hand.
-.generated-routes.json
-/about/
-/bookshelf/
-/build/
-/colophon/
-/enjoying/
-/essays/
-/gear/
-/index.html
-/learning/
-/movies/
-/music/
-/notes/
-/now/
-/podcasts/
-/products/
-/projects/
-/reading/
-/studies/
-/styles/
+# The SSR bundle, written inside the Vite root and read once by the prerender
+# step. Scratch output — never shipped, never uploaded to a Pen.
+src/.ssr/
+
+# Generated route entries. src/vite.config.js writes one index.html per route
+# inside src/, and records which top-level directories it created so cleanup
+# only removes its own work. All derived from src/content — never edit by hand.
+src/.generated-routes.json
+/src/about/
+/src/bookshelf/
+/src/build/
+/src/colophon/
+/src/enjoying/
+/src/essays/
+/src/gear/
+/src/index.html
+/src/learning/
+/src/movies/
+/src/music/
+/src/notes/
+/src/now/
+/src/podcasts/
+/src/products/
+/src/projects/
+/src/reading/
+/src/studies/
+/src/styles/
 
 # macOS / editor noise
 .DS_Store
