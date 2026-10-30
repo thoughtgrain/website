@@ -69,7 +69,7 @@ I had the entry shells referencing the app like this:
 <script type="module" src="/src/app/main.jsx"></script>
 ```
 
-Root-absolute, which Vite resolves against its own root. That works under a plain `vite build`. It does not work under a build that doesn't map `/` to the Vite root, and the result was fifty of these:
+Root-absolute, which Vite resolves against its own root. That works under a plain `vite build`. It does not work under CodePen's, which doesn't map `/` to the Vite root, and the result was fifty of these:
 
 ```
 Failed to resolve /app/main.jsx from /about/index.html
@@ -115,4 +115,4 @@ Drop the extension — it resolves to .jsx locally and .js wherever
 the JSX has already been compiled out.
 ```
 
-I added it because this class of bug is invisible locally and fatal elsewhere, and I'd already spent several rounds rediscovering it. A build that can only fail somewhere you can't see is worth teaching to fail where you can.
+I added it because this class of bug is invisible locally and fatal on CodePen, and I'd already spent several rounds rediscovering it. A build that can only fail somewhere you can't see is worth teaching to fail where you can.

@@ -12,6 +12,8 @@ tag2: "Static sites"
 toc:
   - id: "what-actually-arrives"
     label: "What actually arrives"
+  - id: "where-it-has-to-run"
+    label: "Where it has to run"
   - id: "the-detour-i-took"
     label: "The detour I took"
   - id: "what-that-cost"
@@ -33,6 +35,16 @@ No rewrite rules. No `try_files`. No catch-all that serves one page and lets Jav
 <BuildStepper />
 
 React is still here — it renders those fifty files during the build, and it hydrates them in the browser so the drawer and the tag filter work. But if the script fails to load, you still get the site. You get a slightly less interactive version of exactly the thing you asked for.
+
+## Where it has to run
+
+One constraint shaped most of what follows: I wanted this to build and run on **CodePen**.
+
+Not as a demo — as somewhere the actual site lives, editable in a browser, no local checkout required. CodePen 2.0 runs Vite under the hood, so a standard Vite project is in principle exactly what it wants.
+
+In practice "in principle" did a lot of work in that sentence, and the next four posts are largely the gap between the two. But it's worth saying up front that almost every decision here — relative paths everywhere, no bundler in `package.json`, extensionless imports, a build that degrades instead of failing — comes from that one requirement. A site that only builds on my machine isn't finished.
+
+It also pushed the architecture in a direction I'd have wanted anyway. Output that works from any path, with the words already in the HTML, is portable by construction. CodePen was the forcing function; it isn't the only beneficiary.
 
 ## The detour I took
 

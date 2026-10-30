@@ -22,7 +22,7 @@ toc:
     label: "Designing the failure"
 ---
 
-<Dropcap text="For a while the build was three commands chained with &&. It worked perfectly on my machine and did nothing at all anywhere that just runs the standard one." />
+<Dropcap text="For a while the build was three commands chained with &&. It worked perfectly on my machine and did nothing at all on CodePen, which runs the standard one and nothing else." />
 
 ## Why it has to be one
 
@@ -79,7 +79,7 @@ One small thing I got right by accident: it takes the SSR entry's filename from 
 
 ## The key that has to be top-level
 
-Then the build succeeded somewhere else and every page was white.
+Then the build succeeded on CodePen and every page was white.
 
 Not a rendering failure — *no bundle at all*. The output had fifty HTML files, a copied-through source tree, and no `assets/` directory. The HTML was byte-for-byte the shell, so what reached the browser was:
 

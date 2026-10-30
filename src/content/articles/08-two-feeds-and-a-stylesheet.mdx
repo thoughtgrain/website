@@ -20,6 +20,8 @@ toc:
     label: "The content-type that decides"
   - id: "what-json-cant-do"
     label: "What JSON can't do"
+  - id: "where-this-might-go"
+    label: "Where this might go"
 ---
 
 <Dropcap text="Feeds are the one part of this site that a client-rendered page genuinely cannot produce. A reader asks for /feed.xml and gets whatever the server has, with no chance to run anything first." />
@@ -91,3 +93,16 @@ The JSON feeds are not styled, and can't be.
 There is no `<?json-stylesheet?>`. A JSON document cannot reference one. Open `feed.json` in a browser and you get raw JSON, or whatever viewer your browser ships.
 
 That's worth stating plainly because it's a real asymmetry, and when I added JSON Feed I was briefly asked to make both look nice. Half of that is achievable and half of it isn't — JSON Feed earns its place with readers that prefer it, not in a browser window.
+
+## Where this might go
+
+All six of these posts describe a hand-assembled build: a config that generates its own entry files, a prerender pass stitched in behind the bundler, a content model held deliberately pure so two loaders can share it.
+
+Almost none of that is novel. It's a static site generator, written out longhand, because I wanted the output to run on CodePen and a standard Vite project was the closest thing available.
+
+If CodePen 2.0 grows **Eleventy** or **Astro** blocks — and both seem like natural fits for what the platform is becoming — I'd port to one of them more or less immediately, and most of this build would go in the bin. Eleventy would take the content model almost unchanged; its data cascade is the same idea as `buildContent`, and it has never needed convincing to emit real files at real paths. Astro would absorb more of it, routing and prerendering and the islands the interactive figures want to be, at the cost of putting a framework between me and the HTML.
+
+Either would delete more code than it added. The content wouldn't move — it's `.mdx` with frontmatter, which is the one part of this designed to outlive the thing that renders it.
+
+That's the honest summary of the architecture: a careful answer to a constraint I expect to stop existing.
+
