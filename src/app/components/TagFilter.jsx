@@ -12,7 +12,6 @@
  * you're looking at.
  */
 
-import { relativeHref, useRoute } from '../base.js';
 import { collectTags, slugifyTag } from '../lib/content-model.js';
 
 function Chip({ href, label, tag, active }) {
@@ -34,11 +33,7 @@ export default function TagFilter({ items, kindLabel, dir, activeTag }) {
   const tags = collectTags(items);
   if (!tags.length) return null;
 
-  const route = useRoute();
-  // Every chip is resolved from the page it sits on, so the bar links correctly
-  // from /essays/ and from /essays/tag/<slug>/ alike — the two sit at different
-  // depths and a single shared prefix can only be right on one of them.
-  const kindHref = (path) => relativeHref(route, `/${dir}/${path}`);
+  const kindHref = (path) => `/${dir}/${path}`;
   const labelId = `tag-filter-label-${kindLabel.toLowerCase()}`;
   const liveId = `tag-filter-live-${kindLabel.toLowerCase()}`;
 

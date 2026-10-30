@@ -1,51 +1,30 @@
 /**
- * base.js — where the page being rendered sits, and how to link out of it.
+ * base.js — the route the app is currently drawing.
  *
- * Context rather than props drilled through every component: both values are
- * set once per page from the entry's `data-route` / `data-base` attributes and
- * never change during a render.
+ * This used to carry a depth prefix as well, because every page was a real file
+ * at a real path and links had to climb back to the root. Under a router
+ * there's one file, every href is root-absolute, and the prefix has nothing
+ * left to do — so all that remains is "which route is this".
  *
- * Everything links relatively. That's what lets the built site work from a
- * subdirectory, from a file:// URL, or from whatever path a host hands it —
- * which matters here, because the output has to behave the same on GitHub
- * Pages and dropped into CodePen.
+ * `useRoute` reads it from react-router rather than from the DOM. The pathname
+ * is normalised to a trailing slash because the route table in routes.jsx
+ * matches on that shape, and a reader who types `/notes` without one should
+ * land on the same page as a reader who types `/notes/`.
  */
 
-import { createContext, useContext } from 'react';
+import { useLocation } from 'react-router-dom';
 
-export const BaseContext = createContext({ route: '/', base: './' });
-
-/** The `../` prefix for this page's depth. Only the raw templates still need it. */
-export const useBase = () => useContext(BaseContext).base;
-
-/** The route of the page currently rendering, e.g. "/studies/tag/tag-one/". */
-export const useRoute = () => useContext(BaseContext).route;
+/** The current route, always with a trailing slash: "/notes/your-first-note/". */
+export function useRoute() {
+  const { pathname } = useLocation();
+  return pathname.endsWith('/') ? pathname : `${pathname}/`;
+}
 
 /**
- * The shortest relative href from one route to another.
+ * Kept for the one template that still needs a path prefix.
  *
- * Prefixing a root-relative path with the page's depth works, but produces
- * round trips: from /products/ a link to /products/feed.xml comes out as
- * `../products/feed.xml`. Correct, and noise. Dropping the segments the two
- * paths already share gives plain `feed.xml` instead.
- *
- * @param {string} from The current route — always a directory, trailing slash.
- * @param {string} to   A root-relative target, directory or file.
- * @returns {string} A relative href; "./" for a link to the current page.
+ * layouts/styles.html is raw HTML with `{{basePath}}` slots in it, rendered as
+ * text rather than converted to JSX. Everything is served from the root now, so
+ * the prefix it wants is just that.
  */
-export function relativeHref(from, to) {
-  const fromSegs = from.split('/').filter(Boolean);
-  const toSegs = to.split('/').filter(Boolean);
-
-  let shared = 0;
-  while (shared < fromSegs.length && shared < toSegs.length
-         && fromSegs[shared] === toSegs[shared]) shared += 1;
-
-  const rest = toSegs.slice(shared);
-  const up = '../'.repeat(fromSegs.length - shared);
-  // A directory target keeps its trailing slash, so the browser doesn't have
-  // to redirect; a file target (feed.xml) never had one.
-  const tail = rest.join('/') + (to.endsWith('/') && rest.length ? '/' : '');
-
-  return up + tail || './';
-}
+export const useBase = () => '/';

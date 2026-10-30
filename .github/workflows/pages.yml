@@ -31,14 +31,14 @@ jobs:
       # CI can't quietly build against a different dependency tree than local.
       - run: npm ci
 
-      # One `vite build` doing all of it — SSR build, client build, prerender.
-      # See src/vite.config.js; the same command is what CodePen runs.
+      # A standard client-side Vite build. See vite.config.js; the same
+      # command is what CodePen's react-vite block runs.
       - run: npm run build
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ./src/dist
+          path: ./dist
 
   deploy:
     needs: build

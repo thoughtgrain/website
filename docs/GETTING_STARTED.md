@@ -8,33 +8,28 @@ files at `src/content/**` show every supported shape — read alongside this doc
 ```sh
 npm install        # once
 npm run dev        # dev server with hot reload
-npm run build      # static site → src/dist/
+npm run build      # bundle → dist/
 npm run preview    # serve the built site
 ```
 
 Requires Node 20.19+ or 22.12+ — Vite 8's floor.
 
-`npm run build` is one command doing three things: it builds a server renderer,
-builds the fifty pages, then renders each route into its page. The output in
-`src/dist/` is plain files — every route is a real `index.html` with the content
-already in it, so it works with JavaScript disabled and can be hosted anywhere
-that serves static files.
+`npm run build` produces a client-side React app: one `index.html`, one JS
+bundle, one stylesheet, plus the eleven Atom feeds and `feed.xsl`. The pages
+themselves are drawn in the browser by react-router.
 
-## The two package.json files
-
-The one at the repo root is for you: it has `vite`, `react` and the scripts
-above, and it's what `npm install` reads.
-
-`src/package.json` is CodePen's, and it deliberately declares no dependencies.
-Don't add build tooling to it — CodePen turns every dependency there into an
-`esm.sh` URL, and `vite` can't become one. `ARCHITECTURE.md` §2 has the long
-version.
+**The host must rewrite unknown paths to `index.html`.** `dist/` has exactly one
+HTML file, so without that rewrite only `/` resolves and every other URL 404s
+before any JavaScript runs. `ARCHITECTURE.md` §3.1 has the full list of what
+client-side rendering costs here.
 
 ## Putting it on CodePen
 
-`src/` is the Vite root, so it's also a complete Pen. Upload its contents to a
-Pen made from the React/Vite template and CodePen's own `vite build` produces
-the same site this repo does. Upload `src/`, never the repo root.
+Upload the repo contents to a Pen made from the React/Vite template.
+`.codepen/pen.config.json` and `index.html` have to sit at the top level — that
+is where the block's entry discovery looks. `package.json` should stay free of
+build tooling: CodePen turns each dependency there into an `esm.sh` URL, and
+`vite` can't become one.
 
 Adding content needs none of that detail: drop a file in `src/content/`, and the
 route, the page and the feeds all follow. See `ARCHITECTURE.md` if you want to

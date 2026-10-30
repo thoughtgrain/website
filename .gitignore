@@ -1,37 +1,8 @@
 # Dependencies
 node_modules/
 
-# Build output. Inside the Vite root, which is where Vite puts it by default
-# and where CodePen's build expects to find it.
-src/dist/
-
-# The SSR bundle, written inside the Vite root and read once by the prerender
-# step. Scratch output — never shipped, never uploaded to a Pen.
-src/.ssr/
-
-# Generated route entries. src/vite.config.js writes one index.html per route
-# inside src/, and records which top-level directories it created so cleanup
-# only removes its own work. All derived from src/content — never edit by hand.
-src/.generated-routes.json
-/src/about/
-/src/bookshelf/
-/src/build/
-/src/colophon/
-/src/enjoying/
-/src/essays/
-/src/gear/
-/src/index.html
-/src/learning/
-/src/movies/
-/src/music/
-/src/notes/
-/src/now/
-/src/podcasts/
-/src/products/
-/src/projects/
-/src/reading/
-/src/studies/
-/src/styles/
+# Build output
+dist/
 
 # macOS / editor noise
 .DS_Store
