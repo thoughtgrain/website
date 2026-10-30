@@ -4,20 +4,56 @@
  * Pure dispatch, no router library. Every page is a real HTML file that knows
  * its own route (`data-route` on #root), so there's no history to manage, no
  * links to intercept and no fallback to configure — the server already resolved
- * which page this is. A router here would be re-implementing something the
- * filesystem is already doing.
+ * which page this is. A router here would be re-implementing what the filesystem
+ * is already doing.
  *
- * Patterns are tried in order, so put specific paths before the ones with a
- * slug segment.
+ * Patterns are tried in order, so anything with a fixed second segment comes
+ * before the pattern that would swallow it as a slug: /essays/tag/x/ has to be
+ * matched before /essays/:slug/.
  */
 
+import Home from './pages/Home.jsx';
 import Notes from './pages/Notes.jsx';
 import Note from './pages/Note.jsx';
-import Pending from './pages/Pending.jsx';
+import Writing from './pages/Writing.jsx';
+import Article from './pages/Article.jsx';
+import Projects from './pages/Projects.jsx';
+import Project from './pages/Project.jsx';
+import Styles from './pages/Styles.jsx';
+import { Now, About, Learning, Gear, Colophon } from './pages/Flat.jsx';
+import { KindIndex, KindReader, Enjoying } from './pages/Enjoying.jsx';
+import { ProductsIndex, Product } from './pages/Products.jsx';
+
+const KINDS = 'reading|music|movies|podcasts|bookshelf';
 
 const ROUTES = [
+  [/^\/$/, Home],
+
   [/^\/notes\/$/, Notes],
   [/^\/notes\/[^/]+\/$/, Note],
+
+  [/^\/(essays|studies)\/$/, Writing],
+  [/^\/(essays|studies)\/tag\/[^/]+\/$/, Writing],
+  [/^\/(essays|studies)\/[^/]+\/$/, Article],
+  [/^\/build\/[^/]+\/$/, Article],
+
+  [/^\/projects\/$/, Projects],
+  [/^\/projects\/cat\/[^/]+\/$/, Projects],
+  [/^\/projects\/[^/]+\/$/, Project],
+
+  [new RegExp(`^/(${KINDS})/$`), KindIndex],
+  [new RegExp(`^/(${KINDS})/[^/]+/$`), KindReader],
+  [/^\/enjoying\/(\d+\/)?$/, Enjoying],
+
+  [/^\/products\/$/, ProductsIndex],
+  [/^\/products\/[^/]+\/$/, Product],
+
+  [/^\/now\/$/, Now],
+  [/^\/about\/$/, About],
+  [/^\/learning\/$/, Learning],
+  [/^\/gear\/$/, Gear],
+  [/^\/colophon\/$/, Colophon],
+  [/^\/styles\/$/, Styles],
 ];
 
 /**
@@ -26,7 +62,11 @@ const ROUTES = [
  */
 export function pageFor(route) {
   const hit = ROUTES.find(([pattern]) => pattern.test(route));
-  // Anything not yet ported renders a placeholder rather than a blank page, so
-  // the build stays runnable while the remaining layouts are worked through.
-  return hit ? hit[1] : Pending;
+  if (!hit) {
+    // Every route comes from routesFor(), and every one of those should be
+    // listed above — so reaching here means the two have drifted. Better to
+    // fail the build than to prerender a blank page and find out later.
+    throw new Error(`no page component for route "${route}"`);
+  }
+  return hit[1];
 }
