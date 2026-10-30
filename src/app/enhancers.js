@@ -12,8 +12,6 @@
  */
 
 import '../js/theme.js';
-import '../js/accessibility.js';
 import '../js/nav.js';
 import '../js/texture.js';
-import '../js/floorboards.js';
 import '../js/tag-filter.js';
