@@ -324,6 +324,36 @@ function prepare() {
 function contentPlugins() {
   return [
     /**
+     * Give `React.createElement` a React to call.
+     *
+     * Locally every component is `.jsx` and the React plugin uses the
+     * automatic runtime, so no file mentions `React` and none needs to import
+     * it. CodePen compiles the JSX out before Vite runs, using the *classic*
+     * runtime, so what this build actually receives is `.js` full of
+     *
+     *   React.createElement(StrictMode, null, ...)
+     *
+     * with no import anywhere. Their client build has something that supplies
+     * that binding. The nested SSR build, running `configFile: false`, does
+     * not, so the bundle compiled cleanly and then died the moment it rendered:
+     *
+     *   React is not defined
+     *
+     * Adding the import is enough, and it is a no-op everywhere the automatic
+     * runtime is in use, since nothing there references `React` at all.
+     */
+    {
+      name: 'provide-react-binding',
+      enforce: 'pre',
+      transform(code, id) {
+        if (id.includes('node_modules') || !/\.[jt]sx?(\?|$)/.test(id)) return null;
+        if (!/\bReact\s*\.\s*(createElement|Fragment)/.test(code)) return null;
+        if (/\bimport\s+(\*\s+as\s+)?React\b/.test(code)) return null;
+        return { code: `import React from 'react';\n${code}`, map: null };
+      },
+    },
+
+    /**
      * Refuse to build if any import names a `.jsx` file explicitly.
      *
      * This exists because the failure is invisible here and fatal there.

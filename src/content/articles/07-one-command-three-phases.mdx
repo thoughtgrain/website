@@ -6,7 +6,7 @@ seriesPart: 5
 title: "One command, three phases"
 summary: "How a client build, a server build and a prerender pass fit inside a single `vite build`, the one config key whose position decides whether anything happens at all, and the discovery that the degraded path I'd been carefully designing was the one my site had been shipping all along."
 date: "28 October 2026"
-read: "11 min"
+read: "14 min"
 tag1: "Build series"
 tag2: "Static sites"
 toc:
@@ -24,6 +24,10 @@ toc:
     label: "The degraded path was production"
   - id: "prerendering-without-buildapp"
     label: "Prerendering without buildApp"
+  - id: "reproducing-the-host"
+    label: "Reproducing the host"
+  - id: "failing-softly"
+    label: "Failing softly"
 ---
 
 <Dropcap text="For a while the build was three commands chained with &&. It worked perfectly on my machine and did nothing at all on CodePen, which runs the standard one and nothing else." />
@@ -190,6 +194,32 @@ const entry = path.join(dir, 'server.node.js');
 <MarginaliaPin text="A dead end that eliminates a hypothesis is worth more than a fix you can't explain." rotate="2" />
 
 One wrong turn on the way, worth recording. `react-dom/server.browser` is also unconditional, and I tried it first. It renders all fifty-one pages, prints the summary, and then never exits. Its scheduler drives work through a `MessageChannel`, which in Node is an open handle that nothing closes. The markup is byte-for-byte identical; the process simply doesn't come back. A hang is a worse failure than a crash, because nothing tells you it happened.
+
+Fixing that one bought exactly one error's worth of progress. Next the host couldn't resolve `react` either, from a file that had imported it perfectly happily for months. Which finally made the shape of it obvious: the nested build resolves *no* bare specifiers at all. It was never a quirk of one package. `configFile: false` means none of the host's resolver setup comes along, and the host supplies React to the client build through its own config rather than through a `node_modules` this build can see.
+
+So every bare import the server graph needs is now pinned to an absolute path the same way. Anchored regexes, not plain strings, because a string alias of `react` also prefix-matches `react/jsx-runtime` and would rewrite it to `.../react/index.js/jsx-runtime`.
+
+And then, with everything resolving, it rendered nothing and said:
+
+```
+React is not defined
+```
+
+The host compiles the JSX out before Vite starts, using the *classic* runtime. So what the build actually receives is not my source at all. It's `.js` full of `React.createElement(...)`, with no import anywhere, because locally the automatic runtime means no file ever needs one. Their client build has something that supplies that binding. The nested one didn't. A plugin adds the import where it's missing, and does nothing at all on a machine using the automatic runtime, since nothing there mentions `React`.
+
+## Reproducing the host
+
+Four rounds of this were invisible locally and fatal there, and every one cost an upload, a build, and a report read back by hand. The fix I should have reached for first was not any of those patches. It was making the failure happen where I could see it.
+
+The two differences that matter are both reproducible: compile the JSX out with the classic runtime, then build with `builder` and `environments` deleted so `buildApp` can't be called. Thirty lines, against a throwaway copy.
+
+The first time I ran it, it failed with `React is not defined` before I'd uploaded anything. That's the whole return on it. Every bug in this post was reproducible all along; I just hadn't spent the half hour to find out.
+
+<PullquoteNoCite text="A bug you cannot reproduce is not a hard bug. It is a bug you have not yet paid for." />
+
+Babel goes into the throwaway copy rather than into `package.json`, because that file is something the host reads and installs from, and a local test tool is not its business. The one thing that caught me: `npm install` prunes anything not in `package.json`, so installing Babel after the toolchain silently removed Vite again.
+
+## Failing softly
 
 The real lesson from that round, though, is the one I should have applied from the start: a build step I added should never be able to take the deploy down. The fallback is wrapped now.
 
