@@ -66,7 +66,7 @@ function plainSummary(html, maxLen) {
  */
 function entryFromItem(siteUrl, item, sectionPath) {
   const url = `${siteUrl}/${sectionPath}/${item.slug}/`;
-  const summary = item.summary || item.note || item.dek || plainSummary(item.bodyHtml, 280) || '';
+  const summary = item.summary || item.note || item.dek || item.lede || '';
   return {
     title: item.title || '(untitled)',
     link: url,

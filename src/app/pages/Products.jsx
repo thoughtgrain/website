@@ -11,7 +11,7 @@
 
 import { content } from '../content.js';
 import Link from '../Link.jsx';
-import Html from '../components/Html.jsx';
+import { mdxComponents } from '../components/mdx.jsx';
 import FeedLink from '../components/FeedLink.jsx';
 
 /** Any product image committed under src/assets/products/, by slug. */
@@ -99,7 +99,7 @@ export function Product({ route }) {
 
         <div className="prose">
           {product.note && <p className="lead">{product.note}</p>}
-          <Html html={product.bodyHtml} />
+          <product.Body components={mdxComponents} />
         </div>
 
         {product.url && (

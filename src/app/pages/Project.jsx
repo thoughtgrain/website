@@ -4,7 +4,7 @@
 
 import { content } from '../content.js';
 import Link from '../Link.jsx';
-import Html from '../components/Html.jsx';
+import { mdxComponents } from '../components/mdx.jsx';
 
 export default function Project({ route }) {
   const slug = route.split('/').filter(Boolean)[1];
@@ -36,7 +36,7 @@ export default function Project({ route }) {
           <div className="project-plate__label">{project.label}</div>
         </div>
 
-        <Html className="reader__body prose" html={project.bodyHtml} />
+        <div className="reader__body prose"><project.Body components={mdxComponents} /></div>
       </article>
     </main>
   );

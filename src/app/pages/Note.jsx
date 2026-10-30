@@ -8,7 +8,7 @@
 
 import { content } from '../content.js';
 import Link from '../Link.jsx';
-import Html from '../components/Html.jsx';
+import { mdxComponents } from '../components/mdx.jsx';
 
 const RELATED_COUNT = 3;
 
@@ -46,8 +46,8 @@ export default function Note({ route }) {
               {note.caption && <figcaption className="note-reader__caption">{note.caption}</figcaption>}
             </figure>
           )}
-          {note.ledeHtml && <Html as="p" className="note-reader__lede" html={note.ledeHtml} />}
-          <Html html={note.afterthoughtHtml} />
+          {note.lede && <p className="note-reader__lede">{note.lede}</p>}
+          <note.Body components={mdxComponents} />
           <hr className="note-reader__rule" />
           <p className="note-reader__sign">
             Filed under <em>{note.context}</em>. Permalink <a href={`#${note.slug}`}>#{note.slug}</a>.

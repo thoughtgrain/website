@@ -16,7 +16,7 @@
 import { content } from '../content.js';
 import { ENJOYING_PER_PAGE } from '../lib/content-model.js';
 import Link from '../Link.jsx';
-import Html from '../components/Html.jsx';
+import { mdxComponents } from '../components/mdx.jsx';
 import FeedLink from '../components/FeedLink.jsx';
 
 const META = {
@@ -398,7 +398,7 @@ export function KindReader({ route }) {
 
         <div className="prose">
           <p className="lead">{entry.note}</p>
-          <Html html={entry.afterthoughtHtml} />
+          <entry.Body components={mdxComponents} />
         </div>
 
         <nav className="note-reader__nav" aria-label="Between entries">

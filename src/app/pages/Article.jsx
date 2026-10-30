@@ -12,7 +12,7 @@
 
 import { content } from '../content.js';
 import Link from '../Link.jsx';
-import Html from '../components/Html.jsx';
+import { mdxComponents } from '../components/mdx.jsx';
 
 const RELATED_COUNT = 2;
 
@@ -164,7 +164,7 @@ export default function Article({ route }) {
           </div>
 
           {inSeries && <SeriesNav article={article} />}
-          <Html className="reader__body prose" html={article.bodyHtml} />
+          <div className="reader__body prose"><article.Body components={mdxComponents} /></div>
           {inSeries && <SeriesPrevNext article={article} />}
           {!inSeries && <Related items={related} />}
         </article>

@@ -2,17 +2,16 @@
  * content-model.js — content in, routes and collections out. No I/O.
  *
  * This is the one piece of logic both halves of the build need, so it takes a
- * plain `{ path: rawText }` map and nothing else. `vite.config.js` fills that
- * map with `readdirSync` at build time; the browser fills it with
- * `import.meta.glob`. Neither variant leaks in here, which is what keeps the
- * route list the config generates identical to the one the app renders.
+ * plain `{ path: entry }` map and nothing else. The browser fills it with
+ * `import.meta.glob` over the compiled MDX modules; `node-loader.js` fills the
+ * same shape from disk for the feeds. Neither variant leaks in here, which is
+ * what keeps the feeds and the pages describing the same site.
  *
- * Ported from the old generator's derive step, minus the HTML it used to build —
- * React components do that part now.
+ * Each value is `{ frontmatter, default }` — the parsed YAML and a React
+ * component for the body. The body is never an HTML string, which is why
+ * nothing here reads or transforms it: MDX compiled it, the pages render it,
+ * and this module only ever touches metadata.
  */
-
-import { parseFrontmatter } from './frontmatter.js';
-import { parseMarkdown } from './markdown.js';
 
 /** Reading entries carry a machine `status`; this is its display form. */
 const READING_STATUS_LABEL = { now: 'Now reading', next: 'Queued', done: 'Finished' };
@@ -40,103 +39,35 @@ export function slugifyTag(t) {
   return String(t).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-/** Pull `<Footnote id="1" text="…" />` out of the raw source, before markdown runs. */
-function extractFootnotes(raw) {
-  const footnotes = [];
-  const fnRegex = /<Footnote\s+([\s\S]*?)\/>/g;
-  let m;
-  while ((m = fnRegex.exec(raw)) !== null) {
-    const attrs = {};
-    const attrRegex = /(\w+)=(?:"([^"]*?)"|'([^']*?)')/g;
-    let a;
-    while ((a = attrRegex.exec(m[1])) !== null) {
-      attrs[a[1]] = a[2] !== undefined ? a[2] : a[3];
-    }
-    if (attrs.id && attrs.text) footnotes.push({ id: attrs.id, text: attrs.text });
-  }
-  return footnotes;
+/**
+ * One compiled module into one entry.
+ *
+ * `Body` is capitalised because it's a component and the pages render it as
+ * `<Body />`. Entries with no body at all still get one, so no page has to
+ * guard before rendering.
+ */
+function toEntry(mod) {
+  return { ...(mod.frontmatter || {}), Body: mod.default || (() => null) };
 }
 
 /**
- * Expand MDX-style component tags using the templates from src/components/.
+ * Turn `{ '../content/notes/01-x.mdx': { frontmatter, default } }` into the
+ * derived collections.
  *
- * Content can write `<Pullquote text="…" cite="…" />` and get the markup from
- * Pullquote.html, with `{{prop}}` slots filled from the tag's attributes. Not
- * real MDX: no JSX, no evaluation, no nesting — a regex over a handful of
- * hand-written templates.
+ * Keys are sorted first: content files are numbered (01-, 02-, …) and that
+ * filename order IS their display order.
  *
- * The `[A-Z]` is load-bearing. Restricting the match to capitalised names stops
- * it running across a neighbouring lowercase HTML tag, while still letting
- * attribute VALUES contain inline markup like `<code>` or `<em>`, because those
- * tag names can't start a new match.
- *
- * @param {string} html Output of the markdown pass.
- * @param {object} templates name → template HTML.
+ * @param {object} moduleMap path → compiled MDX module
+ * @param {object} jsonMap   name → parsed JSON config
  */
-function resolveComponents(html, templates) {
-  return html.replace(/<([A-Z]\w*)\s+([\s\S]*?)\/>/g, (match, name, attrsStr) => {
-    const template = templates[name];
-    // Unknown component: leave the source text alone rather than deleting it,
-    // so a typo in a content file is visible in the page.
-    if (!template) return match;
-
-    const attrs = {};
-    const attrRegex = /(\w+)=(?:"([^"]*?)"|'([^']*?)')/g;
-    let m;
-    while ((m = attrRegex.exec(attrsStr)) !== null) {
-      attrs[m[1]] = m[2] !== undefined ? m[2] : m[3];
-    }
-
-    // Values pass through raw: component attributes are authored by me in my own
-    // content files, not by visitors, and several intentionally carry markup.
-    return Object.keys(attrs).reduce(
-      (out, key) => out.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), attrs[key]),
-      template,
-    );
-  });
-}
-
-/** Parse one file's raw text into an entry. */
-function parseEntry(raw, components) {
-  const parsed = parseFrontmatter(raw);
-  // Markdown first, then components: the resolver needs the tags intact, and
-  // the markdown pass leaves unknown inline HTML alone.
-  const bodyHtml = resolveComponents(parseMarkdown(parsed.content), components);
-  const footnotes = extractFootnotes(raw);
-  return {
-    ...parsed.data,
-    bodyHtml,
-    footnotes: footnotes.length ? footnotes : (parsed.data.footnotes || []),
-  };
-}
-
-/** First paragraph unwrapped as the lede, the rest kept as the afterthought. */
-function splitLede(entries) {
-  entries.forEach((e) => {
-    const paras = (e.bodyHtml || '').match(/<p>[\s\S]*?<\/p>/g) || [];
-    e.ledeHtml = paras.length ? paras[0].replace(/^<p>|<\/p>$/g, '') : '';
-    e.afterthoughtHtml = paras.slice(1).join('\n');
-  });
-}
-
-/**
- * Turn `{ '/content/notes/01-x.mdx': '---\n…' }` into derived collections.
- *
- * Keys are sorted before parsing: content files are numbered (01-, 02-, …) and
- * that filename order IS their display order.
- *
- * @param {object} rawMap     path → raw .mdx text
- * @param {object} jsonMap    name → parsed JSON config
- * @param {object} components name → component template HTML, for the MDX tags
- */
-export function buildContent(rawMap, jsonMap = {}, components = {}) {
+export function buildContent(moduleMap, jsonMap = {}) {
   const collections = {};
 
-  Object.keys(rawMap).sort().forEach((filePath) => {
+  Object.keys(moduleMap).sort().forEach((filePath) => {
     const m = filePath.match(/\/content\/([^/]+)\/[^/]+\.mdx$/);
     if (!m) return;
     const key = m[1];
-    (collections[key] = collections[key] || []).push(parseEntry(rawMap[filePath], components));
+    (collections[key] = collections[key] || []).push(toEntry(moduleMap[filePath]));
   });
 
   // Make every collection exist, so pages never guard against undefined.
@@ -155,8 +86,6 @@ export function buildContent(rawMap, jsonMap = {}, components = {}) {
   });
 
   // --- cultural collections ------------------------------------------------
-  [reading, music, movies, podcasts, bookshelf].forEach(splitLede);
-
   reading.forEach((r) => { r.statusLabel = READING_STATUS_LABEL[r.status] || r.status; });
 
   // The WHITE STAR marks unfilled positions rather than a faded filled one, so
@@ -192,17 +121,6 @@ export function buildContent(rawMap, jsonMap = {}, components = {}) {
   Object.values(seriesGroups).forEach((g) => g.sort((a, b) => (a.seriesPart || 0) - (b.seriesPart || 0)));
 
   // --- notes ---------------------------------------------------------------
-  // Their own lede split: the list renders the lede UNWRAPPED inside its own
-  // markup, while the afterthought keeps its <p> wrappers.
-  notes.forEach((n) => {
-    const paras = [];
-    const re = /<p>([\s\S]*?)<\/p>/g;
-    let m;
-    while ((m = re.exec(n.bodyHtml)) !== null) paras.push(m[1]);
-    n.ledeHtml = paras[0] || '';
-    n.afterthoughtHtml = paras.slice(1).map((p) => `<p>${p}</p>`).join('\n');
-  });
-
   const notesGroups = [];
   const byMonth = {};
   notes.forEach((n) => {

@@ -1,11 +1,14 @@
 import react from '@vitejs/plugin-react';
+import mdx from '@mdx-js/rollup';
+import remarkFrontmatter from 'remark-frontmatter';
+import remarkMdxFrontmatter from 'remark-mdx-frontmatter';
 
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { defineConfig } from 'vite';
 
 import { renderFeeds } from './src/app/lib/feeds.js';
-import { readContent, readData, readComponents } from './src/app/lib/node-loader.js';
+import { readContent, readData } from './src/app/lib/node-loader.js';
 import { buildContent } from './src/app/lib/content-model.js';
 
 /**
@@ -26,11 +29,10 @@ const input = readdirSync(process.cwd(), { recursive: true })
       file.endsWith('.html')
       && !file.split(path.sep).includes('node_modules')
       && !file.split(path.sep).includes('dist')
-      // Only real pages. src/layouts holds the previous generator's templates
-      // and src/components holds the MDX fragments — both are .html, neither is
-      // a page, and a recursive glob happily turns them into entries.
-      && !file.split(path.sep).includes('layouts')
-      && !file.split(path.sep).includes('components'),
+      // Only real pages. src/layouts holds the previous generator's templates:
+      // .html, but not pages, and a recursive glob happily turns them into
+      // entries.
+      && !file.split(path.sep).includes('layouts'),
   )
   .map((file) => `./${file}`);
 
@@ -40,6 +42,24 @@ if (input.length === 0) {
 
 export default defineConfig({
   plugins: [
+    /**
+     * Content is real MDX: the .mdx files compile to React components and
+     * their tags — <Pullquote>, <Dropcap> — resolve against the map in
+     * app/components/mdx.jsx.
+     *
+     * Both remark plugins are required, not optional. Without them the
+     * frontmatter block isn't metadata at all: MDX reads `---` as a thematic
+     * break and the slug, title and toc render as visible body text.
+     *
+     * `enforce: 'pre'` so this runs before the React plugin, which needs JSX
+     * rather than MDX.
+     */
+    {
+      enforce: 'pre',
+      ...mdx({
+        remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter],
+      }),
+    },
     react(),
 
     /**
@@ -54,7 +74,7 @@ export default defineConfig({
       name: 'site-feeds',
       apply: 'build',
       generateBundle() {
-        const content = buildContent(readContent(), readData(), readComponents());
+        const content = buildContent(readContent(), readData());
         renderFeeds(content).forEach(({ fileName, source }) => {
           this.emitFile({ type: 'asset', fileName, source });
         });

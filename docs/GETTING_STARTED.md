@@ -18,6 +18,10 @@ Requires Node 20.19+ or 22.12+ — Vite 8's floor.
 bundle, one stylesheet, plus the eleven Atom feeds and `feed.xsl`. The pages
 themselves are drawn in the browser by react-router.
 
+Content is real MDX — CommonMark plus JSX — so ordered lists, nested lists,
+tables and images all work. The five components content may use are exported
+from `src/app/components/mdx.jsx`.
+
 **The host must rewrite unknown paths to `index.html`.** `dist/` has exactly one
 HTML file, so without that rewrite only `/` resolves and every other URL 404s
 before any JavaScript runs. `ARCHITECTURE.md` §3.1 has the full list of what

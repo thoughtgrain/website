@@ -1,25 +1,48 @@
 /**
  * node-loader.js — fill the content map from disk, in Node.
  *
- * The app loads content in the browser with `import.meta.glob` (see
- * content.js). The feeds can't: they're generated during the build, in the
- * Vite config, where there's no module graph to glob — just a filesystem.
+ * The app loads content with `import.meta.glob` over the compiled MDX modules.
+ * The feeds can't: they're generated inside the Vite config, where there's no
+ * module graph to glob — just a filesystem.
  *
  * So this is the second of the two loaders. Both produce the same
- * `{ path: rawText }` shape and both hand it to the same `buildContent`, which
- * is what stops the feeds and the pages describing different sites. The keys
- * match Vite's glob output exactly, for the same reason.
+ * `{ path: { frontmatter, default } }` shape and both hand it to the same
+ * `buildContent`, which is what stops the feeds and the pages describing
+ * different sites. Keys match Vite's glob output exactly, for the same reason.
+ *
+ * The frontmatter is parsed with `yaml` — the same engine remark-frontmatter
+ * uses — rather than a second hand-written parser. That matters: the previous
+ * arrangement had two parsers that agreed on most fields and disagreed on
+ * types, which is exactly the kind of drift that only shows up in production.
+ *
+ * `default` is a stub here. The feeds need metadata and nothing else: every
+ * entry's summary comes from frontmatter, so no body ever has to be rendered
+ * to produce one.
  */
 
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { parse as parseYaml } from 'yaml';
 
 const SRC = path.resolve(import.meta.dirname, '..', '..');
 const CONTENT = path.join(SRC, 'content');
 
+const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---/;
+
+/** The YAML block at the top of an .mdx file, as an object. */
+function frontmatterOf(raw, file) {
+  const m = raw.match(FRONTMATTER);
+  if (!m) return {};
+  try {
+    return parseYaml(m[1]) || {};
+  } catch (err) {
+    throw new Error(`invalid frontmatter in ${file}: ${err.message}`);
+  }
+}
+
 /** Every .mdx file under content/, keyed the way the browser glob keys them. */
 export function readContent() {
-  const raw = {};
+  const out = {};
   readdirSync(CONTENT, { withFileTypes: true })
     .filter((d) => d.isDirectory())
     .forEach((dir) => {
@@ -30,10 +53,14 @@ export function readContent() {
         // their display order, so sort before reading.
         .sort()
         .forEach((file) => {
-          raw[`../content/${dir.name}/${file}`] = readFileSync(path.join(abs, file), 'utf8');
+          const full = path.join(abs, file);
+          out[`../content/${dir.name}/${file}`] = {
+            frontmatter: frontmatterOf(readFileSync(full, 'utf8'), full),
+            default: null,
+          };
         });
     });
-  return raw;
+  return out;
 }
 
 /** The structured JSON that configures the site rather than filling it. */
@@ -45,22 +72,4 @@ export function readData() {
       data[file.replace(/\.json$/, '')] = JSON.parse(readFileSync(path.join(CONTENT, file), 'utf8'));
     });
   return data;
-}
-
-/**
- * The MDX component templates from components/.
- *
- * Content writes `<Pullquote text="…" />`; these supply the markup it expands
- * to. They have to reach `buildContent` the same way the content does, or the
- * tags survive into the feed as literal text.
- */
-export function readComponents() {
-  const dir = path.join(SRC, 'components');
-  const out = {};
-  readdirSync(dir)
-    .filter((f) => f.endsWith('.html'))
-    .forEach((file) => {
-      out[file.replace(/\.html$/, '')] = readFileSync(path.join(dir, file), 'utf8');
-    });
-  return out;
 }

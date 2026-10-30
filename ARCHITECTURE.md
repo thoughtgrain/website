@@ -55,18 +55,16 @@ website/
       content.js               import.meta.glob → parsed collections
       enhancers.js             re-exports the js/ progressive enhancers
       lib/
-        frontmatter.js         YAML-lite parser
-        markdown.js            markdown → HTML
-        content-model.js       parse + derive + the route list
+        content-model.js       derive the collections + the route list
         feeds.js               the eleven Atom feeds
         node-loader.js         the same content map, read from disk for feeds
       components/              Html, FeedLink, NoteList, TagFilter
+                               mdx.jsx — the components content may use
       pages/                   one component per page type
 
     content/                   the site: .mdx entries + JSON config
     css/                       tokens.css, kit.css, site.css
     js/                        progressive enhancers
-    components/                the MDX component templates
     assets/                    product images
     feed.xsl                   stylesheet every feed points at
     layouts/                   the OLD templates — reference only, except
@@ -118,15 +116,21 @@ sites.
 
 ### 3.3 One content model, two loaders
 
-`src/app/lib/content-model.js` takes a `{ path: rawText }` map and returns the
+`src/app/lib/content-model.js` takes a `{ path: module }` map and returns the
 collections and the route list. It does no I/O at all — no `fs`, no Node
 builtins, nothing that assumes where it's running. That's what lets the same
 module serve both loaders.
 
-`.mdx` files are loaded as **raw text** (`query: '?raw'`) and parsed by
-`frontmatter.js` and `markdown.js`, not by an MDX compiler. The frontmatter is a
-YAML-lite subset and `<Pullquote text="…" />` is a string-substitution tag
-expanded against `src/components/*.html`, not a JSX component import.
+Each value is a compiled MDX module: `{ frontmatter, default }`, the parsed
+YAML and a React component for the body. The model never touches the body —
+there is no HTML string in the middle any more, so nothing here can transform,
+split or re-parse it. It only derives from metadata.
+
+Both loaders parse frontmatter with the **same** YAML engine. The browser gets
+it from `remark-mdx-frontmatter`; `node-loader.js` calls `yaml` directly. The
+previous arrangement had two hand-written parsers that agreed on most fields
+and disagreed on types, which is the kind of drift that only surfaces in
+production.
 
 ---
 
@@ -158,14 +162,22 @@ Every `.mdx` file opens with YAML between two `---` lines. The parser handles st
 
 ### 4.2 MDX components
 
-Four custom tags are recognised in article bodies. Each maps to `src/components/<Name>.html` with `{{prop}}` placeholders.
+Five components are available in content bodies. They're real React components
+in `src/app/components/mdx.jsx`, passed to every body as its `components` prop.
 
 - `<Dropcap text="…" />` — display-typeface initial on the opening paragraph.
 - `<Pullquote text="…" cite="…" />` — bordered quote with attribution.
 - `<PullquoteNoCite text="…" />` — same, no attribution.
-- `<MarginaliaPin text="…" />` — small note in the right gutter on wide viewports.
+- `<MarginaliaPin text="…" rotate="…" />` — note in the right gutter on wide viewports.
+- `<Footnote id="…" />` — superscript reference.
 
-To add a new component: drop `src/components/<Name>.html` with the placeholders, then reference it as `<Name prop="value" />` in MDX. No code change needed — `lib/parse/components.js` loads whatever is in that directory.
+To add one: export it from `mdx.jsx` and add it to `mdxComponents`. MDX throws
+at render for any tag it can't resolve — `_missingMdxReference("Name", true)` —
+so a typo in content fails loudly rather than silently rendering as text.
+
+`text` arrives as a string and React escapes it. The old `{{prop}}` templates
+interpolated raw, so a quote could contain `<em>`; none did, and markdown
+inside the tag is the better way to do it now.
 
 ### 4.3 Notes can be text or image
 
@@ -206,20 +218,24 @@ transcription risk for no gain.
 
 ---
 
-## 7. The markdown parser
+## 7. Markdown and MDX
 
-`parseMarkdown(md)` is a line-by-line state machine. Handles:
+Bodies are compiled by `@mdx-js/rollup`, so content gets CommonMark plus JSX:
+ordered lists, nested lists, tables and images all work, which the previous
+hand-written parser didn't support.
 
-- Headings (`# … ######`) — `id` slugified from the text so TOC anchors work.
-- Paragraphs.
-- Unordered lists (`-` or `*`).
-- Blockquotes (`> `).
-- Horizontal rules (`---`).
-- Fenced code blocks (` ``` `), with optional language tag. Content is HTML-escaped before being emitted inside `<pre><code class="language-xxx">…</code></pre>`.
-- Inline: `**bold**`, `*italic*`, `` `code` ``, `[link](url)`.
-- Raw HTML / JSX-style component tags at the start of a line — emitted verbatim so block components don't get wrapped in `<p>`.
+That parser is gone, and with it a bug worth recording. It emitted inline code
+without escaping `<`, so a span like `` `/essays/<slug>/` `` put a real
+`<slug>` element into the DOM and the reader saw `/essays//`. Seven such ghost
+elements existed on one essay page alone. MDX escapes correctly.
 
-What it doesn't handle: ordered lists, nested lists, tables, images, footnotes (those use `<Footnote>` component shorthand instead), reference-style links.
+Three plugins make it work, and all three are load-bearing:
+
+- `remark-frontmatter` — recognises the `---` block as frontmatter rather than
+  a thematic break.
+- `remark-mdx-frontmatter` — exports it as `frontmatter` rather than leaving
+  the slug, title and toc to render as visible body text.
+- `@vitejs/plugin-react`, after both, because by then it's JSX.
 
 ---
 

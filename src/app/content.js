@@ -1,54 +1,35 @@
 /**
- * content.js — the browser half of content loading.
+ * content.js — load every content file as a compiled MDX module.
  *
- * `vite.config.js` fills the same `{ path: rawText }` shape with `readdirSync`
- * at build time; this fills it with Vite's own glob. Both hand it to the same
- * `buildContent`, which is what keeps the routes the config generates and the
- * pages the app renders from drifting apart.
+ * `import.meta.glob` without `?raw` means Vite hands these through the MDX
+ * plugin chain, so each file arrives as `{ frontmatter, default }`: the parsed
+ * YAML, and a React component for the body. The component is what the pages
+ * render — there is no HTML string in the middle any more, which is the whole
+ * difference between this and the previous hand-rolled markdown pass.
  *
- * The patterns are relative to this file rather than root-absolute. Both work
- * under a plain `vite build`, but a root-absolute path assumes the bundler maps
- * `/` to the Vite root, and CodePen's doesn't — that assumption is what made
- * every generated entry fail to resolve its own script tag.
- *
- * `eager: true` inlines the files into the bundle rather than code-splitting
- * them — 30 KB of content total, so a request per note would cost more than it
- * saves. `query: '?raw'` gets the text rather than letting Vite try to parse
- * .mdx as a module.
+ * `eager: true` inlines them rather than code-splitting. Every page needs the
+ * whole model to resolve its links and neighbours, and the content is about
+ * 30 KB in total, so a request per note would cost more than it saves.
  */
 
 import { buildContent } from './lib/content-model.js';
 
-const rawFiles = import.meta.glob('../content/**/*.mdx', {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-});
+const modules = import.meta.glob('../content/**/*.mdx', { eager: true });
 
 const jsonFiles = import.meta.glob('../content/*.json', {
   import: 'default',
   eager: true,
 });
 
-// The MDX component templates. Same shape the Node loaders build with
-// readdirSync, so buildContent can't tell the two apart.
-const componentFiles = import.meta.glob('../components/*.html', {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-});
-
-const components = {};
-Object.keys(componentFiles).forEach((p) => {
-  components[p.replace(/^.*\/([^/]+)\.html$/, '$1')] = componentFiles[p];
-});
+/** Strip a glob key to its basename: "../content/site.json" → "site". */
+const nameOf = (p, ext) => p.replace(new RegExp(`^.*/([^/]+)\\.${ext}$`), '$1');
 
 // site.json, nav.json, … keyed by name rather than path.
 const data = {};
 Object.keys(jsonFiles).forEach((p) => {
-  data[p.replace(/^.*\/([^/]+)\.json$/, '$1')] = jsonFiles[p];
+  data[nameOf(p, 'json')] = jsonFiles[p];
 });
 
-export const content = buildContent(rawFiles, data, components);
+export const content = buildContent(modules, data);
 export const site = content.data.site || {};
 export const nav = content.data.nav || { groups: [] };

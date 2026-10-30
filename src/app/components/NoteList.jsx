@@ -12,7 +12,7 @@ import Html from './Html.jsx';
 
 export function NoteItem({ note }) {
   const alt = note.imageAlt || note.caption || note.title || '';
-  const captionHtml = note.caption || note.ledeHtml || '';
+  const caption = note.caption || note.lede || '';
 
   return (
     <li className={`note-item${note.image ? ' note-item--image' : ''}`}>
@@ -22,10 +22,10 @@ export function NoteItem({ note }) {
           {note.image ? (
             <figure className="note-item__figure">
               <img src={note.image} alt={alt} loading="lazy" />
-              {captionHtml && <Html as="figcaption" className="note-item__caption" html={captionHtml} />}
+              {caption && <Html as="figcaption" className="note-item__caption" html={caption} />}
             </figure>
           ) : (
-            <Html as="p" className="note-item__body" html={note.ledeHtml} />
+            <p className="note-item__body">{note.lede}</p>
           )}
         </Link>
         {note.context && <div className="note-item__context">{note.context}</div>}
