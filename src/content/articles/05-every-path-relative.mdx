@@ -4,7 +4,7 @@ kind: "Build series"
 series: "Building this site"
 seriesPart: 3
 title: "Every path, relative"
-summary: "Forty-two import statements, fifty identical error messages, and a three-line function that decides what every link on the site says."
+summary: "Forty-two import statements, one identical error message per page, and a three-line function that decides what every link on the site says."
 date: "26 October 2026"
 read: "7 min"
 tag1: "Build series"
@@ -14,8 +14,8 @@ toc:
     label: "The function"
   - id: "dropping-whats-shared"
     label: "Dropping what's shared"
-  - id: "fifty-identical-errors"
-    label: "Fifty identical errors"
+  - id: "the-same-error-per-page"
+    label: "The same error, per page"
   - id: "the-extension-test"
     label: "The extension test"
   - id: "the-rule-that-fell-out"
@@ -59,7 +59,7 @@ This also fixed two links the old generator had been getting wrong for months. T
 
 The old build had fourteen broken internal links out of 908. This one has none out of 993, and I only know that because I started crawling the output.
 
-## Fifty identical errors
+## The same error, per page
 
 Relative paths matter in the HTML. They turn out to matter in the module graph too, for a different reason.
 
@@ -69,7 +69,7 @@ I had the entry shells referencing the app like this:
 <script type="module" src="/src/app/main.jsx"></script>
 ```
 
-Root-absolute, which Vite resolves against its own root. That works under a plain `vite build`. It does not work under CodePen's, which doesn't map `/` to the Vite root, and the result was fifty of these:
+Root-absolute, which Vite resolves against its own root. That works under a plain `vite build`. It does not work under CodePen's, which doesn't map `/` to the Vite root, and the result was one of these per entry:
 
 ```
 Failed to resolve /app/main.jsx from /about/index.html
@@ -78,7 +78,7 @@ Failed to resolve /app/main.jsx from /bookshelf/essays-book/index.html
 …
 ```
 
-One per entry. Same message, fifty files.
+One per entry. The same message, over and over.
 
 The fix was the depth prefix the page already had. What makes this worth writing down is that the *first* version of this code was relative, and I'd moved it to absolute to fix a bug that was actually a missing `../`, not a problem with relativeness. I removed the right mechanism because I'd implemented it wrong.
 

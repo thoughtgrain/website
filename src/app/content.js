@@ -31,5 +31,14 @@ Object.keys(jsonFiles).forEach((p) => {
 });
 
 export const content = buildContent(modules, data);
+
+/**
+ * How many content files the site was built from.
+ *
+ * Exported for the build-series figures, which used to state the number in
+ * prose and were wrong about it within a week.
+ */
+export const contentFileCount = Object.keys(modules).length;
+export const dataFileCount = Object.keys(jsonFiles).length;
 export const site = content.data.site || {};
 export const nav = content.data.nav || { groups: [] };

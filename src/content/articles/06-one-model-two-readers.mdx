@@ -34,7 +34,7 @@ toc:
 buildContent({ '../content/notes/01-your-first-note.mdx': { frontmatter, default } })
 ```
 
-Out comes `notes`, `essays`, `studies`, `buildSeries`, `seriesGroups`, `notesGroups`, plus `routesFor()` which turns all of that into the list of fifty routes.
+Out comes `notes`, `essays`, `studies`, `buildSeries`, `seriesGroups`, `notesGroups`, plus `routesFor()` which turns all of that into the list of routes the site publishes.
 
 What it does *not* do is read anything. No `fs`, no `node:path`, nothing that assumes a runtime. Hand it a map and it derives; that's the entire contract.
 

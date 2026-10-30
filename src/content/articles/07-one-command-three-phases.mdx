@@ -42,7 +42,7 @@ vite build && vite build --ssr app/entry-server.jsx --outDir .ssr && node preren
 
 Client bundle, server bundle, then a Node script to stitch them together. Three invocations, two of them with flags, one of them not Vite at all.
 
-That's fine when you control the command. It stops being fine the moment something else builds your project: a CI template, a hosted builder, anything that runs `vite build` and nothing else. All it gets is the first third, which is fifty pages with empty divs in them.
+That's fine when you control the command. It stops being fine the moment something else builds your project: a CI template, a hosted builder, anything that runs `vite build` and nothing else. All it gets is the first third, which is a folder of pages with empty divs in them.
 
 So it all had to move inside one `vite build`.
 
@@ -89,7 +89,7 @@ One small thing I got right by accident: it takes the SSR entry's filename from 
 
 Then the build succeeded on CodePen and every page was white.
 
-Not a rendering failure. *No bundle at all*. The output had fifty HTML files, a copied-through source tree, and no `assets/` directory. The HTML was byte-for-byte the shell, so what reached the browser was:
+Not a rendering failure. *No bundle at all*. The output had every HTML file, a copied-through source tree, and no `assets/` directory. The HTML was byte-for-byte the shell, so what reached the browser was:
 
 ```js
 import { StrictMode } from 'react';   // bare specifier, nothing to resolve it
@@ -115,7 +115,7 @@ But the real lesson was about the *shape* of the failure, not the fix. So I star
 
 | | before | after |
 | --- | --- | --- |
-| HTML files | 50, unprocessed | 50, bundled |
+| HTML files | all, unprocessed | all, bundled |
 | hashed assets | 0 | 3 |
 | a page three levels deep | white | renders |
 
@@ -161,7 +161,7 @@ The fix is to stop making prerendering contingent on the host's choice of build 
 
 `usingBuilder` is set at the top of `buildApp`, which runs before any environment is built, so when the good path is in play the fallback sees the flag and stands down. No double render.
 
-Two details worth getting right. The nested SSR build runs with `configFile: false` and an explicit plugin list, because re-entering this config would re-read all the content and rewrite fifty entry files in the middle of a build that was already consuming them. And the output directory comes from the resolved config rather than the constant at the top of the file, because a host that merges its own build options in may well have moved it. CodePen renames the hashed assets, so assuming it left everything else alone seemed unwise.
+Two details worth getting right. The nested SSR build runs with `configFile: false` and an explicit plugin list, because re-entering this config would re-read all the content and rewrite every entry file in the middle of a build that was already consuming them. And the output directory comes from the resolved config rather than the constant at the top of the file, because a host that merges its own build options in may well have moved it. CodePen renames the hashed assets, so assuming it left everything else alone seemed unwise.
 
 The result, with `builder` and `environments` both stripped out:
 
@@ -193,7 +193,7 @@ const entry = path.join(dir, 'server.node.js');
 
 <MarginaliaPin text="A dead end that eliminates a hypothesis is worth more than a fix you can't explain." rotate="2" />
 
-One wrong turn on the way, worth recording. `react-dom/server.browser` is also unconditional, and I tried it first. It renders all fifty-one pages, prints the summary, and then never exits. Its scheduler drives work through a `MessageChannel`, which in Node is an open handle that nothing closes. The markup is byte-for-byte identical; the process simply doesn't come back. A hang is a worse failure than a crash, because nothing tells you it happened.
+One wrong turn on the way, worth recording. `react-dom/server.browser` is also unconditional, and I tried it first. It renders every page, prints the summary, and then never exits. Its scheduler drives work through a `MessageChannel`, which in Node is an open handle that nothing closes. The markup is byte-for-byte identical; the process simply doesn't come back. A hang is a worse failure than a crash, because nothing tells you it happened.
 
 Fixing that one bought exactly one error's worth of progress. Next the host couldn't resolve `react` either, from a file that had imported it perfectly happily for months. Which finally made the shape of it obvious: the nested build resolves *no* bare specifiers at all. It was never a quirk of one package. `configFile: false` means none of the host's resolver setup comes along, and the host supplies React to the client build through its own config rather than through a `node_modules` this build can see.
 

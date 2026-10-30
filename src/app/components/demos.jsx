@@ -29,7 +29,7 @@
 import { useId, useState } from 'react';
 
 import { relativeHref } from '../base.js';
-import { content } from '../content.js';
+import { content, contentFileCount, dataFileCount } from '../content.js';
 import { routesFor } from '../lib/content-model.js';
 
 /* ---------------------------------------------------------------- scaffold */
@@ -180,26 +180,33 @@ export function PathResolver() {
   );
 }
 
-/** BuildStepper: what exists on disk after each phase of one `vite build`. */
-const PHASES = [
+/**
+ * BuildStepper: what exists on disk after each phase of one `vite build`.
+ *
+ * The counts come from the real route list rather than being written into the
+ * prose, because they went stale almost immediately: the figure said fifty
+ * while the build emitted fifty-one, and it would drift again the next time a
+ * note was added. Same rule as the rest of this file.
+ */
+const phasesFor = (routeCount, fileCount) => [
   {
     label: 'Read',
-    body: 'readdirSync walks src/content. Twenty-three .mdx files and seven .json configs become one { path: module } map.',
-    tree: ['src/content/…  23 .mdx', '(nothing written yet)'],
+    body: `readdirSync walks src/content. ${fileCount} .mdx files and ${dataFileCount} .json configs become one { path: module } map.`,
+    tree: [`src/content/…  ${fileCount} .mdx`, '(nothing written yet)'],
   },
   {
     label: 'Derive',
     body: 'buildContent turns that map into collections; routesFor turns the collections into the list of pages the site publishes.',
-    tree: ['50 routes, in memory'],
+    tree: [`${routeCount} routes, in memory`],
   },
   {
     label: 'Write entries',
     body: 'One HTML shell per route, at the path it will be served from. Each carries its own data-route and data-base. Still empty inside.',
-    tree: ['index.html', 'about/index.html', 'notes/your-first-note/index.html', '…47 more'],
+    tree: ['index.html', 'about/index.html', 'notes/your-first-note/index.html', `…${Math.max(routeCount - 3, 0)} more`],
   },
   {
     label: 'Bundle',
-    body: 'Vite builds the SSR entry, then the client: all fifty shells plus the app and the CSS, hashed and rewritten to point at the real assets.',
+    body: 'Vite builds the SSR entry, then the client: every shell plus the app and the CSS, hashed and rewritten to point at the real assets.',
     tree: ['dist/index.html', 'dist/assets/main-[hash].js', 'dist/assets/main-[hash].css'],
   },
   {
@@ -212,6 +219,7 @@ const PHASES = [
 export function BuildStepper() {
   const [i, setI] = useState(0);
   const name = useId();
+  const PHASES = phasesFor(routesFor(content).length, contentFileCount);
   const phase = PHASES[i];
 
   return (
