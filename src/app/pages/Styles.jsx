@@ -12,7 +12,7 @@
 
 import specimen from '../../layouts/styles.html?raw';
 import { useBase } from '../base.js';
-import Html from '../components/Html.jsx';
+import Html from '../components/Html';
 
 export default function Styles() {
   // The one substitution the old template engine did for this page. The raw

@@ -13,8 +13,8 @@
 
 import { BaseContext } from './base.js';
 import { site, nav } from './content.js';
-import Link from './Link.jsx';
-import { pageFor } from './routes.jsx';
+import Link from './Link';
+import { pageFor } from './routes';
 
 /** The drawer menu: grouped sections, each with a label and a note. */
 function DrawerNav() {

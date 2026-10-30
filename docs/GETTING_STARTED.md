@@ -55,6 +55,26 @@ imported by the config, so they belong in `devDependencies`. Declared as
 all — which looks like "the markdown isn't compiling" because that's the first
 thing you notice.
 
+### Never write an explicit `.jsx` import
+
+Write `import App from './App'`, not `'./App.jsx'`.
+
+CodePen's babel block compiles every `.jsx` to `.js` before Vite runs, and
+doesn't rewrite the specifiers inside, so an explicit extension ends up pointing
+at a filename that no longer exists:
+
+```
+Could not resolve './App.jsx' in src/app/main.js
+```
+
+Extensionless resolves to `.jsx` here and `.js` there. A literal `.js`
+specifier is *not* the answer — Vite maps `.js` to `.ts`/`.tsx`, never `.jsx`,
+so it breaks the local build instead.
+
+The build refuses to run if one creeps back in, naming the file and line. That
+guard exists because this failure is invisible locally and only shows up after
+an upload.
+
 ### Why the bundler isn't declared at all
 
 `vite`, `@vitejs/plugin-react`, `react` and `react-dom` come from the Pen's

@@ -8,9 +8,9 @@
 
 import { content } from '../content.js';
 import { slugifyTag } from '../lib/content-model.js';
-import Link from '../Link.jsx';
-import FeedLink from '../components/FeedLink.jsx';
-import TagFilter from '../components/TagFilter.jsx';
+import Link from '../Link';
+import FeedLink from '../components/FeedLink';
+import TagFilter from '../components/TagFilter';
 
 const META = {
   essays: {

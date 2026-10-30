@@ -9,8 +9,8 @@
  */
 
 import { content, site } from '../content.js';
-import Link from '../Link.jsx';
-import Html from '../components/Html.jsx';
+import Link from '../Link';
+import Html from '../components/Html';
 
 /** Learning resources carry a machine `kind`; this is the pill label. */
 const LEARNING_KIND_LABEL = {

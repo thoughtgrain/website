@@ -246,7 +246,9 @@ export default defineConfig(() => {
       },
       ssr: {
         build: {
-          ssr: path.join(ROOT, 'src', 'app', 'entry-server.jsx'),
+          // Extensionless, like every other specifier here: a pipeline that
+          // compiles the JSX out leaves this as entry-server.js.
+          ssr: path.join(ROOT, 'src', 'app', 'entry-server'),
           outDir: SSR_DIR,
           emptyOutDir: true,
           copyPublicDir: false,
@@ -271,6 +273,48 @@ export default defineConfig(() => {
     },
 
     plugins: [
+      /**
+       * Refuse to build if any import names a `.jsx` file explicitly.
+       *
+       * This exists because the failure is invisible here and fatal there.
+       * CodePen's babel block compiles every .jsx to .js before Vite runs, but
+       * doesn't rewrite the specifiers inside, so `import App from './App.jsx'`
+       * ends up pointing at a file that no longer has that name:
+       *
+       *   Could not resolve './App.jsx' in src/app/main.js
+       *
+       * Extensionless is the portable form — resolve.extensions finds .jsx
+       * here and .js there. A literal `.js` specifier is not an option: Vite
+       * maps .js to .ts/.tsx, never .jsx, so it breaks the local build instead.
+       */
+      {
+        name: 'no-explicit-jsx-specifiers',
+        apply: 'build',
+        buildStart() {
+          const offenders = [];
+          const walk = (dir) => {
+            readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+              const abs = path.join(dir, e.name);
+              if (e.isDirectory()) return walk(abs);
+              if (!/\.(jsx?|mjs)$/.test(e.name)) return;
+              readFileSync(abs, 'utf8').split('\n').forEach((line, i) => {
+                if (/(?:from|import)\s+['"][^'"]+\.jsx['"]/.test(line)) {
+                  offenders.push(`${path.relative(ROOT, abs)}:${i + 1}`);
+                }
+              });
+            });
+          };
+          walk(path.join(ROOT, 'src', 'app'));
+          if (offenders.length) {
+            throw new Error(
+              `explicit .jsx import specifier in:\n  ${offenders.join('\n  ')}\n`
+              + 'Drop the extension — it resolves to .jsx locally and .js wherever '
+              + 'the JSX has already been compiled out.',
+            );
+          }
+        },
+      },
+
       /**
        * Content is real MDX, compiled on the way through.
        *

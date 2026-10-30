@@ -12,17 +12,17 @@
  * matched before /essays/:slug/.
  */
 
-import Home from './pages/Home.jsx';
-import Notes from './pages/Notes.jsx';
-import Note from './pages/Note.jsx';
-import Writing from './pages/Writing.jsx';
-import Article from './pages/Article.jsx';
-import Projects from './pages/Projects.jsx';
-import Project from './pages/Project.jsx';
-import Styles from './pages/Styles.jsx';
-import { Now, About, Learning, Gear, Colophon } from './pages/Flat.jsx';
-import { KindIndex, KindReader, Enjoying } from './pages/Enjoying.jsx';
-import { ProductsIndex, Product } from './pages/Products.jsx';
+import Home from './pages/Home';
+import Notes from './pages/Notes';
+import Note from './pages/Note';
+import Writing from './pages/Writing';
+import Article from './pages/Article';
+import Projects from './pages/Projects';
+import Project from './pages/Project';
+import Styles from './pages/Styles';
+import { Now, About, Learning, Gear, Colophon } from './pages/Flat';
+import { KindIndex, KindReader, Enjoying } from './pages/Enjoying';
+import { ProductsIndex, Product } from './pages/Products';
 
 const KINDS = 'reading|music|movies|podcasts|bookshelf';
 

@@ -11,8 +11,8 @@
  */
 
 import { content } from '../content.js';
-import Link from '../Link.jsx';
-import { mdxComponents } from '../components/mdx.jsx';
+import Link from '../Link';
+import { mdxComponents } from '../components/mdx';
 
 const RELATED_COUNT = 2;
 

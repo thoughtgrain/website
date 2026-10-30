@@ -7,8 +7,8 @@
  * can still carry a sentence of context.
  */
 
-import Link from '../Link.jsx';
-import Html from './Html.jsx';
+import Link from '../Link';
+import Html from './Html';
 
 export function NoteItem({ note }) {
   const alt = note.imageAlt || note.caption || note.title || '';

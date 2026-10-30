@@ -21,7 +21,7 @@ import '../css/tokens.css';
 import '../css/kit.css';
 import '../css/site.css';
 
-import App from './App.jsx';
+import App from './App';
 
 const rootEl = document.getElementById('root');
 const route = rootEl.dataset.route || '/';

@@ -7,9 +7,9 @@
  */
 
 import { content, site } from '../content.js';
-import Link from '../Link.jsx';
-import FeedLink from '../components/FeedLink.jsx';
-import { NoteItem } from '../components/NoteList.jsx';
+import Link from '../Link';
+import FeedLink from '../components/FeedLink';
+import { NoteItem } from '../components/NoteList';
 
 const RECENT_NOTES = 4;
 

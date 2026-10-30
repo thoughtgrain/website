@@ -12,7 +12,7 @@
  */
 
 import { renderToString } from 'react-dom/server';
-import App from './App.jsx';
+import App from './App';
 
 export function render(route, base) {
   return renderToString(<App route={route} base={base} />);

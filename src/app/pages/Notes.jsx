@@ -3,8 +3,8 @@
  */
 
 import { content } from '../content.js';
-import FeedLink from '../components/FeedLink.jsx';
-import NoteList from '../components/NoteList.jsx';
+import FeedLink from '../components/FeedLink';
+import NoteList from '../components/NoteList';
 
 export default function Notes() {
   return (

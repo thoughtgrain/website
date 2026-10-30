@@ -10,9 +10,9 @@
  */
 
 import { content } from '../content.js';
-import Link from '../Link.jsx';
-import { mdxComponents } from '../components/mdx.jsx';
-import FeedLink from '../components/FeedLink.jsx';
+import Link from '../Link';
+import { mdxComponents } from '../components/mdx';
+import FeedLink from '../components/FeedLink';
 
 /** Any product image committed under src/assets/products/, by slug. */
 const images = import.meta.glob('../../assets/products/*.{jpg,jpeg,png,webp,avif,gif}', {

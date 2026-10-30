@@ -15,9 +15,9 @@
 
 import { content } from '../content.js';
 import { ENJOYING_PER_PAGE } from '../lib/content-model.js';
-import Link from '../Link.jsx';
-import { mdxComponents } from '../components/mdx.jsx';
-import FeedLink from '../components/FeedLink.jsx';
+import Link from '../Link';
+import { mdxComponents } from '../components/mdx';
+import FeedLink from '../components/FeedLink';
 
 const META = {
   reading: {

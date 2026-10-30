@@ -10,8 +10,8 @@
 
 import { content } from '../content.js';
 import { MAKING_CATEGORIES } from '../lib/content-model.js';
-import Link from '../Link.jsx';
-import FeedLink from '../components/FeedLink.jsx';
+import Link from '../Link';
+import FeedLink from '../components/FeedLink';
 
 /** Lifecycle buckets, in display order. */
 const GROUPS = [
