@@ -448,15 +448,12 @@ let usingBuilder = false;
  * machine I can't reach, and the list of what was tried is the whole
  * diagnosis.
  */
-function findReactServerEntry() {
-  const require = createRequire(import.meta.url);
-  const attempts = [];
-
+function findReactServerEntry(require, attempts) {
   for (const spec of ['react-dom/server.node', 'react-dom/server']) {
     try {
       const found = require.resolve(spec);
       attempts.push(`resolved ${spec}`);
-      return { entry: found, attempts };
+      return found;
     } catch (err) {
       attempts.push(`could not resolve ${spec} (${err.code || 'failed'})`);
     }
@@ -469,7 +466,7 @@ function findReactServerEntry() {
       const candidate = path.join(dir, file);
       if (existsSync(candidate)) {
         attempts.push(`using ${file} directly`);
-        return { entry: candidate, attempts };
+        return candidate;
       }
     }
     attempts.push(`no server entry file in ${dir}`);
@@ -477,18 +474,78 @@ function findReactServerEntry() {
     attempts.push(`could not locate react-dom at all (${err.code || 'failed'})`);
   }
 
-  return { entry: null, attempts };
+  return null;
+}
+
+/**
+ * Pin every bare import the SSR graph needs to an absolute path.
+ *
+ * Aliasing the server renderer got past the first error and straight into the
+ * second: `react` itself doesn't resolve in this build either. Which makes the
+ * shape of the problem clear. It was never about one awkward subpath. This
+ * build resolves no bare specifiers at all, because `configFile: false` means
+ * it has none of the host's resolver setup and the host is evidently supplying
+ * React to the client build through its own config rather than through a
+ * node_modules the nested build can see.
+ *
+ * Node can find these packages from here, which the server renderer proved by
+ * resolving on the first attempt. So resolve them all the same way and hand
+ * the bundler absolute paths, leaving it nothing to look up.
+ *
+ * Anchored regexes, not bare strings: a string alias of `react` also matches
+ * `react/jsx-runtime` as a prefix and would rewrite it to
+ * `/path/to/react/index.js/jsx-runtime`. Each specifier is pinned exactly, so
+ * the JSX runtime gets its own entry.
+ */
+const SSR_BARE_IMPORTS = [
+  'react',
+  'react/jsx-runtime',
+  'react/jsx-dev-runtime',
+  'react-dom',
+  'react-dom/client',
+];
+
+function ssrAliases() {
+  const require = createRequire(import.meta.url);
+  const attempts = [];
+  const alias = [];
+
+  const server = findReactServerEntry(require, attempts);
+  if (server) {
+    alias.push({
+      find: /^react-dom\/server(\.node|\.browser|\.edge)?$/,
+      replacement: server,
+    });
+  }
+
+  const missing = [];
+  for (const spec of SSR_BARE_IMPORTS) {
+    try {
+      alias.push({
+        find: new RegExp(`^${spec.replace(/[/\\^$*+?.()|[\]{}]/g, '\\$&')}$`),
+        replacement: require.resolve(spec),
+      });
+    } catch (err) {
+      // jsx-dev-runtime is absent from some builds and never reached in a
+      // production bundle, so it is not worth failing over.
+      if (!spec.endsWith('jsx-dev-runtime')) missing.push(spec);
+      attempts.push(`could not resolve ${spec} (${err.code || 'failed'})`);
+    }
+  }
+
+  attempts.push(`pinned ${alias.length} specifiers to absolute paths`);
+  return { alias, attempts, missing: server ? missing : ['react-dom/server', ...missing] };
 }
 
 async function buildSsrAndPrerender(routes, outDir) {
   const { build } = await import('vite');
 
-  const { entry: reactServer, attempts } = findReactServerEntry();
-  attempts.forEach((a) => note(`  react-dom: ${a}`));
-  if (!reactServer) {
+  const { alias, attempts, missing } = ssrAliases();
+  attempts.forEach((a) => note(`  resolve: ${a}`));
+  if (missing.length) {
     throw new Error(
-      'react-dom\'s server renderer is not reachable from this build, so the '
-      + 'pages cannot be prerendered here.',
+      `these packages are not reachable from the build config (${missing.join(', ')}), `
+      + 'so the pages cannot be prerendered here.',
     );
   }
 
@@ -510,14 +567,14 @@ async function buildSsrAndPrerender(routes, outDir) {
     // which is what CodePen's build produced. See entry-server.jsx, which also
     // avoids the conditional subpath entirely.
     //
-    // The alias is the part that actually matters on CodePen. Both server
-    // specifiers fail to resolve there, so both are pinned to the absolute
-    // path found above and the resolver is taken out of the question.
+    // The aliases are the part that actually matters on CodePen, where this
+    // build resolves no bare specifiers at all. Every one the SSR graph needs
+    // is pinned to an absolute path above, which takes the resolver out of the
+    // question entirely rather than trying to configure it correctly for a
+    // machine I can't inspect.
     resolve: {
       conditions: ['node', 'import', 'module', 'default'],
-      alias: [
-        { find: /^react-dom\/server(\.node|\.browser|\.edge)?$/, replacement: reactServer },
-      ],
+      alias,
     },
     ssr: { target: 'node' },
 
