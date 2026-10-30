@@ -221,13 +221,13 @@ function generateEntries(routes, site) {
  * out, since Vite names it `.js` or `.mjs` depending on the nearest
  * package.json.
  */
-async function prerender(routes, entryFile) {
+async function prerender(routes, entryFile, outDir = OUT_DIR) {
   const { render } = await import(path.join(ROOT, SSR_DIR, entryFile));
   let done = 0;
 
   for (const route of routes) {
     const segments = segmentsFor(route);
-    const file = path.join(OUT_DIR, ...segments, 'index.html');
+    const file = path.join(outDir, ...segments, 'index.html');
 
     const shell = readFileSync(file, 'utf8');
     const html = render(route, baseFor(segments));
@@ -265,6 +265,143 @@ function prepare() {
 
   prepared = { content, routes, input };
   return prepared;
+}
+
+/**
+ * The plugins that turn this source tree into something runnable.
+ *
+ * A factory rather than an inline array because two builds need them: the main
+ * one declared below, and the fallback SSR build further down, which runs with
+ * `configFile: false` and so gets nothing it isn't handed directly.
+ */
+function contentPlugins() {
+  return [
+    /**
+     * Refuse to build if any import names a `.jsx` file explicitly.
+     *
+     * This exists because the failure is invisible here and fatal there.
+     * CodePen's babel block compiles every .jsx to .js before Vite runs, but
+     * doesn't rewrite the specifiers inside, so `import App from './App.jsx'`
+     * ends up pointing at a file that no longer has that name:
+     *
+     *   Could not resolve './App.jsx' in src/app/main.js
+     *
+     * Extensionless is the portable form: resolve.extensions finds .jsx here
+     * and .js there. A literal `.js` specifier is not an option, since Vite
+     * maps .js to .ts/.tsx, never .jsx, so it breaks the local build instead.
+     */
+    {
+      name: 'no-explicit-jsx-specifiers',
+      apply: 'build',
+      buildStart() {
+        const offenders = [];
+        const walk = (dir) => {
+          readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+            const abs = path.join(dir, e.name);
+            if (e.isDirectory()) return walk(abs);
+            if (!/\.(jsx?|mjs)$/.test(e.name)) return;
+            readFileSync(abs, 'utf8').split('\n').forEach((line, i) => {
+              if (/(?:from|import)\s+['"][^'"]+\.jsx['"]/.test(line)) {
+                offenders.push(`${path.relative(ROOT, abs)}:${i + 1}`);
+              }
+            });
+          });
+        };
+        walk(path.join(ROOT, 'src', 'app'));
+        if (offenders.length) {
+          throw new Error(
+            `explicit .jsx import specifier in:\n  ${offenders.join('\n  ')}\n`
+            + 'Drop the extension, which resolves to .jsx locally and .js wherever '
+            + 'the JSX has already been compiled out.',
+          );
+        }
+      },
+    },
+
+    /**
+     * Content is real MDX, compiled on the way through.
+     *
+     * This is @mdx-js/mdx directly rather than @mdx-js/rollup, which is a thin
+     * wrapper over it. The wrapper declares a non-optional `rollup`
+     * peerDependency, npm installs it, and `rollup` is one of only two packages
+     * in the tree that pull `fsevents`, which Yarn Berry rewrites to a `patch:`
+     * source, which CodePen rejects because it can't become an esm.sh URL.
+     * Dropping the wrapper drops that whole chain. Same compiler, same remark
+     * plugins, same output.
+     *
+     * Both remark plugins are required, not optional: without them the
+     * frontmatter block isn't metadata at all. MDX reads `---` as a thematic
+     * break and the slug, title and toc render as visible body text.
+     *
+     * `enforce: 'pre'` so this runs before the React plugin, which needs JSX
+     * rather than MDX.
+     */
+    {
+      name: 'site-mdx',
+      enforce: 'pre',
+      async transform(code, id) {
+        if (!id.endsWith('.mdx')) return null;
+        const compiled = await compileMdx(
+          { value: code, path: id },
+          {
+            remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter],
+            // Heading ids, which the `toc:` frontmatter links to. The old
+            // markdown parser slugified them; MDX doesn't, and nothing
+            // replaced it, so every in-page anchor on the site pointed at an
+            // id that was never emitted.
+            rehypePlugins: [rehypeHeadingIds],
+          },
+        );
+        return { code: String(compiled), map: null };
+      },
+    },
+    react(),
+  ];
+}
+
+/**
+ * True once `builder.buildApp` has taken charge of sequencing the build.
+ *
+ * Set at the top of buildApp, which runs before any environment is built, so
+ * the fallback below can tell whether it's needed before it fires.
+ */
+let usingBuilder = false;
+
+/**
+ * Build the SSR bundle and prerender, without the Environment API.
+ *
+ * `buildApp` is the good path and does this itself. But a host can drive Vite
+ * through its legacy build path instead, and then `buildApp` is never called:
+ * the client environment gets built, nothing else does, and the prerender pass
+ * that puts the words into the HTML silently doesn't happen. CodePen does
+ * exactly this, which is how the deployed site ended up as fifty correctly
+ * bundled pages containing an empty div.
+ *
+ * So this is the same three steps, reachable from a plain plugin hook. The
+ * nested build is deliberately `configFile: false`: re-entering this config
+ * would re-read the content, rewrite all fifty entries mid-build, and bring
+ * the fallback plugin along with it. Handing it `contentPlugins()` gives it
+ * exactly what it needs to compile the app and nothing that can recurse.
+ */
+async function buildSsrAndPrerender(routes, outDir) {
+  const { build } = await import('vite');
+
+  const result = await build({
+    configFile: false,
+    root: ROOT,
+    logLevel: 'warn',
+    plugins: contentPlugins(),
+    build: {
+      ssr: path.join(ROOT, 'src', 'app', 'entry-server'),
+      outDir: SSR_DIR,
+      emptyOutDir: true,
+      copyPublicDir: false,
+      target: 'esnext',
+    },
+  });
+
+  const entry = [result].flat()[0].output.find((c) => c.isEntry);
+  await prerender(routes, entry.fileName, outDir);
 }
 
 export default defineConfig(() => {
@@ -324,6 +461,11 @@ export default defineConfig(() => {
       // and the entries aren't deleted and rewritten three times a build.
       sharedConfigBuild: true,
       async buildApp(builder) {
+        // Tells the fallback plugin to stand down. buildApp runs before any
+        // environment is built, so this is set well before the client
+        // environment's closeBundle fires.
+        usingBuilder = true;
+
         const ssr = await builder.build(builder.environments.ssr);
         const entry = [ssr].flat()[0].output.find((c) => c.isEntry);
         await builder.build(builder.environments.client);
@@ -332,86 +474,45 @@ export default defineConfig(() => {
     },
 
     plugins: [
+      ...contentPlugins(),
+
       /**
-       * Refuse to build if any import names a `.jsx` file explicitly.
+       * Prerender even when the host never calls `buildApp`.
        *
-       * This exists because the failure is invisible here and fatal there.
-       * CodePen's babel block compiles every .jsx to .js before Vite runs, but
-       * doesn't rewrite the specifiers inside, so `import App from './App.jsx'`
-       * ends up pointing at a file that no longer has that name:
+       * The `builder` key below is the good path: it builds SSR, then client,
+       * then prerenders, in that order. But a host is free to drive Vite
+       * through its legacy build path instead, and then buildApp is simply
+       * never invoked. The client environment gets built, nothing else does,
+       * and the pass that puts the words into the HTML quietly doesn't run.
        *
-       *   Could not resolve './App.jsx' in src/app/main.js
+       * CodePen does this. The deployed site was fifty correctly bundled pages
+       * whose every `#root` was empty: 1,261 bytes where a prerendered page is
+       * 8,924. It looked like success in a browser, because React filled them
+       * in on load, and like nothing at all to a crawler, a link preview or
+       * anyone with JavaScript off.
        *
-       * Extensionless is the portable form — resolve.extensions finds .jsx
-       * here and .js there. A literal `.js` specifier is not an option: Vite
-       * maps .js to .ts/.tsx, never .jsx, so it breaks the local build instead.
+       * `closeBundle` is late enough to be safe. The HTML is on disk by then,
+       * with the asset links Vite injected, which is the version prerendering
+       * has to modify.
+       *
+       * The outDir comes from the resolved config rather than the constant,
+       * because a host that merges its own build options in may well have
+       * changed it.
        */
       {
-        name: 'no-explicit-jsx-specifiers',
+        name: 'prerender-fallback',
         apply: 'build',
-        buildStart() {
-          const offenders = [];
-          const walk = (dir) => {
-            readdirSync(dir, { withFileTypes: true }).forEach((e) => {
-              const abs = path.join(dir, e.name);
-              if (e.isDirectory()) return walk(abs);
-              if (!/\.(jsx?|mjs)$/.test(e.name)) return;
-              readFileSync(abs, 'utf8').split('\n').forEach((line, i) => {
-                if (/(?:from|import)\s+['"][^'"]+\.jsx['"]/.test(line)) {
-                  offenders.push(`${path.relative(ROOT, abs)}:${i + 1}`);
-                }
-              });
-            });
-          };
-          walk(path.join(ROOT, 'src', 'app'));
-          if (offenders.length) {
-            throw new Error(
-              `explicit .jsx import specifier in:\n  ${offenders.join('\n  ')}\n`
-              + 'Drop the extension — it resolves to .jsx locally and .js wherever '
-              + 'the JSX has already been compiled out.',
-            );
-          }
+        applyToEnvironment: (env) => env.name !== 'ssr',
+        async closeBundle() {
+          if (usingBuilder) return;
+          const configured = this.environment?.config?.build?.outDir;
+          await buildSsrAndPrerender(
+            routes,
+            configured ? path.resolve(ROOT, configured) : OUT_DIR,
+          );
         },
       },
 
-      /**
-       * Content is real MDX, compiled on the way through.
-       *
-       * This is @mdx-js/mdx directly rather than @mdx-js/rollup, which is a
-       * thin wrapper over it. The wrapper declares a non-optional `rollup`
-       * peerDependency, npm installs it, and `rollup` is one of only two
-       * packages in the tree that pull `fsevents` — which Yarn Berry rewrites
-       * to a `patch:` source, which CodePen rejects because it can't become an
-       * esm.sh URL. Dropping the wrapper drops that whole chain. Same compiler,
-       * same remark plugins, same output.
-       *
-       * Both remark plugins are required, not optional: without them the
-       * frontmatter block isn't metadata at all — MDX reads `---` as a thematic
-       * break and the slug, title and toc render as visible body text.
-       *
-       * `enforce: 'pre'` so this runs before the React plugin, which needs JSX
-       * rather than MDX.
-       */
-      {
-        name: 'site-mdx',
-        enforce: 'pre',
-        async transform(code, id) {
-          if (!id.endsWith('.mdx')) return null;
-          const compiled = await compileMdx(
-            { value: code, path: id },
-            {
-              remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter],
-              // Heading ids, which the `toc:` frontmatter links to. The old
-              // markdown parser slugified them; MDX doesn't, and nothing
-              // replaced it — so every in-page anchor on the site pointed at
-              // an id that was never emitted.
-              rehypePlugins: [rehypeHeadingIds],
-            },
-          );
-          return { code: String(compiled), map: null };
-        },
-      },
-      react(),
 
       /**
        * The feeds: eleven sections, each as Atom and as JSON Feed. They need
