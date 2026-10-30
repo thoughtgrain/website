@@ -66,7 +66,6 @@ website/
     css/                       tokens.css, kit.css, site.css
     js/                        progressive enhancers
     assets/                    product images
-    feed.xsl                   stylesheet every feed points at
     layouts/                   the OLD templates — reference only, except
                                styles.html, which /styles/ still renders
 
@@ -130,8 +129,14 @@ static — fifty files you can drop on any host, with no rewrite rules.
 
 ### 3.4 The feeds
 
-A Vite plugin emits the eleven Atom feeds and `feed.xsl` at build time, from
-the same content model the pages render.
+A Vite plugin emits twenty-two feeds at build time from the same content model
+the pages render: each of the eleven sections as Atom (`feed.xml`) and as JSON
+Feed 1.1 (`feed.json`).
+
+Both serialisers share `orderEntries`, so the two formats can't drift into
+listing different items or a different order. There is no XSL stylesheet —
+CodePen won't host `.xsl`, and the one this used to ship had been pointing at a
+stylesheet path that no longer existed since the Vite migration.
 
 That's why `node-loader.js` exists. The browser fills the content map with
 `import.meta.glob`; the build fills the same shape with `readdirSync`, because

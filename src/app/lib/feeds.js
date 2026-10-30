@@ -76,18 +76,27 @@ function entryFromItem(siteUrl, item, sectionPath) {
   };
 }
 
-/** Serialise one Atom document. */
-function renderAtom(site, siteUrl, meta, entries) {
-  const ordered = entries.slice()
+/**
+ * Newest first, capped.
+ *
+ * Shared by both serialisers rather than done inside each. They describe the
+ * same feed in two formats, so a reader comparing them must see the same items
+ * in the same order — duplicating the sort is how that quietly stops being
+ * true.
+ */
+function orderEntries(entries) {
+  return entries.slice()
     .sort((a, b) => b.updated.localeCompare(a.updated))
     .slice(0, MAX_ENTRIES);
+}
 
-  const feedUrl = siteUrl + meta.path + 'feed.xml';
+/** Serialise one Atom document. */
+function renderAtom(site, siteUrl, meta, entries) {
+  const ordered = orderEntries(entries);
+
+  const feedUrl = `${siteUrl + meta.path}feed.xml`;
   const lines = [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    // Root-relative: browsers only apply an XSL stylesheet same-origin with the
-    // XML, so an absolute URL built off siteUrl breaks on any other host.
-    '<?xml-stylesheet type="text/xsl" href="/feed.xsl"?>',
     '<feed xmlns="http://www.w3.org/2005/Atom">',
     `  <title>${escapeXml(meta.title)}</title>`,
     `  <subtitle>${escapeXml(meta.subtitle || '')}</subtitle>`,
@@ -116,6 +125,40 @@ function renderAtom(site, siteUrl, meta, entries) {
 }
 
 /**
+ * Serialise one JSON Feed 1.1 document.
+ *
+ * https://jsonfeed.org/version/1.1
+ *
+ * This exists because the Atom feeds used to ship with an XSL stylesheet that
+ * rendered them as a readable page, and CodePen won't host `.xsl` at all. JSON
+ * isn't a stylesheet and doesn't replace what that did — it's a second feed
+ * format, served as a plain file, which is the part that matters.
+ *
+ * `summary` is dropped rather than emitted empty: the spec treats absent and
+ * empty differently, and a reader showing a blank line under every title is
+ * worse than showing none.
+ */
+function renderJsonFeed(site, siteUrl, meta, entries) {
+  const feed = {
+    version: 'https://jsonfeed.org/version/1.1',
+    title: meta.title,
+    description: meta.subtitle || '',
+    home_page_url: siteUrl + meta.path,
+    feed_url: `${siteUrl + meta.path}feed.json`,
+    authors: [{ name: site.ownerName }],
+    items: orderEntries(entries).map((e) => ({
+      id: e.id,
+      url: e.link,
+      title: e.title,
+      ...(e.summary ? { summary: e.summary } : {}),
+      date_published: e.updated,
+    })),
+  };
+
+  return `${JSON.stringify(feed, null, 2)}\n`;
+}
+
+/**
  * Every feed the site publishes.
  *
  * @param {object} content From buildContent().
@@ -133,22 +176,19 @@ export function renderFeeds(content) {
   }));
 
   bundles.forEach(({ section, entries }) => {
-    out.push({
-      fileName: `${section.dir}/feed.xml`,
-      source: renderAtom(site, siteUrl, {
-        path: `/${section.dir}/`,
-        title: `${site.title}, ${section.title}`,
-        subtitle: section.subtitle,
-      }, entries),
-    });
+    const meta = {
+      path: `/${section.dir}/`,
+      title: `${site.title}, ${section.title}`,
+      subtitle: section.subtitle,
+    };
+    out.push({ fileName: `${section.dir}/feed.xml`, source: renderAtom(site, siteUrl, meta, entries) });
+    out.push({ fileName: `${section.dir}/feed.json`, source: renderJsonFeed(site, siteUrl, meta, entries) });
   });
 
-  out.push({
-    fileName: 'feed.xml',
-    source: renderAtom(site, siteUrl, {
-      path: '/', title: site.title, subtitle: site.description,
-    }, bundles.flatMap((b) => b.entries)),
-  });
+  const allMeta = { path: '/', title: site.title, subtitle: site.description };
+  const all = bundles.flatMap((b) => b.entries);
+  out.push({ fileName: 'feed.xml', source: renderAtom(site, siteUrl, allMeta, all) });
+  out.push({ fileName: 'feed.json', source: renderJsonFeed(site, siteUrl, allMeta, all) });
 
   return out;
 }

@@ -2315,8 +2315,16 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
 .projects-group__count { color: var(--fg-faint); font-family: var(--font-mono); }
 
 /* =========================================================================
-   RSS / Atom feed XSL preview (rendered by /feed.xsl when the user opens
-   a feed URL in a browser).
+   RSS / Atom feed preview.
+
+   DEAD as of the JSON Feed change: these styled /feed.xsl, which rendered the
+   Atom XML as a readable page when a feed URL was opened in a browser. CodePen
+   won't host .xsl files, so the stylesheet is gone and nothing emits these
+   class names any more.
+
+   Kept rather than deleted because reinstating a feed preview — as an HTML page
+   rather than XSLT — is a reasonable thing to want, and this is the design for
+   it. Delete the block if that's not on the cards.
    ========================================================================= */
 
 .feed-banner {

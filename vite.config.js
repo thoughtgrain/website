@@ -144,6 +144,7 @@ function generateEntries(routes, site) {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="alternate" type="application/atom+xml" title="${escapeHtml(site.title || '')}, all updates" href="${base}feed.xml" />
+    <link rel="alternate" type="application/feed+json" title="${escapeHtml(site.title || '')}, all updates" href="${base}feed.json" />
   </head>
   <body>
     <div id="root" data-route="${route}" data-base="${base}"></div>
@@ -297,12 +298,12 @@ export default defineConfig(() => {
       react(),
 
       /**
-       * The eleven Atom feeds plus the stylesheet they point at. They need real
-       * files at real URLs, which no amount of client rendering provides.
+       * The feeds: eleven sections, each as Atom and as JSON Feed. They need
+       * real files at real URLs, which no amount of client rendering provides.
        *
        * Scoped to the client: with the Environment API a plugin runs in every
        * environment by default, which had the SSR pass emitting its own useless
-       * copy of all twelve into .ssr/.
+       * copy of all of them into .ssr/.
        */
       {
         name: 'site-feeds',
@@ -311,11 +312,6 @@ export default defineConfig(() => {
         generateBundle() {
           renderFeeds(content).forEach(({ fileName, source }) => {
             this.emitFile({ type: 'asset', fileName, source });
-          });
-          this.emitFile({
-            type: 'asset',
-            fileName: 'feed.xsl',
-            source: readFileSync(path.join(ROOT, 'src', 'feed.xsl'), 'utf8'),
           });
         },
       },

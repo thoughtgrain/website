@@ -282,13 +282,21 @@ Every section gets its own Atom feed, and the global feed combines them:
 | `/products/feed.xml` | Products |
 | `/reading/feed.xml`, `/music/feed.xml`, `/movies/feed.xml`, `/podcasts/feed.xml`, `/bookshelf/feed.xml` | Each cultural kind |
 
-All feeds reference `/feed.xsl` via an `<?xml-stylesheet?>` processing
-instruction, so opening a feed URL in a browser renders a friendly preview
-(title + description + entry list with summaries) instead of raw XML.
+Each of those is published **twice** — as Atom (`feed.xml`) and as
+[JSON Feed 1.1](https://jsonfeed.org/version/1.1) (`feed.json`) — so twenty-two
+files in all. Same entries, same order, same ids; one source serialised two
+ways.
 
-The `<head>` of every page links the global feed via
-`<link rel="alternate" type="application/atom+xml">` for feed-reader
-discovery. The footer RSS link points at the same.
+There is no XSL stylesheet. There used to be: `/feed.xsl` turned the Atom XML
+into a readable page when you opened a feed URL in a browser. CodePen won't host
+`.xsl` files at all, and the stylesheet had been quietly broken since the Vite
+migration anyway — it linked `/css/style.css`, a path that stopped existing when
+the old generator was replaced. JSON Feed isn't a replacement for it (JSON isn't
+a stylesheet); it's a second feed format that a static host will actually serve.
+
+The `<head>` of every page links both global feeds via
+`<link rel="alternate">` for feed-reader discovery. The footer RSS link points
+at the Atom one.
 
 The base URL the feed uses for absolute `<link>` and `<id>` values comes
 from `siteUrl` in `site.json`. Set this to your real domain before
