@@ -623,7 +623,7 @@ body::after {
 .now-footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--rule); }
 
 /* ============ READER ============ */
-.reader { max-width: 640px; margin: 0 auto; padding: 56px 24px 80px; }
+.reader { max-width: var(--container); margin: 0 auto; padding: 56px var(--gutter) 80px; }
 .reader__back { margin-bottom: 18px; display: inline-flex; align-items: center; gap: 4px; text-decoration: none; white-space: nowrap; }
 .reader__back:hover .reader__back-label { text-decoration: underline; text-decoration-color: currentColor; }
 .btn--link .ph { text-decoration: none; display: inline-block; }
@@ -644,7 +644,8 @@ body::after {
   font-family: var(--font-serif);
 }
 .reader__meta { display: flex; gap: 14px; margin-bottom: 40px; flex-wrap: wrap; }
-.reader p { font-size: 18px; line-height: 1.68; max-width: none; }
+.reader p,
+.reader li { font-size: 18px; line-height: 1.68; max-width: var(--measure-wide); }
 .reader h2 { font-family: var(--font-display); font-size: 28px; margin-top: 48px; margin-bottom: 16px; color: var(--ink-800); }
 [data-theme="dark"] .reader h2 { color: var(--fg); }
 .reader ul { max-width: 60ch; padding-left: 1.2em; }
@@ -841,14 +842,18 @@ body::after {
 }
 
 /* ============ TOC with-reader tweaks ============ */
-.reader-with-toc { display: grid; grid-template-columns: 1fr min(640px, 100%) 1fr; gap: 0; padding: 56px 24px 80px; }
-.reader-with-toc .reader { margin: 0; padding: 0; grid-column: 2; max-width: 640px; }
-.reader-with-toc .toc { grid-column: 3; padding-left: 40px; position: sticky; top: 96px; align-self: start; max-width: 240px; }
+.reader-with-toc { display: grid; grid-template-columns: 1fr min(var(--container), 100%) 1fr; gap: 0; padding: 56px var(--gutter) 80px; }
+.reader-with-toc .reader { margin: 0; padding: 0; grid-column: 2; max-width: var(--container); }
+/* The side column has to fit the gutter the frame leaves, or the grid
+   steals width from the middle and the article text stops lining up with
+   every other page. At the widest layout that gutter is 256px, so the table
+   of contents is sized to sit inside it. */
+.reader-with-toc .toc { grid-column: 3; padding-left: 24px; position: sticky; top: 96px; align-self: start; max-width: 200px; min-width: 0; }
 @media (max-width: 1099px) { .reader-with-toc .toc { display: none; } }
 .reader h2[id] { scroll-margin-top: 100px; }
 
 /* ============ NOTE READER ============ */
-.note-reader { max-width: 640px; padding-top: 72px; padding-bottom: 96px; }
+.note-reader { max-width: var(--container); padding-top: 72px; padding-bottom: 96px; }
 .note-reader__head { margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--rule); }
 .note-reader__meta { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; margin-bottom: 14px; }
 .note-reader__title {

@@ -165,8 +165,13 @@
   --dur-slow:   420ms;
 
   /* ---------- Layout ---------- */
+  /* One page frame. There used to be a second, narrower one, which meant
+     standing pages and collections sat 50px further in than the home page
+     and the index pages, and articles 40px further in than that: three left
+     edges for one site. The reading measure is what keeps text readable, so
+     the frame does not need to vary to do that job. */
   --container:        720px;
-  --container-narrow: 620px;
+  --container-narrow: var(--container);
   --gutter:           var(--s-5);
 
   --paper-noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch' seed='3'/><feColorMatrix type='matrix' values='0 0 0 0 0.20  0 0 0 0 0.15  0 0 0 0 0.11  0 0 0 1 0'/><feComponentTransfer><feFuncA type='discrete' tableValues='0 0 0 0 0.05 0 0 0.07 0 0 0.04 0 0 0.06 0 0'/></feComponentTransfer></filter><rect width='100%25' height='100%25' filter='url(%23g)'/></svg>");

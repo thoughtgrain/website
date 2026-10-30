@@ -406,8 +406,8 @@ mark {
 
 /* ---- Container / layout ----
    Single column. Everything sits in --container (720px) by default. */
-.container { max-width: var(--container); margin: 0 auto; padding: 0 var(--gutter); }
-.container--narrow { max-width: var(--container-narrow); margin: 0 auto; padding: 0 var(--gutter); }
+.container,
+.container--narrow { max-width: var(--container); margin: 0 auto; padding: 0 var(--gutter); }
 
 /* ---- Page hero (legacy) ---- */
 .hero {
@@ -453,9 +453,9 @@ mark {
 }
 
 /* ---- TOC sticky (desktop) ---- */
-.reader-with-toc { display: grid; grid-template-columns: 1fr min(640px, 100%) 1fr; gap: 0; padding: var(--s-8) var(--gutter) var(--s-9); }
+.reader-with-toc { display: grid; grid-template-columns: 1fr min(var(--container), 100%) 1fr; gap: 0; padding: var(--s-8) var(--gutter) var(--s-9); }
 .reader-with-toc .reader { margin: 0; padding: 0; grid-column: 2; }
-.reader-with-toc .toc { grid-column: 3; padding-left: var(--s-6); position: sticky; top: 96px; align-self: start; max-width: 220px; }
+.reader-with-toc .toc { grid-column: 3; padding-left: var(--s-5); position: sticky; top: 96px; align-self: start; max-width: 200px; min-width: 0; }
 .toc__title {
   font-family: var(--font-mono); font-size: 11px;
   letter-spacing: 0; text-transform: none;
