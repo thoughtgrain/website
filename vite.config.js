@@ -391,6 +391,21 @@ async function buildSsrAndPrerender(routes, outDir) {
     root: ROOT,
     logLevel: 'warn',
     plugins: contentPlugins(),
+
+    // `configFile: false` means this build inherits nothing, from the host or
+    // from the config above, so it has to say what it is building for.
+    //
+    // Without this, `react-dom/server` can fail to resolve. Its export map is
+    // conditional (node, browser, workerd, edge-light and so on), and a
+    // resolver that applies none of those conditions matches no branch at all:
+    //
+    //   Rolldown failed to resolve import "react-dom/server"
+    //
+    // which is what CodePen's build produced. See entry-server.jsx, which also
+    // avoids the conditional subpath entirely.
+    resolve: { conditions: ['node', 'import', 'module', 'default'] },
+    ssr: { target: 'node' },
+
     build: {
       ssr: path.join(ROOT, 'src', 'app', 'entry-server'),
       outDir: SSR_DIR,
@@ -506,10 +521,25 @@ export default defineConfig(() => {
         async closeBundle() {
           if (usingBuilder) return;
           const configured = this.environment?.config?.build?.outDir;
-          await buildSsrAndPrerender(
-            routes,
-            configured ? path.resolve(ROOT, configured) : OUT_DIR,
-          );
+
+          // Never fail the host's build from in here.
+          //
+          // Prerendering is an enhancement on a site that already works: skip
+          // it and the pages render client-side, which is where this project
+          // was for its whole life until recently. A hook that can take the
+          // whole deploy down with it is a worse outcome than one that
+          // quietly does less, and the first version of this could, and did.
+          try {
+            await buildSsrAndPrerender(
+              routes,
+              configured ? path.resolve(ROOT, configured) : OUT_DIR,
+            );
+          } catch (err) {
+            this.warn(
+              `[prerender] skipped: ${err.message}\n`
+              + 'Pages will render client-side. The build is otherwise complete.',
+            );
+          }
         },
       },
 

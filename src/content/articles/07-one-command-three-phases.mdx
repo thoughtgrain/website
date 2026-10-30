@@ -168,6 +168,28 @@ The result, with `builder` and `environments` both stripped out:
 | empty `#root` | 51 | **0** |
 | `about/index.html` | 1,261 bytes | **9,041 bytes** |
 
+Then I shipped it and the host's build failed outright:
+
+```
+Rolldown failed to resolve import "react-dom/server"
+```
+
+`configFile: false` buys isolation, and isolation means the nested build inherits nothing: not the host's resolver settings, not mine. `react-dom/server` is a conditional export, with branches for node, browser, workerd, deno and edge-light, and a resolver applying none of those conditions matches no branch at all. So the entry now imports `react-dom/server.node`, which is conditioned only on `default` and is the same implementation the `node` condition would have picked.
+
+`react-dom/server.browser` is also unconditional, and I tried it first. It renders all fifty-one pages, prints the summary, and then never exits. Its scheduler drives work through a `MessageChannel`, which in Node is an open handle that nothing closes. The markup is byte-for-byte identical; the process simply doesn't come back. A hang is a worse failure than a crash, because nothing tells you it happened.
+
+The real lesson from that round, though, is the one I should have applied from the start: a build step I added should never be able to take the deploy down. The fallback is wrapped now.
+
+```js
+try {
+  await buildSsrAndPrerender(routes, outDir);
+} catch (err) {
+  this.warn(`[prerender] skipped: ${err.message}`);
+}
+```
+
+Prerendering is an improvement on a site that already works. If it can't run, the right outcome is fifty-one client-rendered pages and a warning in the log, which is where this project sat for months anyway. For a day and a half my attempt to fix the empty pages meant there were no pages.
+
 Same numbers the Environment API path produces, from a build that can't reach `buildApp`. The client bundle is byte-identical either way, which is how I know the fallback only adds the missing phase rather than quietly changing the rest.
 
 The broader lesson is less about Vite than about what I was verifying. A build that behaves differently on the host than on my machine is the normal case, not the exotic one, and "it works when I build it" was never evidence about the thing people actually load.
