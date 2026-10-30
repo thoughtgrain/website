@@ -127,10 +127,16 @@ function generateEntries(routes, site) {
     mkdirSync(path.dirname(abs), { recursive: true });
 
     // `base` does double duty: the prefix the app hands to Link, and how the
-    // module script finds itself. That src has to be RELATIVE — a root-absolute
-    // path resolves fine under a plain `vite build` but not under CodePen's,
-    // which doesn't map `/` to the Vite root. That mismatch is what produced
-    // fifty identical "Failed to resolve /app/main.jsx" errors.
+    // module script finds itself.
+    //
+    // Two things about that src, both the result of getting them wrong first.
+    // It's RELATIVE, because a root-absolute path resolves under a plain
+    // `vite build` but not under CodePen's, which doesn't map `/` to the Vite
+    // root — that mismatch produced fifty identical "Failed to resolve
+    // /app/main.jsx" errors. And it's EXTENSIONLESS, so it resolves whether the
+    // file is main.jsx as it is here or main.js after a pipeline has compiled
+    // the JSX out: `resolve.extensions` covers both, while a literal `.js`
+    // specifier fails locally (Vite maps .js to .ts/.tsx, never .jsx).
     const base = baseFor(segments);
 
     writeFileSync(abs, `<!doctype html>
@@ -148,7 +154,7 @@ function generateEntries(routes, site) {
   </head>
   <body>
     <div id="root" data-route="${route}" data-base="${base}"></div>
-    <script type="module" src="${base}src/app/main.jsx"></script>
+    <script type="module" src="${base}src/app/main"></script>
   </body>
 </html>
 `);

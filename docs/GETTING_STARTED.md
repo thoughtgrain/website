@@ -39,23 +39,38 @@ Upload these four things to a Pen made from the React/Vite template:
 Not the whole repo. The generated route directories are optional —
 `vite.config.js` writes them at config time, before any bundling.
 
-### Why `package.json` has no bundler in it
+### How `package.json` is split
 
-CodePen turns every declared dependency into an `esm.sh` URL, and rejects
-anything whose source can't become one. `vite` has `fsevents` as an optional
-dependency; Yarn Berry rewrites `fsevents` to a `patch:` source; `patch:` has no
-esm.sh URL. The result is:
+CodePen reads the two dependency fields differently, and getting this wrong is
+why the build did nothing for a while:
+
+- **`dependencies`** become an `esm.sh` importmap entry and stay external at
+  runtime. That's for packages the *browser* imports.
+- **`devDependencies`** are installed into `node_modules` for the build. That's
+  for packages `vite.config.js` imports in Node.
+
+`@mdx-js/mdx`, `remark-frontmatter` and `remark-mdx-frontmatter` are all
+imported by the config, so they belong in `devDependencies`. Declared as
+`dependencies` they never resolve, the config throws, and nothing bundles at
+all — which looks like "the markdown isn't compiling" because that's the first
+thing you notice.
+
+### Why the bundler isn't declared at all
+
+`vite`, `@vitejs/plugin-react`, `react` and `react-dom` come from the Pen's
+`react-vite-19` block. Declaring them is both unnecessary and actively harmful:
+exactly two packages in the tree pull `fsevents`, and those are `vite` and
+`rollup`. Yarn Berry rewrites `fsevents` to a `patch:` source, which has no
+esm.sh URL, and the build is rejected before it starts:
 
 ```
 build-time dependency rejected: fsevents uses unsupported source
 "fsevents@patch:fsevents@npm%3A2.3.3#optional!builtin<compat/fsevents>..."
 ```
 
-Exactly two packages pull `fsevents`: `vite` and `rollup`. Neither is declared.
-`vite`, `@vitejs/plugin-react`, `react` and `react-dom` all come from the Pen's
-`react-vite-19` block, which is why the template's own manifest declares none of
-them either. `rollup` used to arrive as a peer of `@mdx-js/rollup`, which is why
-the MDX compile is a small inline plugin over `@mdx-js/mdx` instead.
+The template's own manifest declares none of them either. `rollup` used to
+arrive as a peer of `@mdx-js/rollup`, which is why the MDX compile is a small
+inline plugin over `@mdx-js/mdx` instead.
 
 That's what `npm run setup` is for: it installs the toolchain locally and in CI,
 with exact pins, without putting it in the manifest CodePen reads.

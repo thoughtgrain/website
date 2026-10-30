@@ -438,12 +438,16 @@ to a Pen created from the React/Vite template — not the whole repo. The
 generated entries sit at the top level, which is where the block's recursive
 `.html` discovery looks, but they don't need uploading: the config writes them.
 
-`package.json` deliberately declares no bundler. CodePen turns every dependency
-into an `esm.sh` URL and rejects anything that can't become one; `vite` and
-`rollup` are the only two packages that pull `fsevents`, Yarn rewrites that to a
-`patch:` source, and `patch:` has no esm.sh URL. The block supplies vite, the
-React plugin, react and react-dom. `npm run setup` installs them locally and in
-CI instead. See `docs/GETTING_STARTED.md` for the full table.
+`package.json` declares three `devDependencies` and nothing else. CodePen
+installs `devDependencies` into `node_modules` for the build and turns
+`dependencies` into an `esm.sh` importmap for the browser — so the MDX packages
+`vite.config.js` imports have to be the former, not the latter.
+
+The bundler isn't declared at all: `vite` and `rollup` are the only two packages
+that pull `fsevents`, Yarn rewrites that to a `patch:` source, and `patch:` has
+no esm.sh URL. The block supplies vite, the React plugin, react and react-dom;
+`npm run setup` installs them locally and in CI instead. See
+`docs/GETTING_STARTED.md` for the full table.
 
 ---
 
