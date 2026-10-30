@@ -1,5 +1,5 @@
 /**
- * Products.jsx — /products/ and /products/:slug/
+ * Products.jsx: /products/ and /products/:slug/
  *
  * The hero image is whatever has been saved to src/assets/products/<slug>.*.
  * The old generator scraped it from the product page's og:image at build time;

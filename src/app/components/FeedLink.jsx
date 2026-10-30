@@ -1,5 +1,5 @@
 /**
- * FeedLink.jsx — the "Subscribe to …" pill in a section header.
+ * FeedLink.jsx: the "Subscribe to …" pill in a section header.
  *
  * Its own line in the page header so it reads as a quiet invitation, distinct
  * from the small RSS link in the footer.

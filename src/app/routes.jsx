@@ -1,9 +1,9 @@
 /**
- * routes.jsx — route string in, page component out.
+ * routes.jsx: route string in, page component out.
  *
  * Pure dispatch, no router library. Every page is a real HTML file that knows
  * its own route (`data-route` on #root), so there's no history to manage, no
- * links to intercept and no fallback to configure — the server already resolved
+ * links to intercept and no fallback to configure, the server already resolved
  * which page this is. A router here would be re-implementing what the filesystem
  * is already doing.
  *
@@ -64,7 +64,7 @@ export function pageFor(route) {
   const hit = ROUTES.find(([pattern]) => pattern.test(route));
   if (!hit) {
     // Every route comes from routesFor(), and every one of those should be
-    // listed above — so reaching here means the two have drifted. Better to
+    // listed above, so reaching here means the two have drifted. Better to
     // fail the build than to prerender a blank page and find out later.
     throw new Error(`no page component for route "${route}"`);
   }

@@ -1,15 +1,15 @@
 /**
- * Enjoying.jsx — the five cultural collections, their readers, and the pooled
+ * Enjoying.jsx: the five cultural collections, their readers, and the pooled
  * /enjoying/ stream.
  *
- * Reading, music, movies, podcasts and bookshelf are the same idea with
+ * Reading: music, movies, podcasts and bookshelf are the same idea with
  * different cards, so they share one module: an index component per kind
- * (because the markup genuinely differs — a spine for a book, a poster and star
+ * (because the markup genuinely differs, a spine for a book, a poster and star
  * rating for a film) over one shared page frame, and a single reader that takes
  * the kind-specific header from a lookup.
  *
  * Products join the pooled stream even though their own pages live in
- * Products.jsx — the stream is about what I'm enjoying, and a recommended object
+ * Products.jsx: the stream is about what I'm enjoying, and a recommended object
  * belongs there as much as a record does.
  */
 
@@ -156,7 +156,7 @@ function MoviesIndex() {
                 <p className="movie-row__note">{m.note}</p>
               </div>
               {/* role="img" + aria-label rather than the bare <div> the old
-                  template had — which carried a TODO saying exactly this. A
+                  template had, which carried a TODO saying exactly this. A
                   plain div can't take an accessible name, so the rating was
                   invisible to assistive tech. The glyphs stay aria-hidden so it
                   isn't announced as ten separate star characters. */}
@@ -196,7 +196,7 @@ function PodcastsIndex() {
 }
 
 function BookshelfIndex() {
-  // Grouped by section in first-encounter order — which is filename order, so
+  // Grouped by section in first-encounter order, which is filename order, so
   // the numbering in src/content/bookshelf/ controls the section sequence.
   const sections = [];
   const bySection = {};

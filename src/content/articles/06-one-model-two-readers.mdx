@@ -18,6 +18,8 @@ toc:
     label: "Why the keys have to match"
   - id: "switching-to-real-mdx"
     label: "Switching to real MDX"
+  - id: "what-the-switch-broke"
+    label: "What the switch broke"
   - id: "seven-ghosts"
     label: "Seven ghosts"
 ---
@@ -42,7 +44,7 @@ Which matters because two completely different things need to fill that map.
 
 <LoaderCompare />
 
-The app uses `import.meta.glob`, which the bundler expands at compile time into real imports of compiled MDX modules. The feeds can't — they're generated inside the Vite config, where there is no module graph to glob, only a filesystem. So `node-loader.js` walks `src/content/` with `readdirSync` and produces the same shape.
+The app uses `import.meta.glob`, which the bundler expands at compile time into real imports of compiled MDX modules. The feeds can't, because they're generated inside the Vite config, where there is no module graph to glob, only a filesystem. So `node-loader.js` walks `src/content/` with `readdirSync` and produces the same shape.
 
 Both hand their map to the same `buildContent`. Neither knows about the other.
 
@@ -50,9 +52,9 @@ Both hand their map to the same `buildContent`. Neither knows about the other.
 
 Exactly, character for character.
 
-The previous build had two different ways of answering "what content exists", and the gap between them cost me three rounds of debugging on a bug that only appeared for some files. The versions I have now produce identical keys by construction — `../content/<dir>/<file>.mdx` — because that's what Vite's glob emits and the Node loader is written to match it.
+The previous build had two different ways of answering "what content exists", and the gap between them cost me three rounds of debugging on a bug that only appeared for some files. The versions I have now produce identical keys by construction, `../content/<dir>/<file>.mdx`, because that's what Vite's glob emits and the Node loader is written to match it.
 
-The same reasoning applies one level down. Both loaders now parse frontmatter with the *same YAML engine*: the browser gets it from `remark-mdx-frontmatter`, and `node-loader.js` calls `yaml` directly. Before that, there were two hand-written parsers that agreed on most fields and disagreed on types — one returned `"1"` where the other returned `1`. Nothing downstream cared, right up until something would have.
+The same reasoning applies one level down. Both loaders now parse frontmatter with the *same YAML engine*: the browser gets it from `remark-mdx-frontmatter`, and `node-loader.js` calls `yaml` directly. Before that, there were two hand-written parsers that agreed on most fields and disagreed on types: one returned `"1"` where the other returned `1`. Nothing downstream cared, right up until something would have.
 
 <PullquoteNoCite text="Two implementations that agree today are two implementations that will disagree eventually. The only reliable fix is to have one." />
 
@@ -60,11 +62,21 @@ The same reasoning applies one level down. Both loaders now parse frontmatter wi
 
 The content was always `.mdx`, but for a long time it wasn't really MDX. It was raw text run through a markdown parser I'd written, with a regex pass that expanded `<Pullquote text="…" />` by substituting into an HTML template.
 
-Now it's compiled by `@mdx-js/mdx`, with `remark-frontmatter` and `remark-mdx-frontmatter` for the metadata. Content gets CommonMark plus JSX: ordered lists, nested lists, tables, images — none of which my parser supported.
+Now it's compiled by `@mdx-js/mdx`, with `remark-frontmatter` and `remark-mdx-frontmatter` for the metadata. Content gets CommonMark plus JSX: ordered lists, nested lists, tables and images, none of which my parser supported.
 
 The components are real React components now. `<Pullquote>` resolves against a map passed to every body, and MDX throws at render for any name it can't resolve, so a typo in a content file fails loudly instead of silently rendering as text.
 
 Switching also let me delete `content-model.js` down from 274 lines to 193. The markdown pass, the component resolver, the footnote extractor and both lede splits all went, because there is no HTML string in the middle any more for them to operate on.
+
+## What the switch broke
+
+Every post in this series carries a `toc:` block in its frontmatter, a list of `{ id, label }` pairs that renders as the contents sidebar. Those ids have to match ids on the actual headings.
+
+My old parser slugified every heading on the way past, so they did. MDX doesn't do that, and nothing replaced it. The contents list kept rendering, every entry kept linking, and every single link pointed at an id that was never emitted. Clicking one did nothing at all. It's a good example of the kind of bug that no error surfaces: the markup is valid, the build is clean, and the only symptom is a link that silently doesn't move the page.
+
+The first fix was `rehype-slug`, which is the correct package and did the job. I took it out again a few days later. By then I'd twice watched this build turn into a no-op because something at the top of `vite.config.js` failed to resolve on the host: the config throws, Vite never runs, the HTML ships exactly as written, and the build reports success. Every import in that file is a way for that to happen, so the ones that remain should be carrying real weight. A compiler earns it. Three dozen lines of string munging does not.
+
+So heading ids are now a local plugin: walk the tree, lowercase the text, drop anything that isn't a word character or a space, join on hyphens, and keep a counter for the case where two sections share a title. I checked it against the previous output id by id before swapping it in, because a slugger that's *almost* compatible breaks exactly the anchors it was added to fix.
 
 ## Seven ghosts
 
@@ -84,6 +96,6 @@ It'll appear at `/essays/<slug>/` automatically.
 
 Which the browser parsed as a real `<slug>` element. Readers saw `/essays//`.
 
-One essay page had seven of these — `dropcap`, `pullquote`, `pullquotenocite`, `marginaliapin`, and two `slug`s — all sitting in the DOM as unknown elements, invisible unless you went looking. MDX escapes correctly, and all seven are gone.
+One essay page had seven of these: `dropcap`, `pullquote`, `pullquotenocite`, `marginaliapin`, and two `slug`s, all sitting in the DOM as unknown elements, invisible unless you went looking. MDX escapes correctly, and all seven are gone.
 
 I found them by diffing the computed styles of every element on every page between the old output and the new one, looking for regressions. They turned up as elements present in the old build and absent from the new, which looked like a regression and was in fact the fix.

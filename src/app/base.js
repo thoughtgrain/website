@@ -1,12 +1,12 @@
 /**
- * base.js — where the page being rendered sits, and how to link out of it.
+ * base.js: where the page being rendered sits, and how to link out of it.
  *
  * Context rather than props drilled through every component: both values are
  * set once per page from the entry's `data-route` / `data-base` attributes and
  * never change during a render.
  *
  * Everything links relatively. That's what lets the built site work from a
- * subdirectory, from a file:// URL, or from whatever path a host hands it —
+ * subdirectory, from a file:// URL, or from whatever path a host hands it, 
  * which matters here, because the output has to behave the same on GitHub
  * Pages and dropped into CodePen.
  */
@@ -29,7 +29,7 @@ export const useRoute = () => useContext(BaseContext).route;
  * `../products/feed.xml`. Correct, and noise. Dropping the segments the two
  * paths already share gives plain `feed.xml` instead.
  *
- * @param {string} from The current route — always a directory, trailing slash.
+ * @param {string} from The current route, always a directory, trailing slash.
  * @param {string} to   A root-relative target, directory or file.
  * @returns {string} A relative href; "./" for a link to the current page.
  */

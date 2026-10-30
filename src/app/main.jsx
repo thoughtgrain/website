@@ -1,5 +1,5 @@
 /**
- * main.jsx — mount one page.
+ * main.jsx: mount one page.
  *
  * Every generated HTML entry loads this same module; the only thing that
  * differs is `data-route` on #root, which says which page this file is. That's
@@ -7,7 +7,7 @@
  * each rendering one route, rather than one page swapping content on the
  * client.
  *
- * There is no router. The server already resolved which page this is — a router
+ * There is no router. The server already resolved which page this is, a router
  * here would re-implement what the filesystem is doing, and cost 50 KB to do it.
  */
 
@@ -45,7 +45,7 @@ if (rootEl.firstChild) {
 
 // The progressive enhancers (theme toggle, drawer, paper grain) query the DOM,
 // so they load after the first render rather than at import time. They use
-// ready() rather than listening for DOMContentLoaded directly — by the time a
+// ready() rather than listening for DOMContentLoaded directly, by the time a
 // dynamically imported module runs, that event has already fired and a listener
 // for it would never run at all.
 import('./enhancers.js');

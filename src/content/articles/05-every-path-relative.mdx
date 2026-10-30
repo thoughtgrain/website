@@ -38,7 +38,7 @@ The second one is the interesting case.
 
 ## Dropping what's shared
 
-The naive version is "prefix with the page's depth". From `/products/`, that turns `/products/feed.xml` into `../products/feed.xml`. Correct — it resolves to the right file — and silly, because it climbs out of a directory only to walk straight back into it.
+The naive version is "prefix with the page's depth". From `/products/`, that turns `/products/feed.xml` into `../products/feed.xml`. Correct, in that it resolves to the right file, and silly, because it climbs out of a directory only to walk straight back into it.
 
 So before climbing, the function counts how many leading segments the two paths already have in common, and drops them:
 
@@ -57,7 +57,7 @@ That figure calls the real function. If the algorithm changes, the figure change
 
 This also fixed two links the old generator had been getting wrong for months. The tag chips on `/essays/tag/tag-one/` pointed at `/essays/tag/tag/`, and the project tiles under `/projects/cat/code/` pointed at `/projects/cat/projects/`. Both were invisible, because JavaScript intercepted the clicks before the browser ever tried to follow them. With JS off, they 404'd.
 
-The old build had fourteen broken internal links out of 908. This one has none out of 963, and I only know that because I started crawling the output.
+The old build had fourteen broken internal links out of 908. This one has none out of 993, and I only know that because I started crawling the output.
 
 ## Fifty identical errors
 
@@ -80,7 +80,7 @@ Failed to resolve /app/main.jsx from /bookshelf/essays-book/index.html
 
 One per entry. Same message, fifty files.
 
-The fix was the depth prefix the page already had. What makes this worth writing down is that the *first* version of this code was relative, and I'd moved it to absolute to fix a bug — a bug that was actually a missing `../`, not a problem with relativeness. I removed the right mechanism because I'd implemented it wrong.
+The fix was the depth prefix the page already had. What makes this worth writing down is that the *first* version of this code was relative, and I'd moved it to absolute to fix a bug that was actually a missing `../`, not a problem with relativeness. I removed the right mechanism because I'd implemented it wrong.
 
 ## The extension test
 
@@ -100,7 +100,7 @@ The obvious fix is to write `./App.js`. I tested it before committing to it:
 | `./app/main.js` | **fails** |
 | `./app/main` | builds |
 
-`.js` fails because Vite maps a `.js` specifier to `.ts` and `.tsx` — never `.jsx`. So writing the extension that works *there* breaks it *here*.
+`.js` fails because Vite maps a `.js` specifier to `.ts` and `.tsx`, never `.jsx`. So writing the extension that works *there* breaks it *here*.
 
 Extensionless works in both: `resolve.extensions` finds `.jsx` locally and `.js` wherever the JSX has already been compiled out. Forty-two import statements across sixteen files lost their extensions.
 
@@ -111,7 +111,7 @@ There is now a plugin in the build that refuses to compile if any import names a
 ```
 Error: explicit .jsx import specifier in:
   src/app/main.jsx:24
-Drop the extension — it resolves to .jsx locally and .js wherever
+Drop the extension, which resolves to .jsx locally and .js wherever
 the JSX has already been compiled out.
 ```
 

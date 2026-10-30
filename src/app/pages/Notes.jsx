@@ -1,5 +1,5 @@
 /**
- * Notes.jsx — /notes/
+ * Notes.jsx: /notes/
  */
 
 import { content } from '../content.js';

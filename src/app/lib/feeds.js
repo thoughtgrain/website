@@ -1,5 +1,5 @@
 /**
- * feeds.js — the eleven Atom feeds, as files.
+ * feeds.js: the eleven Atom feeds, as files.
  *
  * Ported from the old generator's lib/pages/feeds.js. It stays a build-time
  * concern because a feed has to be a real file at a real URL: a reader fetches
@@ -26,7 +26,7 @@ const SECTIONS = [
 
 const MAX_ENTRIES = 30;
 
-/** XML escaping — the same five as HTML plus the XML-correct &apos;. */
+/** XML escaping, the same five as HTML plus the XML-correct &apos;. */
 function escapeXml(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -61,8 +61,8 @@ function plainSummary(html, maxLen) {
 
 /**
  * One feed entry. The summary falls through several fields because the
- * collections don't share a shape — an essay has `summary`, a product has
- * `note`, a project has `dek` — and stripping the body is the last resort.
+ * collections don't share a shape, an essay has `summary`, a product has
+ * `note`, a project has `dek`, and stripping the body is the last resort.
  */
 function entryFromItem(siteUrl, item, sectionPath) {
   const url = `${siteUrl}/${sectionPath}/${item.slug}/`;
@@ -81,7 +81,7 @@ function entryFromItem(siteUrl, item, sectionPath) {
  *
  * Shared by both serialisers rather than done inside each. They describe the
  * same feed in two formats, so a reader comparing them must see the same items
- * in the same order — duplicating the sort is how that quietly stops being
+ * in the same order, duplicating the sort is how that quietly stops being
  * true.
  */
 function orderEntries(entries) {
@@ -97,10 +97,10 @@ function renderAtom(site, siteUrl, meta, entries) {
   const feedUrl = `${siteUrl + meta.path}feed.xml`;
   const lines = [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    // Relative, and pointing at a copy sitting in this feed's own directory.
+    // Relative: and pointing at a copy sitting in this feed's own directory.
     // Browsers only apply an XSL stylesheet same-origin with the XML, and the
     // hrefs the transform emits resolve against the FEED's URL rather than the
-    // stylesheet's — so one shared copy at the root can't get the paths right
+    // stylesheet's, so one shared copy at the root can't get the paths right
     // for feeds at different depths.
     '<?xml-stylesheet type="text/xsl" href="feed-style.xml"?>',
     '<feed xmlns="http://www.w3.org/2005/Atom">',
@@ -137,7 +137,7 @@ function renderAtom(site, siteUrl, meta, entries) {
  *
  * This exists because the Atom feeds used to ship with an XSL stylesheet that
  * rendered them as a readable page, and CodePen won't host `.xsl` at all. JSON
- * isn't a stylesheet and doesn't replace what that did — it's a second feed
+ * isn't a stylesheet and doesn't replace what that did. It's a second feed
  * format, served as a plain file, which is the part that matters.
  *
  * `summary` is dropped rather than emitted empty: the spec treats absent and

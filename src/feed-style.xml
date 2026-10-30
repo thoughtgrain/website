@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  feed-style.xml — the XSLT that makes an Atom feed readable in a browser.
+  feed-style.xml, the XSLT that makes an Atom feed readable in a browser.
 
   Named .xml, not .xsl, because CodePen won't accept a .xsl file at all. The
   extension is irrelevant: <?xml-stylesheet?> references a URL, and browsers
   decide by the processing instruction's type attribute, not the filename.
 
   {{cssHref}} and {{homeHref}} are filled per feed directory by the site-feeds
-  plugin in vite.config.js — a copy of this lands beside every feed.xml with
+  plugin in vite.config.js, a copy of this lands beside every feed.xml with
   paths correct for that depth, because the hrefs in the transformed output
   resolve against the FEED's URL, not this file's.
 
   One caveat worth knowing: a browser only applies this when the feed is served
-  as text/xml or application/xml. Served as application/atom+xml — which is
-  technically the more correct type — Chromium shows raw XML and ignores the
+  as text/xml or application/xml. Served as application/atom+xml, which is
+  technically the more correct type, Chromium shows raw XML and ignores the
   stylesheet entirely.
 -->
 <xsl:stylesheet version="1.0"

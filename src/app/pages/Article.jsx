@@ -1,5 +1,5 @@
 /**
- * Article.jsx — the reader for essays, studies and build-series posts.
+ * Article.jsx: the reader for essays, studies and build-series posts.
  *
  * All three are the same page with different copy and a different back link,
  * which is why `kind` routes them (content-model.js) but doesn't fork them here.
@@ -39,7 +39,7 @@ function SeriesNav({ article }) {
       <ol className="series-nav__list">
         {parts.map((p) => {
           const current = p.slug === article.slug;
-          // Drop the series prefix from the title — it's already in the caption,
+          // Drop the series prefix from the title. It's already in the caption,
           // and repeating it on every row makes the list unreadable.
           const label = p.title
             .replace(new RegExp(`^${article.series},?\\s*`, 'i'), '')
@@ -136,7 +136,7 @@ export default function Article({ route }) {
   const inSeries = Boolean(article.series && content.seriesGroups[article.series]);
 
   // Related is drawn from the same pool minus this piece, and minus anything in
-  // a series — series parts have their own navigation and would otherwise turn
+  // a series, series parts have their own navigation and would otherwise turn
   // up as loose recommendations mid-series.
   const pool = dir === 'build' ? content.buildSeries : content.articles;
   const related = inSeries

@@ -1,5 +1,5 @@
 /**
- * content-model.js — content in, routes and collections out. No I/O.
+ * content-model.js: content in, routes and collections out. No I/O.
  *
  * This is the one piece of logic both halves of the build need, so it takes a
  * plain `{ path: entry }` map and nothing else. The browser fills it with
@@ -7,7 +7,7 @@
  * same shape from disk for the feeds. Neither variant leaks in here, which is
  * what keeps the feeds and the pages describing the same site.
  *
- * Each value is `{ frontmatter, default }` — the parsed YAML and a React
+ * Each value is `{ frontmatter, default }`, the parsed YAML and a React
  * component for the body. The body is never an HTML string, which is why
  * nothing here reads or transforms it: MDX compiled it, the pages render it,
  * and this module only ever touches metadata.
@@ -34,7 +34,7 @@ export const FLAT_ROUTES = ['now', 'about', 'learning', 'gear', 'colophon', 'sty
 /** How many items per page of the paginated /enjoying/ stream. */
 export const ENJOYING_PER_PAGE = 12;
 
-/** Lowercase, non-alphanumerics to single hyphens, no leading or trailing one. */
+/** Lowercase: non-alphanumerics to single hyphens, no leading or trailing one. */
 export function slugifyTag(t) {
   return String(t).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
@@ -89,7 +89,7 @@ export function buildContent(moduleMap, jsonMap = {}) {
   reading.forEach((r) => { r.statusLabel = READING_STATUS_LABEL[r.status] || r.status; });
 
   // The WHITE STAR marks unfilled positions rather than a faded filled one, so
-  // the empty state reads as an outlined shape — legible for low vision and in
+  // the empty state reads as an outlined shape, legible for low vision and in
   // glare, where a fade isn't.
   movies.forEach((m) => {
     const rating = Math.max(0, Math.min(5, parseInt(m.rating, 10) || 0));

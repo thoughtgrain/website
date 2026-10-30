@@ -1,10 +1,10 @@
 /**
- * TagFilter.jsx — the tag chip bar above a writing index.
+ * TagFilter.jsx: the tag chip bar above a writing index.
  *
  * Chips are real links to /<kind>/tag/<slug>/, and every tag page renders the
  * FULL list with non-matching cards marked hidden. So without JS a chip
  * navigates to a statically filtered page, and with JS the tag-filter enhancer
- * intercepts the click and toggles `hidden` in place. Same markup serves both —
+ * intercepts the click and toggles `hidden` in place. Same markup serves both, 
  * it costs a little page weight and buys a filter that works with JS disabled.
  *
  * Tags are the union across every item of the kind, so the bar doesn't reshuffle
@@ -36,7 +36,7 @@ export default function TagFilter({ items, kindLabel, dir, activeTag }) {
 
   const route = useRoute();
   // Every chip is resolved from the page it sits on, so the bar links correctly
-  // from /essays/ and from /essays/tag/<slug>/ alike — the two sit at different
+  // from /essays/ and from /essays/tag/<slug>/ alike, the two sit at different
   // depths and a single shared prefix can only be right on one of them.
   const kindHref = (path) => relativeHref(route, `/${dir}/${path}`);
   const labelId = `tag-filter-label-${kindLabel.toLowerCase()}`;

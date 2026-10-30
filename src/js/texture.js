@@ -24,7 +24,7 @@
 
   // Tunables.
   //   MIN_OPACITY: floor while scrolling. The grain dims but doesn't
-  //                vanish — the presence-not-gone state is what we want
+  //                vanish, the presence-not-gone state is what we want
   //                during motion, since the issue is the motion itself
   //                not the texture's existence.
   //   VEL_TO_FADE: how aggressively velocity drives the dim. Lower is

@@ -1,9 +1,9 @@
 /**
- * enhancers.js — the existing progressive enhancement scripts.
+ * enhancers.js: the existing progressive enhancement scripts.
  *
  * These are the browser-only files from src/js/: the theme toggle, the drawer,
  * the paper-grain fade, the tag filter. They manipulate the DOM directly, which
- * is fine — they enhance markup React has already rendered, and none of them
+ * is fine. They enhance markup React has already rendered, and none of them
  * owns state React also owns.
  *
  * Imported after the first render (see main.jsx) because they query the DOM at

@@ -1,5 +1,5 @@
 /**
- * Note.jsx — /notes/:slug/
+ * Note.jsx: /notes/:slug/
  *
  * The collection is newest-first, so "earlier" is the NEXT index and "later" is
  * the previous one. Worth stating because the variable names read backwards

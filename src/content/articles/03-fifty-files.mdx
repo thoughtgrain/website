@@ -34,15 +34,15 @@ No rewrite rules. No `try_files`. No catch-all that serves one page and lets Jav
 
 <BuildStepper />
 
-React is still here — it renders those fifty files during the build, and it hydrates them in the browser so the drawer and the tag filter work. But if the script fails to load, you still get the site. You get a slightly less interactive version of exactly the thing you asked for.
+React is still here. It renders those fifty files during the build, and it hydrates them in the browser so the drawer and the tag filter work. But if the script fails to load, you still get the site. You get a slightly less interactive version of exactly the thing you asked for.
 
 ## Where it has to run
 
 One constraint shaped most of what follows: I wanted this to build and run on **CodePen**.
 
-Not as a demo — as somewhere the actual site lives, editable in a browser, no local checkout required. CodePen 2.0 runs Vite under the hood, so a standard Vite project is in principle exactly what it wants.
+Not as a demo, but as somewhere the actual site lives, editable in a browser, no local checkout required. CodePen 2.0 runs Vite under the hood, so a standard Vite project is in principle exactly what it wants.
 
-In practice "in principle" did a lot of work in that sentence, and the next four posts are largely the gap between the two. But it's worth saying up front that almost every decision here — relative paths everywhere, no bundler in `package.json`, extensionless imports, a build that degrades instead of failing — comes from that one requirement. A site that only builds on my machine isn't finished.
+In practice "in principle" did a lot of work in that sentence, and the next four posts are largely the gap between the two. But it's worth saying up front that almost every decision here comes from that one requirement: relative paths everywhere, no bundler in `package.json`, extensionless imports, a build that prerenders whether or not the host cooperates. A site that only builds on my machine isn't finished.
 
 It also pushed the architecture in a direction I'd have wanted anyway. Output that works from any path, with the words already in the HTML, is portable by construction. CodePen was the forcing function; it isn't the only beneficiary.
 
@@ -70,7 +70,7 @@ Three things, and I only really felt the first one when I tried to host it somew
 
 **Everything else gets an empty div.** The HTML that arrives is `<div id="app"></div>`. That is what a crawler indexes, what a link preview quotes, and what someone with JavaScript disabled reads. The words only exist after React runs.
 
-**Every link has to be absolute.** A router matches on pathname, so a relative href would resolve against whatever page you happened to be standing on. Which means the output can only be served from a domain root — not a subdirectory, not `file://`.
+**Every link has to be absolute.** A router matches on pathname, so a relative href would resolve against whatever page you happened to be standing on. Which means the output can only be served from a domain root. Not a subdirectory, not `file://`.
 
 None of those are bugs. They're the deal you make. I just didn't want to make it for a site whose entire job is to hold words that should still be there in ten years.
 

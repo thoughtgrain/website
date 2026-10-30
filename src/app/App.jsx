@@ -1,9 +1,9 @@
 /**
- * App.jsx — the page shell every route renders inside.
+ * App.jsx: the page shell every route renders inside.
  *
  * This is base.html from the old generator, as a component. The markup is kept
  * deliberately identical because 112 KB of CSS is keyed to these class names and
- * this structure — `site-nav__inner`, `drawer__body`, `site-footer__groups` and
+ * this structure, `site-nav__inner`, `drawer__body`, `site-footer__groups` and
  * the rest. Changing the shape here means changing the stylesheet, so don't,
  * unless that's the job.
  *
@@ -20,7 +20,7 @@ import { pageFor } from './routes';
 function DrawerNav() {
   return nav.groups.map((group) => {
     const items = (group.items || []).filter((it) => it.enabled);
-    // An entirely disabled group renders nothing — no orphan heading.
+    // An entirely disabled group renders nothing, no orphan heading.
     if (!items.length) return null;
 
     const titleId = `drawer-grp-${group.id}`;
@@ -50,7 +50,7 @@ function FooterNav() {
 
     const titleId = `footer-grp-${group.id}`;
     // RSS and Email hang off the About group rather than getting a column of
-    // their own — two links don't justify one.
+    // their own. Two links don't justify one.
     const extras = group.id === 'about' ? (nav.footerExtras || []) : [];
 
     return (

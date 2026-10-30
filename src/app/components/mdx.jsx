@@ -1,9 +1,9 @@
 /**
- * mdx.jsx — the components content is allowed to use.
+ * mdx.jsx: the components content is allowed to use.
  *
  * Content writes `<Pullquote text="…" cite="…" />` in a .mdx file. Under real
  * MDX those tags compile to JSX, and MDX throws at render for any name it
- * can't resolve — `_missingMdxReference("Pullquote", true)` — so every one of
+ * can't resolve, `_missingMdxReference("Pullquote", true)`, so every one of
  * them has to be in scope. This map is what provides them, handed to the MDX
  * body as its `components` prop.
  *
@@ -12,7 +12,7 @@
  * kept identical because the stylesheet is keyed to these exact class names.
  *
  * `text` arrives as a plain string and React escapes it, which is the right
- * default and a change from the old templates — those interpolated raw, so a
+ * default and a change from the old templates, those interpolated raw, so a
  * pull quote could contain `<em>`. None currently does; if one needs to, it
  * should be written as real markdown inside the tag rather than as HTML in an
  * attribute.
@@ -69,7 +69,7 @@ export function Footnote({ id }) {
  * Passed to every MDX body as its `components` prop.
  *
  * The demos are the interactive figures the build series uses. They're the only
- * stateful components in the app — see demos.jsx for the three rules that come
+ * stateful components in the app, see demos.jsx for the three rules that come
  * with that.
  */
 export const mdxComponents = {

@@ -28,7 +28,7 @@ toc:
 
 ## Twenty-two feeds
 
-Eleven sections — the whole site, plus essays, studies, notes, projects, products, and each of the five cultural collections — each published twice. Atom at `feed.xml`, [JSON Feed](https://jsonfeed.org/version/1.1) at `feed.json`.
+Eleven sections, which is the whole site plus essays, studies, notes, projects, products, and each of the five cultural collections, each published twice. Atom at `feed.xml`, [JSON Feed](https://jsonfeed.org/version/1.1) at `feed.json`.
 
 <FeedFormats />
 
@@ -48,7 +48,7 @@ function orderEntries(entries) {
 
 That's deliberate, and it's the same instinct as the content model having one implementation rather than two. Two formats describing the same feed must list the same items in the same order, and duplicating a four-line sort is exactly how that quietly stops being true six months later.
 
-I check it rather than trust it. The build output gets compared pairwise — all eleven, same item ids, same order.
+I check it rather than trust it. The build output gets compared pairwise: all eleven, same item ids, same order.
 
 ## A stylesheet that isn't CSS
 
@@ -66,13 +66,13 @@ Two details worth having.
 
 **It's named `.xml`, not `.xsl`.** The processing instruction references a *URL*, and the browser decides from the `type` attribute, not the filename. So when I needed to host it somewhere that wouldn't accept a `.xsl` file, renaming it was the whole fix.
 
-**There's a copy beside every feed.** Not one shared file at the root. The `<link>` and `<a href>` the transform emits resolve against the *feed's* URL, not the stylesheet's — so the paths inside have to match the depth of the feed that used it. Eleven small copies is the cheap way to be correct at every depth.
+**There's a copy beside every feed.** Not one shared file at the root. The `<link>` and `<a href>` the transform emits resolve against the *feed's* URL, not the stylesheet's, so the paths inside have to match the depth of the feed that used it. Eleven small copies is the cheap way to be correct at every depth.
 
 While restoring it I found it had been broken for months anyway: it linked `/css/style.css`, a path that stopped existing when I replaced the old generator, so the preview had been styling itself with a 404. It also loaded three fonts the site no longer uses.
 
 ## The content-type that decides
 
-Here's the part I'd never have guessed. Whether the preview works at all depends on how the host serves the feed — not on anything in the file.
+Here's the part I'd never have guessed. Whether the preview works at all depends on how the host serves the feed, not on anything in the file.
 
 | feed served as | stylesheet as | result |
 | --- | --- | --- |
@@ -82,7 +82,7 @@ Here's the part I'd never have guessed. Whether the preview works at all depends
 | `text/xml` | `text/xml` | **transformed** |
 | `application/rss+xml` | `text/xsl` | raw XML |
 
-Served as `application/atom+xml` — which is the *more correct* type for a feed — Chromium ignores the stylesheet entirely and shows you the XML.
+Served as `application/atom+xml`, which is the *more correct* type for a feed, Chromium ignores the stylesheet entirely and shows you the XML.
 
 Most static hosts serve `.xml` as `text/xml` by default, which is why this works. But it's the host's call, not mine, and there is nothing I can put in the file to change it.
 
@@ -92,7 +92,7 @@ The JSON feeds are not styled, and can't be.
 
 There is no `<?json-stylesheet?>`. A JSON document cannot reference one. Open `feed.json` in a browser and you get raw JSON, or whatever viewer your browser ships.
 
-That's worth stating plainly because it's a real asymmetry, and when I added JSON Feed I was briefly asked to make both look nice. Half of that is achievable and half of it isn't — JSON Feed earns its place with readers that prefer it, not in a browser window.
+That's worth stating plainly because it's a real asymmetry, and when I added JSON Feed I was briefly asked to make both look nice. Half of that is achievable and half of it isn't. JSON Feed earns its place with readers that prefer it, not in a browser window.
 
 ## Where this might go
 
@@ -100,9 +100,11 @@ All six of these posts describe a hand-assembled build: a config that generates 
 
 Almost none of that is novel. It's a static site generator, written out longhand, because I wanted the output to run on CodePen and a standard Vite project was the closest thing available.
 
-If CodePen 2.0 grows **Eleventy** or **Astro** blocks — and both seem like natural fits for what the platform is becoming — I'd port to one of them more or less immediately, and most of this build would go in the bin. Eleventy would take the content model almost unchanged; its data cascade is the same idea as `buildContent`, and it has never needed convincing to emit real files at real paths. Astro would absorb more of it, routing and prerendering and the islands the interactive figures want to be, at the cost of putting a framework between me and the HTML.
+If CodePen 2.0 grows **Eleventy** or **Astro** blocks, and both seem like natural fits for what the platform is becoming, I'd port to one of them more or less immediately, and most of this build would go in the bin. Eleventy would take the content model almost unchanged; its data cascade is the same idea as `buildContent`, and it has never needed convincing to emit real files at real paths. Astro would absorb more of it, routing and prerendering and the islands the interactive figures want to be, at the cost of putting a framework between me and the HTML.
 
-Either would delete more code than it added. The content wouldn't move — it's `.mdx` with frontmatter, which is the one part of this designed to outlive the thing that renders it.
+Either would delete more code than it added. Most of what the last post describes, the fallback that prerenders when the host skips `buildApp`, exists because I'm hand-rolling a static site generator inside a bundler that doesn't consider itself one. A tool that was built to emit pages wouldn't need persuading to emit them.
+
+Either way the content wouldn't move. It's `.mdx` with frontmatter, which is the one part of this designed to outlive the thing that renders it.
 
 That's the honest summary of the architecture: a careful answer to a constraint I expect to stop existing.
 

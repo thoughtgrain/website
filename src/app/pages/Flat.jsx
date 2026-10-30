@@ -1,8 +1,8 @@
 /**
- * Flat.jsx — the five standing pages driven by JSON: now, about, learning,
+ * Flat.jsx: the five standing pages driven by JSON: now, about, learning,
  * gear, colophon.
  *
- * They share nothing but their shape — one config file, one layout — so they're
+ * They share nothing but their shape, one config file, one layout, so they're
  * one module with a component each rather than five files of boilerplate.
  * /styles/ is the exception and lives on its own, being a specimen page with no
  * data behind it.
@@ -248,7 +248,7 @@ export function Colophon() {
           ))}
         </ul>
 
-        {/* The colophon is the index for the build series — it's the only place
+        {/* The colophon is the index for the build series. It's the only place
             those posts are linked from. */}
         {series.length > 0 && (
           <section className="build-series">

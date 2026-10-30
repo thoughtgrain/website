@@ -1,5 +1,5 @@
 /**
- * Home.jsx — /
+ * Home.jsx: /
  *
  * The launch homepage: hero plus the four most recent notes. The fuller version
  * (recent writing, projects, reading) is preserved in src/layouts/home.full.html

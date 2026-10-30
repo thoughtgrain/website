@@ -1,5 +1,5 @@
 /**
- * Projects.jsx — /projects/ and /projects/cat/<slug>/
+ * Projects.jsx: /projects/ and /projects/cat/<slug>/
  *
  * Projects are organised two ways at once, on purpose: by LIFECYCLE on the
  * index, because the first question about someone's project list is "what's
@@ -23,7 +23,7 @@ const GROUPS = [
 /**
  * Map a free-text `status:` onto a bucket. Matched loosely because the field is
  * prose and may carry a leading symbol. Untagged work counts as live rather than
- * hidden — a missing status far more often means "I forgot" than "this is dead".
+ * hidden, a missing status far more often means "I forgot" than "this is dead".
  */
 function bucketFor(status) {
   const s = String(status || '').toLowerCase();
@@ -55,7 +55,7 @@ function Tile({ project }) {
 function Groups({ list }) {
   return GROUPS.map((g) => {
     const members = list.filter((p) => bucketFor(p.status) === g.key);
-    // An empty bucket renders nothing at all — no orphan heading.
+    // An empty bucket renders nothing at all, no orphan heading.
     if (!members.length) return null;
     return (
       <section className="projects-group" key={g.key}>

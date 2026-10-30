@@ -1,5 +1,5 @@
 /* ================================================================
-   Thought Grain — personal site styles (atop kit.css)
+   Thought Grain, personal site styles (atop kit.css)
    ================================================================ */
 
 /* All cased labels render as written. No global lowercase trick. */
@@ -29,7 +29,7 @@ h6, .h6 {
 }
 .skip-link:focus { top: 12px; }
 
-/* Brand mark / nav text — body sans, restrained */
+/* Brand mark / nav text, body sans, restrained */
 .brand-mark { display: none; }
 .brand-name {
   font-family: var(--font-display);
@@ -350,7 +350,7 @@ body::after {
   color: var(--fg-subtle);
 }
 
-/* The HTML `hidden` attribute means "remove from layout and a11y tree" — but
+/* The HTML `hidden` attribute means "remove from layout and a11y tree", but
    any author CSS that sets a more specific display value (.essay-card uses
    display: flex, .note-item uses display: grid, etc.) ties or beats the
    user-agent's default [hidden] { display: none }. Doubling the attribute
@@ -358,7 +358,7 @@ body::after {
    rules without reaching for !important. */
 [hidden][hidden] { display: none; }
 
-/* Visually hidden helper — reachable by AT, removed from layout. */
+/* Visually hidden helper, reachable by AT, removed from layout. */
 .visually-hidden {
   position: absolute;
   width: 1px; height: 1px;
@@ -458,7 +458,7 @@ body::after {
 @media (max-width: 1200px) { .marginalia-pin--right { display: none; } }
 
 /* ============ PROJECT TILES ============
-   Row-style — definitive rules live in kit.css. These overrides flatten
+   Row-style, definitive rules live in kit.css. These overrides flatten
    the small-tile variant so it doesn't reintroduce the plate grid. */
 .project-tile.project-tile--sm { display: block; grid-template-columns: none; }
 .project-tile.project-tile--sm .project-tile__body { padding: 0; }
@@ -817,7 +817,7 @@ body::after {
 .site-footer__social,
 .site-footer__tagline { display: none !important; }
 
-/* ============ HR — clean modern line ============ */
+/* ============ HR, clean modern line ============ */
 .home hr, .container hr {
   margin: var(--s-7) 0;
   height: 1px;
@@ -1127,7 +1127,7 @@ body::after {
   white-space: nowrap;
 }
 
-/* Movies — letterboxd-diary style */
+/* Movies: letterboxd-diary style */
 .movies-diary { list-style: none; padding: 0; margin: 0; }
 .movie-row {
   display: grid;
@@ -1538,10 +1538,10 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
 
 
 /* ================================================================
-   Accessibility — WCAG 2.2 A / AA focus + link styles
+   Accessibility, WCAG 2.2 A / AA focus + link styles
    ================================================================ */
 
-/* Consistent, high-contrast focus ring for ALL interactive elements.
+/* Consistent: high-contrast focus ring for ALL interactive elements.
    Uses :focus-visible so mouse clicks don't show rings, but keyboard,
    screen reader, and :focus fallback all do. (WCAG 2.4.7, 2.4.11) */
 :where(a, button, input, select, textarea, summary, [tabindex], [role="button"], [role="link"], [role="tab"], [role="menuitem"]):focus-visible {
@@ -1555,7 +1555,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
 :where(a, button, input, select, textarea, summary, [tabindex], [role="button"]):focus:not(:focus-visible) {
   outline: none;
 }
-/* Dark mode — same token, already high contrast */
+/* Dark mode, same token, already high contrast */
 [data-theme="dark"] :where(a, button, input, select, textarea, summary, [tabindex], [role="button"]):focus-visible {
   outline-color: var(--accent);
   box-shadow: 0 0 0 4px color-mix(in oklch, var(--accent) 30%, transparent);
@@ -1572,7 +1572,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
   text-underline-offset: 3px;
 }
 
-/* Nav links — keep the bottom-border as the primary affordance but
+/* Nav links, keep the bottom-border as the primary affordance but
    also underline the text on hover so the cue survives in high-contrast
    / forced-colors mode, where border-bottom may disappear. */
 .site-nav__link:hover,
@@ -1590,7 +1590,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
   text-underline-offset: 3px;
 }
 
-/* Footer links already underline on hover — ensure focus matches */
+/* Footer links already underline on hover, ensure focus matches */
 .site-footer a:focus-visible {
   color: var(--fg);
   text-decoration: underline;
@@ -1602,7 +1602,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
 .toc a:hover,
 .toc a:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
 
-/* Project tiles — card-level link: underline the title on hover/focus */
+/* Project tiles, card-level link: underline the title on hover/focus */
 .project-tile:hover .project-tile__title,
 .project-tile:focus-visible .project-tile__title,
 .project-card:hover .project-card__title,
@@ -1624,7 +1624,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
   text-underline-offset: 3px;
 }
 
-/* Inline / body-copy links — any bare <a> inside prose */
+/* Inline / body-copy links, any bare <a> inside prose */
 .prose a,
 .essay-card__excerpt a,
 .hero__prose a:not(.btn),
@@ -1656,12 +1656,12 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
   text-decoration-color: currentColor;
 }
 
-/* Buttons styled as links (.btn--link) — make hover/focus state explicit */
+/* Buttons styled as links (.btn--link), make hover/focus state explicit */
 .btn--link:focus-visible {
   text-decoration-color: currentColor;
 }
 
-/* Filter-bar buttons (Projects page chips) — underline active on focus so
+/* Filter-bar buttons (Projects page chips), underline active on focus so
    selection state isn't color-only */
 .filter-bar button:focus-visible {
   outline-offset: 3px;
@@ -1670,7 +1670,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
   background: var(--bg-sunken);
 }
 
-/* Skip link — when focused it slides into view; give it a strong, visible
+/* Skip link, when focused it slides into view; give it a strong, visible
    outline that reads against both the dark pill and the page behind. */
 .skip-link:focus,
 .skip-link:focus-visible {
@@ -1801,7 +1801,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
 
 
 /* ================================================================
-   Cover-art layouts — albums, movies, podcasts, books
+   Cover-art layouts, albums, movies, podcasts, books
    ================================================================ */
 
 .cover { display: block; border-radius: 6px; overflow: hidden; box-shadow: 0 6px 20px -8px oklch(0% 0 0 / 0.45), 0 1px 2px oklch(0% 0 0 / 0.15); }
@@ -1899,7 +1899,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
 
 
 /* =========================================================================
-   Refactored from inline styles — BEM utilities + page-specific blocks
+   Refactored from inline styles, BEM utilities + page-specific blocks
    ========================================================================= */
 
 /* Reader column: wider variant used by per-kind cultural readers + /projects/<slug>/ */
@@ -1912,7 +1912,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
 .icon--trailing { margin-left: 4px; }
 
 /* Cover placeholder (per-kind reader covers, until covers.jsx is ported).
-   Base sets layout only — paint comes from --paper or from a sibling
+   Base sets layout only, paint comes from --paper or from a sibling
    class like .reading-card__spine--cocoa. */
 .cover-placeholder {
   display: flex;
@@ -1930,7 +1930,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
 .cover-placeholder--poster { aspect-ratio: 2 / 3; }
 .cover-placeholder--square { aspect-ratio: 1 / 1; }
 
-/* Single-cover frames inside readers — sets margin + width per medium */
+/* Single-cover frames inside readers, sets margin + width per medium */
 .cover-frame { margin: 28px 0 36px; }
 .cover-frame--book    { max-width: 320px; }
 .cover-frame--album   { max-width: 320px; }
@@ -2016,11 +2016,11 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
 [data-theme="dark"] .site-nav__theme .theme-toggle__moon { display: none; }
 [data-theme="dark"] .site-nav__theme .theme-toggle__sun  { display: block; }
 
-/* Dropcap p — already gets max-width:none from .reader p, but
+/* Dropcap p, already gets max-width:none from .reader p, but
    guarantee it for any prose context that uses .dropcap directly. */
 .dropcap { max-width: none; }
 
-/* Per-kind enjoying index — cross-link to the unified /enjoying/ stream */
+/* Per-kind enjoying index, cross-link to the unified /enjoying/ stream */
 .kind-index__cross-link {
   font-size: var(--t-small);
   color: var(--fg-subtle);
@@ -2029,7 +2029,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
 }
 
 /* When the cultural cards become <a> elements (so the whole row is clickable),
-   suppress the global hover-underline on the wrapper — only the title text
+   suppress the global hover-underline on the wrapper, only the title text
    inside should underline on hover, matching the .essay-card behaviour. */
 .album-card,
 .movie-row,
@@ -2056,7 +2056,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
   text-underline-offset: 3px;
 }
 
-/* The album/podcast/book grids and the movies-diary are <ul> wrappers — make
+/* The album/podcast/book grids and the movies-diary are <ul> wrappers, make
    sure the <li>s don't carry the browser's default list bullet/indent. */
 .album-grid,
 .podcast-grid,
@@ -2064,7 +2064,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
 .movies-diary { list-style: none; padding: 0; }
 
 /* =========================================================================
-   Styles page — design-system specimen
+   Styles page, design-system specimen
    ========================================================================= */
 
 .styles-section { margin: 0 0 64px; max-width: 880px; }
@@ -2111,7 +2111,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
   border-top: 1px solid var(--rule);
 }
 
-/* Per-token backgrounds — primitives */
+/* Per-token backgrounds, primitives */
 .swatch--paper-50  { background: var(--paper-50); }
 .swatch--paper-100 { background: var(--paper-100); }
 .swatch--paper-200 { background: var(--paper-200); }
@@ -2171,7 +2171,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
   margin: 0 0 16px;
 }
 
-/* Marginalia host paragraph — give the pin a positioned ancestor so its
+/* Marginalia host paragraph, give the pin a positioned ancestor so its
    absolute right offset has somewhere to anchor against. */
 .styles-marginalia-host { position: relative; max-width: 56ch; }
 
@@ -2296,7 +2296,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
 }
 .product-reader__buy .btn { display: inline-flex; align-items: center; gap: 6px; }
 
-/* Projects index — grouped by status (in-flight / shipped / paused). */
+/* Projects index, grouped by status (in-flight / shipped / paused). */
 .projects-group { margin-bottom: 56px; }
 .projects-group:last-of-type { margin-bottom: 0; }
 .projects-group__label {
@@ -2387,7 +2387,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
   text-wrap: pretty;
 }
 
-/* Section-feed pill — sits inside the page header beneath the lead.
+/* Section-feed pill, sits inside the page header beneath the lead.
    Visually distinct from the footer's small RSS social link: a pill-
    shaped chip with the section name in the label, mono-cased so it
    reads as a deliberate "subscribe" affordance, not an icon row. */
@@ -2418,7 +2418,7 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
 }
 .page-feed-link__icon { flex-shrink: 0; }
 
-/* /styles/ specimen sizing — bound a single bare card to a representative
+/* /styles/ specimen sizing, bound a single bare card to a representative
    width since cards normally inherit width from their grid wrapper. */
 .styles-card { display: block; max-width: 320px; }
 .styles-card--xs { max-width: 200px; }
@@ -2429,8 +2429,8 @@ a.series-nav__link:hover .series-nav__title { color: var(--accent); }
 /* =========================================================================
    Interactive figures (the build series).
 
-   The only stateful components on the site. Styled with existing tokens —
-   no new colours, no new type scale — so a figure reads as part of the prose
+   The only stateful components on the site. Styled with existing tokens, 
+   no new colours, no new type scale, so a figure reads as part of the prose
    rather than as an embedded widget.
    ========================================================================= */
 

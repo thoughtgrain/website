@@ -1,5 +1,5 @@
 /**
- * Writing.jsx — /essays/, /studies/ and their tag pages.
+ * Writing.jsx: /essays/, /studies/ and their tag pages.
  *
  * One component for both kinds and both shapes. A tag page renders every item
  * and hides the ones that don't match, which is what lets the filter work
@@ -56,7 +56,7 @@ export default function Writing({ route }) {
   const meta = META[dir];
   const items = content[dir];
 
-  // /essays/tag/<slug>/ — resolve the slug back to the tag it came from.
+  // /essays/tag/<slug>/, resolve the slug back to the tag it came from.
   const tagSlug = segments[1] === 'tag' ? segments[2] : null;
   const activeTag = tagSlug
     ? items.flatMap((i) => i.tagList).find((t) => slugifyTag(t) === tagSlug) || null

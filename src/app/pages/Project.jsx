@@ -1,5 +1,5 @@
 /**
- * Project.jsx — /projects/:slug/
+ * Project.jsx: /projects/:slug/
  */
 
 import { content } from '../content.js';
@@ -12,7 +12,7 @@ export default function Project({ route }) {
   if (!project) return <main id="main"><div className="container section"><h1>Not found</h1></div></main>;
 
   // Tags joined into one string rather than looped, so the meta row reads as a
-  // single kicker — "tag · tag · tag" — instead of several fragments.
+  // single kicker, "tag · tag · tag", instead of several fragments.
   const tagsJoined = [project.tag1, project.tag2, project.tag3].filter(Boolean).join(' · ');
 
   return (

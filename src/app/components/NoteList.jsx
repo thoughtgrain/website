@@ -1,5 +1,5 @@
 /**
- * NoteList.jsx — the month-grouped notes list.
+ * NoteList.jsx: the month-grouped notes list.
  *
  * Shared by /notes/ and the homepage, which is why it isn't inside either. A
  * note is either a short text fragment or an image with an optional caption;

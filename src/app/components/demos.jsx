@@ -1,5 +1,5 @@
 /**
- * demos.jsx — the interactive figures the build-series posts use.
+ * demos.jsx: the interactive figures the build-series posts use.
  *
  * These are the only stateful components in the app. Everything else renders
  * once and stays put, so three rules apply here that apply nowhere else:
@@ -8,7 +8,7 @@
  *    prerendered so that a reader with JS off, a crawler and a link preview all
  *    get real content. A demo that renders an empty box until React boots would
  *    quietly undo that for six posts. So each one ships with a real worked
- *    example already selected — interacting CHANGES the example, it isn't how
+ *    example already selected, interacting CHANGES the example, it isn't how
  *    you get one.
  *
  * 2. Initial state must be deterministic. No Date.now, no randomness, no
@@ -20,7 +20,7 @@
  *    results in a live region. The visual layout is a convenience; the source
  *    order is the actual document.
  *
- * They also import the real implementations — `relativeHref` from base.js, the
+ * They also import the real implementations, `relativeHref` from base.js, the
  * real route list from the content model. A demo that reimplements the thing it
  * documents is a demo that drifts. These can't: change the code and the figure
  * changes with it.
@@ -39,7 +39,7 @@ import { routesFor } from '../lib/content-model.js';
  *
  * `aria-live="polite"` on the output means a screen reader announces the new
  * example when you change the selection. Without it the demo is silent to
- * anyone not watching the pixels change — the interaction appears to do
+ * anyone not watching the pixels change, the interaction appears to do
  * nothing.
  */
 function Figure({ title, note, controls, children }) {
@@ -100,7 +100,7 @@ const baseOf = (route) => {
 /* ------------------------------------------------------------- the figures */
 
 /**
- * RouteExplorer — pick a route, see the HTML the build writes for it.
+ * RouteExplorer: pick a route, see the HTML the build writes for it.
  *
  * The routes come from `routesFor(content)`, the same function the build calls,
  * so this list is the real one. Add a note to src/content and it appears here.
@@ -136,7 +136,7 @@ export function RouteExplorer({ routes: given }) {
 }
 
 /**
- * PathResolver — watch relativeHref work.
+ * PathResolver: watch relativeHref work.
  *
  * Calls the actual function from base.js. The shared-prefix count and the
  * number of `../` are derived the same way the implementation derives them, so
@@ -180,7 +180,7 @@ export function PathResolver() {
   );
 }
 
-/** BuildStepper — what exists on disk after each phase of one `vite build`. */
+/** BuildStepper: what exists on disk after each phase of one `vite build`. */
 const PHASES = [
   {
     label: 'Read',
@@ -205,7 +205,7 @@ const PHASES = [
   {
     label: 'Prerender',
     body: 'renderToString runs each route through the SSR bundle and injects the markup into that route’s shell. The words are now in the HTML.',
-    tree: ['dist/**/index.html  — filled', 'dist/**/feed.xml, feed.json'],
+    tree: ['dist/**/index.html (filled)', 'dist/**/feed.xml, feed.json'],
   },
 ];
 
@@ -236,7 +236,7 @@ export function BuildStepper() {
   );
 }
 
-/** LoaderCompare — the same file, read two ways, producing the same key. */
+/** LoaderCompare: the same file, read two ways, producing the same key. */
 export function LoaderCompare() {
   const [side, setSide] = useState('browser');
   const name = useId();
@@ -271,13 +271,13 @@ export function LoaderCompare() {
       <p className="demo__step-body">
         {isBrowser
           ? 'Vite’s glob, compiled MDX modules, used to render every page.'
-          : 'Node’s filesystem, frontmatter only, used to build the feeds — where there is no module graph to glob.'}
+          : 'Node’s filesystem, frontmatter only, used to build the feeds, where there is no module graph to glob.'}
       </p>
     </Figure>
   );
 }
 
-/** FeedFormats — one set of entries, serialised two ways. */
+/** FeedFormats. One set of entries, serialised two ways. */
 export function FeedFormats() {
   const [format, setFormat] = useState('atom');
   const name = useId();

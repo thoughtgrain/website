@@ -1,5 +1,5 @@
 /* =========================================================================
-   Thought Grain — Foundations
+   Thought Grain, Foundations
    Warm-paper personal site. Newsreader serif for display, Inter for body,
    JetBrains Mono for labels. Single warm rust accent. OKLCH throughout.
    Inspired by Frank Chimero / anh.computer: lots of whitespace, no card
@@ -29,7 +29,7 @@
   --ink-400:   oklch(68.0% 0.014 60);     /* placeholder */
 
   /* ---------- Single warm accent ---------- */
-  --rust-700:  oklch(46.0% 0.150 32);     /* deep rust — link accent */
+  --rust-700:  oklch(46.0% 0.150 32);     /* deep rust, link accent */
   --rust-600:  oklch(54.0% 0.165 30);     /* hover */
   --rust-500:  oklch(64.0% 0.175 32);
   --rust-400:  oklch(76.0% 0.140 38);
@@ -56,7 +56,7 @@
 
   /* ---------- Semantic: Light ---------- */
   --bg:           var(--paper-50);
-  --bg-raised:    var(--paper-50);        /* same as bg — no raised plate */
+  --bg-raised:    var(--paper-50);        /* same as bg, no raised plate */
   --bg-sunken:    var(--paper-100);
   --bg-code:      oklch(92% 0.020 80);     /* code surface, light */
   --bg-inverse:   var(--ink-900);
@@ -91,7 +91,7 @@
   --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   --font-hand:    'Newsreader', Georgia, serif;
 
-  /* Sizes — body type is bigger; display is restrained, almost lowercase. */
+  /* Sizes: body type is bigger; display is restrained, almost lowercase. */
   --t-micro:   0.75rem;     /* 12px */
   --t-small:   0.8125rem;   /* 13px */
   --t-base:    1rem;        /* 16px */
@@ -132,12 +132,12 @@
   --s-10: 128px;
   --s-11: 192px;
 
-  /* Content column rhythm — narrower, more reading-site */
+  /* Content column rhythm, narrower, more reading-site */
   --measure-narrow: 32ch;
   --measure:        62ch;
   --measure-wide:   72ch;
 
-  /* ---------- Radii (low — paper-like, not card-like) ---------- */
+  /* ---------- Radii (low, paper-like, not card-like) ---------- */
   --r-0:    0;
   --r-1:    2px;
   --r-2:    3px;
@@ -147,7 +147,7 @@
   --r-pill: 999px;
   --r-card: 4px;
 
-  /* ---------- Shadows — almost none ---------- */
+  /* ---------- Shadows, almost none ---------- */
   --sh-0: none;
   --sh-1: none;
   --sh-2: none;
@@ -234,7 +234,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Paper texture — explicit opt-in only. */
+/* Paper texture, explicit opt-in only. */
 .paper-noise { position: relative; isolation: isolate; }
 .paper-noise::before {
   content: ""; position: absolute; inset: 0;
@@ -242,7 +242,7 @@ body {
   pointer-events: none;
 }
 
-/* Headings — Newsreader serif, low-tracking, restrained weight. */
+/* Headings, Newsreader serif, low-tracking, restrained weight. */
 h1, .h1, .t-h1 {
   font-family: var(--font-display);
   font-weight: 500;
@@ -344,7 +344,7 @@ p { margin: 0 0 var(--s-4); max-width: var(--measure); text-wrap: pretty; }
 .font-mono { font-family: var(--font-mono); }
 .font-serif { font-family: var(--font-display); }
 
-/* Links — prose-style by default. Always underlined, accent on hover. */
+/* Links: prose-style by default. Always underlined, accent on hover. */
 a {
   color: var(--fg);
   text-decoration: underline;
@@ -365,7 +365,7 @@ a:focus-visible {
   border-radius: var(--r-2);
 }
 
-/* Wrapping anchors — anchors around a whole card, row, or list item should
+/* Wrapping anchors, anchors around a whole card, row, or list item should
    not underline themselves or their descendants. Hover-tinting the inner
    title provides the affordance. */
 a:where(:has(h1, h2, h3, h4, h5, h6, p, ul, ol, figure, article, section, header, div)) {
@@ -377,7 +377,7 @@ a:where(:has(h1, h2, h3, h4, h5, h6, p, ul, ol, figure, article, section, header
   color: inherit;
 }
 
-/* Code — mono on a distinct surface so blocks and inline code read as
+/* Code: mono on a distinct surface so blocks and inline code read as
    code without any syntax highlighting. --bg-code is darker than
    --bg-sunken so it stands clear of the page; the dark theme override
    below inverts it. */
@@ -427,7 +427,7 @@ blockquote {
 }
 [data-theme="dark"] blockquote { color: var(--fg-muted); }
 
-/* Horizontal rule — quiet line, no ornament */
+/* Horizontal rule, quiet line, no ornament */
 hr {
   border: 0;
   border-top: 1px solid var(--rule);
@@ -437,7 +437,7 @@ hr {
 
 ::selection { background: color-mix(in oklch, var(--accent) 30%, transparent); color: var(--fg); }
 
-/* Marginalia — small italic note in accent. No rotation, no Caveat. */
+/* Marginalia: small italic note in accent. No rotation, no Caveat. */
 .marginalia {
   font-family: var(--font-display);
   font-style: italic;
@@ -449,7 +449,7 @@ hr {
 .marginalia--green { color: var(--marginalia-2); }
 .marginalia--rotated { transform: none; }
 
-/* Drop cap — opt-in only. */
+/* Drop cap, opt-in only. */
 .dropcap::first-letter {
   font-family: var(--font-display);
   font-weight: 500;

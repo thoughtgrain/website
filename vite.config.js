@@ -1,11 +1,11 @@
 /**
- * vite.config.js — the whole build, in one file and one command.
+ * vite.config.js: the whole build, in one file and one command.
  *
  * The repo root is the Vite root, and it is also what gets uploaded to a
  * CodePen Pen: the generated entries at the top level, `.codepen/pen.config.json`
  * beside them, source under `src/`. CodePen runs a bare `vite build` with no
  * npm scripts of its own, so everything the site needs happens inside that one
- * invocation — and its own entry discovery is a recursive glob for `.html`,
+ * invocation, and its own entry discovery is a recursive glob for `.html`,
  * which is exactly what fifty entries at the root give it.
  *
  * What a `vite build` does here:
@@ -13,8 +13,8 @@
  *   1. Reads src/content with readdirSync, in Node, at config time, and derives
  *      the route list.
  *   2. Writes one HTML entry per route, at the path it's served from.
- *   3. Builds the `ssr` environment — a Node-loadable render function.
- *   4. Builds the `client` environment — the entries from step 2 plus the app.
+ *   3. Builds the `ssr` environment, a Node-loadable render function.
+ *   4. Builds the `client` environment, the entries from step 2 plus the app.
  *   5. Prerenders every route and injects the markup into its shell.
  *
  * Steps 3–5 are sequenced by `builder.buildApp`. The output is fifty real HTML
@@ -47,7 +47,7 @@ const OUT_DIR = path.join(ROOT, 'dist');
 const SSR_DIR = '.ssr';
 
 /**
- * Generated entries live at the root, in the folder each route is served from —
+ * Generated entries live at the root, in the folder each route is served from, 
  * `notes/your-first-note/index.html` and so on. The bundler derives an output
  * path from where its input sits, so entries parked in a `pages/` folder would
  * come out at `dist/pages/…`. Putting them where they belong is what makes the
@@ -67,7 +67,7 @@ const GENERATED_MANIFEST = path.join(ROOT, '.generated-routes.json');
  * is cheap insurance: a route that would collide fails the build loudly.
  *
  * It earned its keep immediately. The output directory used to be called
- * `build/`, and the build-series posts route at `/build/<slug>/` — so
+ * `build/`, and the build-series posts route at `/build/<slug>/`, so
  * generation wrote entries into the output directory and cleaned them away on
  * the next run. Hence `dist`, listed here, and `build` deliberately not listed.
  */
@@ -81,7 +81,7 @@ const RESERVED = new Set([
  * This is a local plugin rather than `rehype-slug`, deliberately. Every import
  * at the top of this file is a way for the whole build to fail silently: if one
  * doesn't resolve, the config throws, Vite never runs, and the HTML ships
- * unprocessed — which looks like a successful build and a white page. That has
+ * unprocessed, which looks like a successful build and a white page. That has
  * happened twice. @mdx-js/mdx and the remark plugins earn that risk; a dozen
  * lines of string munging does not.
  *
@@ -133,7 +133,7 @@ function escapeHtml(s) {
 /** The `../` prefix a page at this route needs to reach the site root. */
 const baseFor = (segments) => (segments.length ? '../'.repeat(segments.length) : './');
 
-/** Route string to path segments — "/notes/x/" to ["notes", "x"]. */
+/** Route string to path segments, "/notes/x/" to ["notes", "x"]. */
 const segmentsFor = (route) => (route === '/' ? [] : route.slice(1, -1).split('/'));
 
 /**
@@ -172,7 +172,7 @@ function generateEntries(routes, site) {
     // Two things about that src, both the result of getting them wrong first.
     // It's RELATIVE, because a root-absolute path resolves under a plain
     // `vite build` but not under CodePen's, which doesn't map `/` to the Vite
-    // root — that mismatch produced fifty identical "Failed to resolve
+    // root. That mismatch produced fifty identical "Failed to resolve
     // /app/main.jsx" errors. And it's EXTENSIONLESS, so it resolves whether the
     // file is main.jsx as it is here or main.js after a pipeline has compiled
     // the JSX out: `resolve.extensions` covers both, while a literal `.js`
@@ -214,7 +214,7 @@ function generateEntries(routes, site) {
  * walks the routes, renders each, and injects the markup into its shell.
  *
  * It has to come after the client build rather than live in a plugin hook,
- * because it needs the finished HTML on disk — the version with the asset links
+ * because it needs the finished HTML on disk, the version with the asset links
  * Vite injected, which only exists once every other hook has run.
  *
  * `entryFile` comes from the SSR build's own output rather than being spelled
@@ -239,7 +239,7 @@ async function prerender(routes, entryFile, outDir = OUT_DIR) {
       (_, open, close) => open + html + close,
     );
 
-    if (filled === shell) throw new Error(`could not inject into ${file} — root div not found`);
+    if (filled === shell) throw new Error(`could not inject into ${file}, root div not found`);
 
     writeFileSync(file, filled);
     done += 1;
@@ -249,7 +249,7 @@ async function prerender(routes, entryFile, outDir = OUT_DIR) {
 }
 
 /**
- * Read the content and write the entries — once per process, however many times
+ * Read the content and write the entries, once per process, however many times
  * the config is evaluated.
  */
 let prepared;
@@ -412,7 +412,7 @@ export default defineConfig(() => {
     appType: 'mpa',
 
     // Relative asset URLs. Vite defaults to `/`, which only works when the site
-    // is served from a domain root — a page opened from any subpath asks for
+    // is served from a domain root, a page opened from any subpath asks for
     // /assets/main-<hash>.js and gets a 404. Every other path in this build is
     // resolved relative to the file that wants it; this is the last one.
     base: './',
@@ -421,7 +421,7 @@ export default defineConfig(() => {
      * Declared at the TOP level, not inside environments.client.
      *
      * The client environment inherits this, so it reads the same either way
-     * here — but it does not read the same everywhere. A pipeline that drives
+     * here, but it does not read the same everywhere. A pipeline that drives
      * Vite through the legacy build path rather than the Environment API
      * builder only ever looks at this key. With `input` nested under
      * `environments`, such a build finds nothing to bundle and emits no assets
@@ -430,7 +430,7 @@ export default defineConfig(() => {
      *
      * That is exactly what CodePen produced. Keeping the build declared here
      * means the worst case is fifty bundled pages without prerendered markup,
-     * rendering client-side — degraded, but working.
+     * rendering client-side, degraded, but working.
      */
     build: {
       outDir: OUT_DIR,

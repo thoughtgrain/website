@@ -1,24 +1,24 @@
 /**
- * node-loader.js — fill the content map from disk, in Node.
+ * node-loader.js: fill the content map from disk, in Node.
  *
  * Lives beside vite.config.js rather than under src/app/, and that placement is
  * deliberate. This is build-time code: it imports `yaml` and reads the
  * filesystem, neither of which means anything in a browser. When it sat in the
  * app tree, CodePen scanned it as app code and put `yaml` into the page's
- * runtime importmap — a Node parser shipped to the browser for no reason.
+ * runtime importmap, a Node parser shipped to the browser for no reason.
  * Build-time code belongs beside the build.
  *
  * The app loads content with `import.meta.glob` over the compiled MDX modules.
  * The feeds can't: they're generated inside the Vite config, where there's no
- * module graph to glob — just a filesystem.
+ * module graph to glob, just a filesystem.
  *
  * So this is the second of the two loaders. Both produce the same
  * `{ path: { frontmatter, default } }` shape and both hand it to the same
  * `buildContent`, which is what stops the feeds and the pages describing
  * different sites. Keys match Vite's glob output exactly, for the same reason.
  *
- * The frontmatter is parsed with `yaml` — the same engine remark-frontmatter
- * uses — rather than a second hand-written parser. That matters: the previous
+ * The frontmatter is parsed with `yaml`, the same engine remark-frontmatter
+ * uses, rather than a second hand-written parser. That matters: the previous
  * arrangement had two parsers that agreed on most fields and disagreed on
  * types, which is exactly the kind of drift that only shows up in production.
  *

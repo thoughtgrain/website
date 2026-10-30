@@ -1,4 +1,4 @@
-/* Theme toggle — warm light / warm dark */
+/* Theme toggle, warm light / warm dark */
 import { ready } from './ready.js';
 
 (function () {

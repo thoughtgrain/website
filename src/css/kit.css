@@ -1,5 +1,5 @@
 /* =========================================================================
-   UI Kit — Thought Grain
+   UI Kit, Thought Grain
    Reading-site kit. Almost no chrome: lists, not cards. Links are
    first-class. Buttons are a quiet pill. Depends on tokens.css.
    ========================================================================= */
@@ -56,7 +56,7 @@
 .btn--lg { font-size: 15px; padding: 11px 18px; }
 
 /* ---- Tags ----
-   Plain inline labels. No pill background — they're just small italic
+   Plain inline labels. No pill background. They're just small italic
    serif notes in the muted ink. */
 .tag {
   display: inline;
@@ -264,9 +264,9 @@ mark {
 .project-tile__blurb { font-size: 15px; color: var(--fg-muted); line-height: 1.55; margin: 0; max-width: 56ch; }
 
 /* ---- Nav ----
-   Inline text links. No backdrop blur, no chrome — just a quiet rule
+   Inline text links. No backdrop blur, no chrome, just a quiet rule
    at the bottom of the bar. */
-/* Glass top bar — full-width sticky strip with a translucent background and
+/* Glass top bar, full-width sticky strip with a translucent background and
    a backdrop-blur, plus a thin ::after edge below it that ramps the blur
    off into the content (the Josh Comeau distortion-edge trick). The inner
    content stays in the 720px column. */
@@ -288,7 +288,7 @@ mark {
   max-width: var(--container);
   margin: 0 auto;
 }
-/* Soft blur ramp that extends just below the bar — the edge fades from
+/* Soft blur ramp that extends just below the bar, the edge fades from
    blurred to clear, so scrolling content distorts smoothly under the
    glass rather than against a hard line. */
 .site-nav::after {
