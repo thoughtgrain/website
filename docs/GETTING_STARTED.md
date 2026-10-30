@@ -6,24 +6,21 @@ files at `src/content/**` show every supported shape — read alongside this doc
 ## Run it
 
 ```sh
-node build.js   # one-shot build → dist/
-node serve.js   # dev server on http://localhost:3000 with watch + live reload
+npm install        # once
+npm run dev        # dev server with hot reload
+npm run build      # static site → dist/
+npm run preview    # serve the built site
 ```
 
-Requires Node 18+. No `package.json`, no dependencies, nothing to install.
+Requires Node 18+. `npm run build` does three passes: Vite builds the pages,
+a second pass builds a server renderer, and `prerender.mjs` renders each route
+to static HTML. The output in `dist/` is plain files — every route is a real
+`index.html` with the content already in it, so it works with JavaScript
+disabled and can be hosted anywhere that serves static files.
 
-If you're on a phone, or on anything that kills long-running processes, the build
-also splits into two commands — one to gather the files, one to walk them:
-
-```sh
-node build.js scan                    # gather inputs → .cache/manifest.json
-node build.js render                  # walk them → dist/
-node build.js render --group notes    # or just one group at a time
-node build.js render --resume         # pick up after an interrupted run
-```
-
-`node build.js render --list` shows the groups. `docs/BUILD.md` explains the
-model and why it exists; you don't need any of it for normal editing.
+Adding content needs none of that detail: drop a file in `src/content/`, and the
+route, the page and the feeds all follow. See `ARCHITECTURE.md` if you want to
+know how.
 
 ## Where things live
 

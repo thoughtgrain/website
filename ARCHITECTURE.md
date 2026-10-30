@@ -1,21 +1,33 @@
 # Architecture
 
-A reference for how this site is actually built. Written for the maintainer (me, in six months) so a small change doesn't require re-reading the whole build. Start with `docs/BUILD.md` if you want the command surface first.
-
-The public-facing version of this is the `Building this site` series on the colophon. This document is the internal companion: more mechanical, more file paths, fewer essays.
+A reference for how this site is actually built. Written for the maintainer (me,
+in six months) so a small change doesn't mean re-reading everything.
 
 ---
 
 ## 1. Philosophy in one paragraph
 
-Node standard library only. A small `lib/` of single-purpose modules behind a `build.js` CLI. Plain HTML out. Content is markdown with frontmatter. CSS is hand-written, token-driven, in three layers. JavaScript is small enhancers, one file per concern. Deploy is GitHub Pages, triggered by a single workflow on push to `main`. If something looks complicated, it's worth questioning.
+Content is markdown with frontmatter, in `src/content/`. CSS is hand-written,
+token-driven, in three layers. The build is Vite: it scans the content at config
+time, generates one HTML entry per route, and prerenders each one to static HTML.
+Deploy is GitHub Pages, from a single workflow. If something looks complicated,
+it's worth questioning — this project has twice grown machinery it didn't need.
 
 The core rules:
 
-- **No npm dependencies.** There is no `package.json` at all — nothing to install, so CI runs `node build.js` directly.
-- **No bundler, no framework.** Source files ship.
-- **No build-time code splitting, no client-side router.** The browser asks for `/notes/` and the server returns `dist/notes/index.html`.
-- **The build never destroys its own output.** Pages are written over the existing `dist/`, and stale files are pruned only after a complete run. An interrupted build leaves a working site. See `docs/BUILD.md` for why that rule exists.
+- **One output per route.** `/notes/your-first-note/` is a real file at a real
+  path, prerendered to real HTML. No client-side router, no hash URLs, no SPA
+  fallback to configure.
+- **Content is the source of truth.** `src/content/` and `src/css/` are the site.
+  Everything else is a way of turning them into pages, and has been replaced once
+  already.
+- **One way to do each thing.** The previous build had two paths for deciding
+  whether anything had changed, and the bug lived in the gap between them.
+
+Dependencies: Vite and React. That's a deliberate reversal — this was a
+zero-dependency project, and the hand-rolled generator that bought grew to 5,665
+lines across 42 modules before it was replaced by a config file and some
+components.
 
 ---
 
@@ -23,144 +35,89 @@ The core rules:
 
 ```
 website/
-  build.js                     CLI entry — parses argv, dispatches to a command
-  serve.js                     dev server (static, live reload, port from env)
-  ARCHITECTURE.md              this file
-  docs/BUILD.md                the build model: scan/render, groups, resume
-  docs/                        other reference docs
-  .github/workflows/pages.yml  CI: build + deploy on push to main
+  vite.config.js               scans content, generates entries, emits feeds
+  prerender.mjs                renders each route to static HTML
+  package.json
+  index.html                   generated — the home entry
 
-  lib/
-    config.js                  paths, content dirs, CSS/JS order
-    args.js                    tiny argv parser
-    log.js                     progress reporting
-    fsx.js                     the write-then-prune output writer
-    manifest.js                scan: enumerate every input
-    state.js                   the render checkpoint
-    context.js                 the derive step, shared by every page group
-    watch-poll.js              mtime watcher, the fs.watch fallback
-    parse/                     frontmatter, markdown, components, content files
-    render/                    escaping, template engine, layouts, nav, helpers
-    net/                       opt-in HTTP client + product image grabber
-    pages/                     one module per output group; index.js registers them
-    commands/                  scan, render, build, clean
+  app/
+    main.jsx                   mounts one page; imports the CSS in cascade order
+    App.jsx                    the shell: nav, drawer, footer
+    routes.jsx                 route string → page component
+    content.js                 import.meta.glob → parsed collections
+    base.js, Link.jsx          depth-prefix handling for relative links
+    enhancers.js               re-exports the src/js progressive enhancers
+    entry-server.jsx           the SSR entry prerender.mjs calls
+    lib/
+      frontmatter.js           YAML-lite parser
+      markdown.js              markdown → HTML
+      content-model.js         parse + derive + the route list
+      feeds.js                 the eleven Atom feeds
+    components/                Html, FeedLink, NoteList, TagFilter
+    pages/                     one component per page type
 
   src/
-    site.json                  site-wide metadata (title, owner, email)
-    nav.json                   drawer + footer nav config (see §10)
-    layouts/                   HTML templates with {{...}} placeholders
-    components/                MDX components (one HTML file each)
-    content/
-      site.json                site-wide constants
-      nav.json                 nav config
-      about.json               structured About page data
-      colophon.json            structured Colophon page data
-      now.json                 Now page state
-      learning.json            Learning topics + resources
-      gear.json                Gear list
-      articles/                essays + studies + build series (.mdx)
-      notes/                   short notes (.mdx, text or image)
-      projects/                project case studies (.mdx)
-      reading/                 reading items (.mdx)
-      music/                   album entries (.mdx)
-      movies/                  movie diary (.mdx)
-      podcasts/                podcast entries (.mdx)
-      bookshelf/               permanent-shelf books (.mdx)
-      products/                product picks (.mdx)
-    css/
-      tokens.css               foundations: palette, type, scale, motion
-      kit.css                  components: buttons, cards, nav, etc.
-      site.css                 page-specific styles, layout, hero, etc.
-    js/
-      theme.js                 light/dark toggle + storage
-      nav.js                   drawer dialog, focus trap, escape close
-      texture.js               paper-grain scroll fade (see §9.4)
-      tag-filter.js            client-side tag filter on index pages
-      accessibility.js         reserved
-      floorboards.js           reserved
-    feed.xsl                   styled XSL preview for the Atom feeds
+    content/                   the site: .mdx entries + JSON config
+    css/                       tokens.css, kit.css, site.css
+    js/                        progressive enhancers
+    layouts/                   the OLD templates — kept as reference only,
+                               except styles.html, which /styles/ still renders
 
-  dist/                        built site, written fresh per build
+  .github/workflows/pages.yml  npm ci && npm run build → Pages
 ```
 
-`dist/` is gitignored in spirit but currently committed (so GitHub Pages doesn't have to rebuild). The CI workflow always overwrites it.
+Generated at build time and gitignored: `index.html`, one directory per route at
+the repo root, `.generated-routes.json`, `dist/`, `.ssr/`.
 
 ---
 
 ## 3. The build pipeline
 
-The build runs in three phases, and they are separable on purpose — `docs/BUILD.md`
-explains why (short version: a single indivisible build doesn't survive being
-killed on a phone).
+Three passes, wired together by `npm run build`.
 
-### 3.1 Scan — `lib/manifest.js`
+### 3.1 Config — `vite.config.js`
 
-Walks every input directory once and writes `.cache/manifest.json`: each content
-file, layout, component, stylesheet, script, JSON config and standalone asset,
-with its size and mtime. No parsing, no rendering. Run on its own with
-`node build.js scan`.
+Runs in Node. `readdirSync` reads every `.mdx` and `.json` under `src/content/`
+into a `{ path: rawText }` map, `buildContent` derives the collections, and
+`routesFor` produces the route list. Then one HTML entry is written per route, at
+the path it will be served from, and handed to `rollupOptions.input`.
 
-Nothing downstream lists a directory again — `render` works from this list. That
-matters because `readdir` is the call most likely to fail or come back empty in a
-sandboxed runtime, and this is now the one place it happens, with counts printed.
+Each entry is the same shell. The only things that differ are `data-route`,
+which tells the app which page it is, and `data-base`, the prefix links need to
+climb back to the root.
 
-### 3.2 Derive — `lib/context.js`
+Entry generation writes directories at the repo root, so it refuses any route
+whose first segment collides with a project directory and removes only what it
+recorded creating. That guard caught a real collision on its first run: the
+output directory was `build/` and the build-series posts route at `/build/<slug>/`.
+Output is `dist/`.
 
-Parses everything the manifest names and computes every field the page modules
-share, in one pass:
+### 3.2 Client build
 
-1. Read the site/nav/about/now/learning/gear/colophon JSON.
-2. Render drawer + footer HTML from `nav.json` (see §10) onto `site.drawerNavHtml`
-   and `site.footerNavHtml`.
-3. Pre-render the fragments the template engine can't produce itself — work
-   highlights, learning resource lists, gear items — because `{{#each}}` doesn't
-   nest.
-4. Parse the nine content collections (`lib/parse/content.js`).
-5. Derive per-collection fields: product URL hosts, cultural ledes, reading status
-   labels, movie star ratings, article routes and tag lists.
-6. Partition articles into `essays`, `studies` and `buildSeries` by `kind` (§5.1).
-7. Group articles by `series:` (§11), and group notes by month.
+Vite builds all fifty entries, bundling `app/` and the CSS. A plugin emits the
+eleven Atom feeds — they need real files at real URLs, which no amount of client
+rendering provides.
 
-The result is one `ctx` object. **Every page group receives a fully-derived
-context**, which is what lets any group run alone, in any order, in its own
-process.
+### 3.3 Prerender — `prerender.mjs`
 
-### 3.3 Render — `lib/commands/render.js` + `lib/pages/`
+A second Vite pass builds `app/entry-server.jsx` for Node, then this walks the
+routes, calls `renderToString` for each, and injects the markup into that route's
+shell. The words end up in the HTML: the site works with JS disabled, crawlers
+and link previews see real content, and the output is genuinely static. React
+hydrates rather than re-rendering.
 
-Walks the group registry in `lib/pages/index.js`, checkpointing to
-`.cache/state.json` after each group:
+### 3.4 One content model, two loaders
 
-| Group | Output |
-| ----- | ------ |
-| `assets` | `dist/css/style.css`, `dist/js/main.js`, `feed.xsl` |
-| `home` | `/` |
-| `notes` | `/notes/` and `/notes/<slug>/` |
-| `writing` | `/essays/`, `/studies/`, their tag pages and readers |
-| `series` | `/build/<slug>/` |
-| `projects` | `/projects/`, `/projects/cat/<slug>/`, per-project readers |
-| `flat` | `/now/`, `/about/`, `/learning/`, `/gear/`, `/colophon/`, `/styles/` |
-| `enjoying` | the five cultural kinds, plus the paginated `/enjoying/` |
-| `products` | `/products/` and product readers |
-| `feeds` | `/feed.xml` plus ten per-section Atom feeds |
+`app/lib/content-model.js` takes a `{ path: rawText }` map and returns the
+collections and the route list. It does no I/O at all, which is the point:
 
-Order is presentation order, not dependency order — it only buys a readable log.
+- `vite.config.js` and `prerender.mjs` fill that map with `readdirSync`;
+- `app/content.js` fills the same shape with `import.meta.glob`.
 
-Outputs go through the writer in `lib/fsx.js`, which skips files whose bytes
-already match and records everything it wrote. Stale files are pruned at the end,
-and only when every group finished.
-
-Total runtime: ~90ms on a laptop for a full build; a content edit typically
-rewrites two or three files and reports the other sixty as unchanged.
-
-### 3.4 Two things that are NOT what they look like
-
-- **CSS and JS are not globbed.** `lib/config.js` holds explicit ordered lists.
-  The cascade depends on `tokens` → `kit` → `site`, and `theme.js` must run first
-  so the stored colour scheme applies before paint. A glob would sort them
-  alphabetically and break both, silently. Adding a file means adding it to the
-  list. (An earlier version of this document claimed otherwise. It was wrong.)
-- **`src/assets/` is not copied wholesale.** `icons.svg` is inlined as a sprite
-  during derive; product images are copied individually by the `products` group.
+Both call `buildContent`, so the routes the config generates and the pages the
+app renders cannot drift apart. The previous build had two different ways of
+answering "what changed" and lost three rounds of debugging to the gap between
+them.
 
 ---
 
@@ -221,31 +178,22 @@ Build-series posts also carry `series: "Building this site"` and `seriesPart: 1.
 
 ---
 
-## 6. The template engine
+## 6. Pages and routing
 
-`renderTemplate(template, data)` lives in `lib/render/template.js`. Three constructs, three passes, each looped until stable — with an iteration cap, so a value that expands to text containing its own placeholder fails loudly instead of hanging.
+`app/routes.jsx` maps a route string to a component. Pure dispatch, no router
+library — every page is a real file that knows its own route, so there is no
+history to manage, no links to intercept and no fallback to configure. Patterns
+are tried in order, so a fixed second segment has to come before the pattern that
+would swallow it as a slug: `/essays/tag/x/` before `/essays/:slug/`.
 
-### 6.1 Constructs
+An unmatched route throws rather than rendering blank, because the only way to
+get one is for `routesFor()` and this table to have drifted.
 
-```handlebars
-{{key}}                          simple substitution
-{{a.b.c}}                        nested path
-{{#each list}}…{{/each}}         loop
-{{#if key}}…{{/if}}              conditional
-```
-
-That's the whole syntax. No filters, no partials, no escaping helpers. Whatever needs to be more complex is done in JS and passed in as an already-rendered HTML string.
-
-### 6.2 Three passes
-
-1. **`{{#each}}`**, innermost first, looped until no `each` blocks remain.
-2. **`{{#if}}`**, same shape — innermost first, looped until stable.
-3. **`{{key}}` / `{{a.b.c}}`**, looped until output stops changing.
-
-The two looping properties exist for real reasons:
-
-- **Nested `{{#if}}` requires innermost-first.** A naive non-greedy regex grabs the first `{{/if}}` it sees, which is the inner close on a nested block, leaving the outer close orphaned. Inside notes/image conditionals this was visibly broken; the fix is the regex pattern `(?:(?!\{\{#if\s)[\s\S])*?` for the body and a `do…while` that keeps re-running until the output stops changing.
-- **Looping the simple-key pass** is what makes injected HTML resolve transitively. The drawer is built from `nav.json` as an HTML string containing `{{basePath}}`, then injected into pages via `{{drawerNavHtml}}`. Without the loop, `{{basePath}}` would ship literally to the browser. (This caused the `%7B%7BbasePath%7D%7Dnotes/` URL leak.)
+The old hand-rolled `{{var}}` / `{{#each}}` / `{{#if}}` template engine is gone;
+React does that job. The one place its output survives is `/styles/`, which still
+renders `src/layouts/styles.html` as raw HTML — 369 lines of static specimen with
+`{{basePath}}` as its only variable, so converting it to JSX would have been
+transcription risk for no gain.
 
 ---
 
@@ -396,87 +344,72 @@ Build series posts (`kind: "Build series"`) all set `series: "Building this site
 
 ## 12. Deploy
 
-Single workflow file at `.github/workflows/pages.yml`. On push to `main`:
+`.github/workflows/pages.yml` runs on push to `main` and `claude/**`:
+`npm ci`, then `npm run build`, then uploads `dist/` to Pages. `npm ci` rather
+than `npm install` so the lockfile is authoritative and CI can't quietly build a
+different dependency tree than local.
 
-1. Checkout.
-2. Install Node 20.
-3. `node build.js` (no `npm install` first — there's nothing to install).
-4. Upload `dist/` as a Pages artifact.
-5. Deploy the artifact to Pages.
-
-Typical end-to-end: ~35 seconds. Build itself is sub-second.
-
-No dependency cache (nothing to cache). No preview deploys (no fork PRs). No CI link/a11y/Lighthouse check (audited manually). No CDN-purge step (Pages handles it).
+`dist/` is not committed. It was, under the old generator, which meant every
+commit carried a diff of the built site.
 
 ---
 
 ## 13. Common tasks
 
-### 13.1 Add an essay
+### 13.1 Add an essay, study or note
 
-```
-src/content/articles/NN-my-essay.mdx
-```
+Drop a numbered `.mdx` file in the right folder under `src/content/`. Filenames
+set the order, which is why they're numbered. Frontmatter needs at least `slug`,
+`title` and `date`; essays and studies also take `kind`, `summary`, `read` and up
+to three tags. Run `npm run dev` and it appears — the route is generated from the
+content, so nothing else needs touching.
 
-Frontmatter: `slug`, `kind: Essay`, `title`, `summary`, `date`, `read`, optional `tag1/2/3`, optional `toc`. Run `node build.js`. New page appears at `/essays/<slug>/`.
+### 13.2 Add a page type
 
-To make it visible in the launch nav, also flip `Essays` to `"enabled": true` in `nav.json`.
+1. Write the component in `app/pages/`.
+2. Add its pattern to the table in `app/routes.jsx`.
+3. If it needs new routes, add them to `routesFor()` in `app/lib/content-model.js`.
 
-### 13.2 Add a note (text or image)
+### 13.3 Change a colour or type token
 
-```
-src/content/notes/NN-my-note.mdx
-```
+`src/css/tokens.css`. Everything else reads from it.
 
-Text note: `slug`, `date`, `month`, `title`, optional `context`, body in markdown.
+### 13.4 Flip a nav item on or off
 
-Image note: same plus `image:` (URL), `imageAlt:`, optional `caption:`. Body is optional.
+`src/content/nav.json`, the `enabled` flag. Both the drawer and the footer read
+from it. The item's page still builds, so a direct URL keeps working.
 
-### 13.3 Add a project
+### 13.5 Add a product image
 
-```
-src/content/projects/NN-my-project.mdx
-```
-
-Frontmatter: `slug`, `title`, `summary`, `kind: Project`, optional `category` (Code/Design/Accessibility/Hardware/Experiments), `status`, `year`, `tag1/2/3`. Lands at `/projects/<slug>/` and appears on `/projects/`. With a category set, also appears on `/projects/cat/<slug>/`.
-
-### 13.4 Change a colour or type token
-
-Edit the relevant custom property in `src/css/tokens.css`. The dark-mode override under `[data-theme="dark"]` lives in the same file.
-
-### 13.5 Flip a nav item on or off
-
-Edit `enabled` in `src/content/nav.json`. Build.
-
-### 13.6 Add a new series
-
-In each piece of the series, set `series: "Series name"` and `seriesPart: N`. The series UI appears automatically; no code change needed.
-
-### 13.7 Add a new MDX component
-
-Create `src/components/<Name>.html` with `{{prop}}` placeholders. Reference it as `<Name prop="value" />` in any MDX body.
-
-### 13.8 Tune the paper grain
-
-Two SVG tokens in `tokens.css`: `--paper-noise` (broad) and `--paper-flecks` (sparse darker specks). Both use a `feComponentTransfer` discrete table to threshold the alpha. More non-zero entries = denser. Higher peak values = stronger specks. Light + dark have separate definitions.
-
-### 13.9 Tune the grain's scroll fade
-
-Tunables at the top of `src/js/texture.js`: `MIN_OPACITY`, `VEL_TO_FADE`, `SMOOTH_IN`, `SMOOTH_OUT`. CSS transition on the layers is 180ms linear — the JS smoothing is what makes the fade gradual.
+Save it as `src/assets/products/<slug>.{jpg,png,webp}`. It gets picked up by
+glob. There's no scraping any more — the old build fetched `og:image` over the
+network on every run, against a cache directory that didn't exist.
 
 ---
 
 ## 14. Known quirks and lessons
 
-- **Template engine needs to loop simple substitutions.** An interpolation that injects HTML containing further `{{...}}` placeholders won't resolve in one pass. `renderTemplate` repeats each pass until the output stops changing — capped at 50 iterations, so a genuinely circular value throws with the stuck placeholder named instead of spinning forever.
-- **Never delete `dist/` at the start of a build.** The build used to open with `fs.rmSync(DIST, …)`. Killed at 100ms, that left 13 of 64 files on disk and no way to tell why. Outputs now go through `lib/fsx.js`, which writes over the existing site and prunes stale files only after a complete run.
-- **A module that runs work at import time will run it twice.** `build.js` used to call `build()` on load *and* export it, so `serve.js`'s `require('./build')` started one build and its explicit call started another — both deleting `dist/`. Anything with side effects needs a `require.main === module` guard.
-- **`fs.watch(… { recursive: true })` is not universally available.** It throws `ERR_FEATURE_UNAVAILABLE_ON_PLATFORM` or `ENOSYS` where the platform can't back it. `serve.js` catches that and falls back to mtime polling over the manifest.
-- **Nested `{{#if}}` and `{{#each}}` need innermost-first matching.** A negative lookahead `(?:(?!\{\{#if\s)[\s\S])*?` in the body of the regex pattern restricts each match to a block without further nesting; loop until stable.
-- **CSS grid `1fr` carries implicit `min-width: min-content`.** An image inside a grid cell expands the cell to the image's intrinsic width unless you use `minmax(0, 1fr)` and put `min-width: 0` on the body cell. This bit the image-note row.
-- **Fixed-position noise behind moving content triggers motion sickness.** The grain fade in `texture.js` is not cosmetic — it's an accessibility default, with a hard opt-out under `prefers-reduced-motion`.
-- **GitHub Pages CDN can hold the previous version at the edge for a few minutes** after a deploy. If something looks wrong right after a push, hard-refresh and wait before debugging.
-- **Don't put hashed filenames on `style.css` / `main.js`** unless you also expose a stable alias. Stable URLs are how the site can be referenced from external tools (Figma code layers, embeds) without rewriting.
+- **Don't detect change with metadata you don't control.** The old build compared
+  file size and mtime. On iOS under File Provider Storage, mtimes aren't
+  dependable, so an edited note read as unchanged and never re-rendered.
+- **An optimisation that can make the build look broken is not worth 45ms.** A
+  fingerprint check that skipped the render when nothing had changed produced
+  "it builds the first time, then nothing" — twice — for 45ms of a 125ms build.
+- **One way to answer a question, not two.** Staleness checking walked the
+  entries already in the manifest, so an added or deleted file was invisible to
+  it. One code path escaped that by luck; the others didn't.
+- **A decision to skip work has to show its evidence.** Every round of debugging
+  that build was lost to something it decided silently.
+- **The file browser caches.** The symptom that started the last rewrite was a
+  page that "wouldn't update". It had updated; Code App was showing a stale copy.
+- **CSS grid `1fr` carries an implicit `min-width: min-content`.** An image in a
+  grid cell expands it to the image's intrinsic width unless you use
+  `minmax(0, 1fr)` and `min-width: 0` on the body cell. This bit the image-note row.
+- **Fixed-position noise behind moving content triggers motion sickness.** The
+  grain fade in `texture.js` is an accessibility default, with a hard opt-out
+  under `prefers-reduced-motion`.
+- **GitHub Pages holds the previous version at the edge for a few minutes.** Hard
+  refresh and wait before debugging a deploy.
 
 ---
 
@@ -486,7 +419,7 @@ If a new person inherits this repo, the order I'd hand them:
 
 1. This file.
 2. `docs/GETTING_STARTED.md`.
-3. `docs/BUILD.md`, then `lib/commands/render.js` → `lib/context.js` → `lib/pages/index.js`.
+3. `vite.config.js`, then `app/lib/content-model.js` → `app/routes.jsx` → `app/pages/`.
 4. `src/css/tokens.css`, then `kit.css`, then `site.css`.
 5. The Build series essays at `/build/building-this-site-N-…/`.
 
