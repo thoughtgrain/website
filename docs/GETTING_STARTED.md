@@ -95,6 +95,21 @@ inline plugin over `@mdx-js/mdx` instead.
 That's what `npm run setup` is for: it installs the toolchain locally and in CI,
 with exact pins, without putting it in the manifest CodePen reads.
 
+**Re-run it after any `npm install`.** Installing anything rewrites
+`node_modules` from the lockfile, and the lockfile doesn't cover the bundler, so
+the next build fails with `vite: not found`. One command fixes it:
+
+```sh
+npm run setup
+```
+
+There used to be a `prebuild` hook doing this automatically. It had to go:
+`package.json` is the file CodePen reads, and a hook that runs `npm i react` on
+the host installs a second React beside the one its block provides, at which
+point every hook call in the app fails and you get a blank page. Convenience
+scripts that mutate the dependency tree don't belong in a manifest someone else
+executes.
+
 Adding content needs none of that detail: drop a file in `src/content/`, and the
 route, the page and the feeds all follow. See `ARCHITECTURE.md` if you want to
 know how.

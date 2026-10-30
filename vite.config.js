@@ -28,7 +28,6 @@ import react from '@vitejs/plugin-react';
 import { compile as compileMdx } from '@mdx-js/mdx';
 import remarkFrontmatter from 'remark-frontmatter';
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter';
-import rehypeSlug from 'rehype-slug';
 import { defineConfig } from 'vite';
 
 import { buildContent, routesFor } from './src/app/lib/content-model.js';
@@ -75,6 +74,46 @@ const GENERATED_MANIFEST = path.join(ROOT, '.generated-routes.json');
 const RESERVED = new Set([
   'src', 'dist', 'docs', 'node_modules', '.codepen', '.git', '.github', SSR_DIR,
 ]);
+
+/**
+ * Give every heading an id, so the `toc:` frontmatter has something to link to.
+ *
+ * This is a local plugin rather than `rehype-slug`, deliberately. Every import
+ * at the top of this file is a way for the whole build to fail silently: if one
+ * doesn't resolve, the config throws, Vite never runs, and the HTML ships
+ * unprocessed — which looks like a successful build and a white page. That has
+ * happened twice. @mdx-js/mdx and the remark plugins earn that risk; a dozen
+ * lines of string munging does not.
+ *
+ * Matches github-slugger closely enough for our headings: lowercase, drop
+ * anything that isn't a word character or a space, join on hyphens. The
+ * duplicate counter is there because two sections can share a title.
+ */
+function rehypeHeadingIds() {
+  const textOf = (node) => (node.type === 'text'
+    ? node.value
+    : (node.children || []).map(textOf).join(''));
+
+  const slugify = (t) => t
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N} -]+/gu, '')
+    .trim()
+    .replace(/\s+/g, '-');
+
+  return (tree) => {
+    const seen = new Map();
+    const walk = (node) => {
+      if (node.type === 'element' && /^h[1-6]$/.test(node.tagName) && !node.properties?.id) {
+        const base = slugify(textOf(node)) || 'section';
+        const n = seen.get(base) || 0;
+        seen.set(base, n + 1);
+        node.properties = { ...node.properties, id: n ? `${base}-${n}` : base };
+      }
+      (node.children || []).forEach(walk);
+    };
+    walk(tree);
+  };
+}
 
 /** Remove only the directories the previous run created. */
 function cleanGenerated() {
@@ -366,7 +405,7 @@ export default defineConfig(() => {
               // markdown parser slugified them; MDX doesn't, and nothing
               // replaced it — so every in-page anchor on the site pointed at
               // an id that was never emitted.
-              rehypePlugins: [rehypeSlug],
+              rehypePlugins: [rehypeHeadingIds],
             },
           );
           return { code: String(compiled), map: null };
