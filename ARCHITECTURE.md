@@ -66,6 +66,7 @@ website/
     css/                       tokens.css, kit.css, site.css
     js/                        progressive enhancers
     assets/                    product images
+    feed-style.xml             XSLT that renders a feed as a readable page
     layouts/                   the OLD templates — reference only, except
                                styles.html, which /styles/ still renders
 
@@ -134,9 +135,20 @@ the pages render: each of the eleven sections as Atom (`feed.xml`) and as JSON
 Feed 1.1 (`feed.json`).
 
 Both serialisers share `orderEntries`, so the two formats can't drift into
-listing different items or a different order. There is no XSL stylesheet —
-CodePen won't host `.xsl`, and the one this used to ship had been pointing at a
-stylesheet path that no longer existed since the Vite migration.
+listing different items or a different order.
+
+The Atom feeds carry an XSLT stylesheet so a browser renders them as a readable
+page. It lives at `src/feed-style.xml` — `.xml` rather than `.xsl` because
+CodePen won't accept that extension, and the extension is irrelevant to how
+browsers resolve it. The plugin emits a copy beside every `feed.xml` rather than
+one shared copy, because the `<link>` and `<a href>` the transform produces
+resolve against the *feed's* URL, not the stylesheet's, so the paths inside have
+to match the depth of the feed that used it.
+
+Two things about it are worth knowing. A browser applies it only when the feed
+is served as `text/xml` or `application/xml`; `application/atom+xml` is ignored.
+And JSON Feed has no equivalent — JSON cannot carry a stylesheet, so those feeds
+render raw whatever we do.
 
 That's why `node-loader.js` exists. The browser fills the content map with
 `import.meta.glob`; the build fills the same shape with `readdirSync`, because

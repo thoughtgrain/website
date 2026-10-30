@@ -287,12 +287,25 @@ Each of those is published **twice** — as Atom (`feed.xml`) and as
 files in all. Same entries, same order, same ids; one source serialised two
 ways.
 
-There is no XSL stylesheet. There used to be: `/feed.xsl` turned the Atom XML
-into a readable page when you opened a feed URL in a browser. CodePen won't host
-`.xsl` files at all, and the stylesheet had been quietly broken since the Vite
-migration anyway — it linked `/css/style.css`, a path that stopped existing when
-the old generator was replaced. JSON Feed isn't a replacement for it (JSON isn't
-a stylesheet); it's a second feed format that a static host will actually serve.
+**The Atom feeds are styled.** Open one in a browser and you get a readable
+page — the site's own type and colour, a subscribe banner with the feed URL, and
+the entry list — rather than raw XML. That's XSLT: `src/feed-style.xml`, copied
+beside every `feed.xml` at build time with its paths fixed for that depth.
+
+It's named `.xml` rather than `.xsl` because CodePen won't accept a `.xsl` file.
+The extension doesn't matter — `<?xml-stylesheet?>` references a URL, and the
+browser decides from the instruction's `type`, not the filename.
+
+**One caveat.** A browser only applies the stylesheet when the feed is served as
+`text/xml` or `application/xml`. Served as `application/atom+xml` — technically
+the more correct type — Chromium shows raw XML and ignores it. Most static hosts
+serve `.xml` as `text/xml` by default, which is why this works, but it's the
+host's call, not ours.
+
+**The JSON feeds are not styled, and can't be.** JSON has no stylesheet
+mechanism — no equivalent of `<?xml-stylesheet?>` exists. A browser shows raw
+JSON, or its own built-in JSON viewer. That's the format's limit, not a gap in
+the build.
 
 The `<head>` of every page links both global feeds via
 `<link rel="alternate">` for feed-reader discovery. The footer RSS link points

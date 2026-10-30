@@ -309,10 +309,34 @@ export default defineConfig(() => {
         name: 'site-feeds',
         apply: 'build',
         applyToEnvironment: (env) => env.name === 'client',
-        generateBundle() {
-          renderFeeds(content).forEach(({ fileName, source }) => {
+        generateBundle(_options, bundle) {
+          const feeds = renderFeeds(content);
+          feeds.forEach(({ fileName, source }) => {
             this.emitFile({ type: 'asset', fileName, source });
           });
+
+          // A copy of the XSL stylesheet beside every feed.xml.
+          //
+          // One shared copy won't do. The <link> and <a href> the transform
+          // emits resolve against the FEED's URL, not the stylesheet's, so the
+          // paths inside have to match the depth of the feed that used it.
+          // Eleven ~3 KB copies is the cheap way to be correct at every depth.
+          const cssFile = Object.keys(bundle).find((f) => f.endsWith('.css'));
+          const template = readFileSync(path.join(ROOT, 'src', 'feed-style.xml'), 'utf8');
+
+          feeds
+            .filter(({ fileName }) => fileName.endsWith('feed.xml'))
+            .forEach(({ fileName }) => {
+              const depth = fileName.split('/').length - 1;
+              const up = depth ? '../'.repeat(depth) : './';
+              this.emitFile({
+                type: 'asset',
+                fileName: fileName.replace(/feed\.xml$/, 'feed-style.xml'),
+                source: template
+                  .replaceAll('{{cssHref}}', up + (cssFile || ''))
+                  .replaceAll('{{homeHref}}', up),
+              });
+            });
         },
       },
     ],

@@ -97,6 +97,12 @@ function renderAtom(site, siteUrl, meta, entries) {
   const feedUrl = `${siteUrl + meta.path}feed.xml`;
   const lines = [
     '<?xml version="1.0" encoding="UTF-8"?>',
+    // Relative, and pointing at a copy sitting in this feed's own directory.
+    // Browsers only apply an XSL stylesheet same-origin with the XML, and the
+    // hrefs the transform emits resolve against the FEED's URL rather than the
+    // stylesheet's — so one shared copy at the root can't get the paths right
+    // for feeds at different depths.
+    '<?xml-stylesheet type="text/xsl" href="feed-style.xml"?>',
     '<feed xmlns="http://www.w3.org/2005/Atom">',
     `  <title>${escapeXml(meta.title)}</title>`,
     `  <subtitle>${escapeXml(meta.subtitle || '')}</subtitle>`,
