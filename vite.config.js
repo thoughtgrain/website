@@ -11,7 +11,7 @@ const CONTENT = path.join(ROOT, 'src', 'content');
 
 /**
  * Generated entries live at the repo root, in the directory each route is served
- * from — `/notes/your-first-note/index.html` and so on. Rollup derives an
+ * from — `/notes/your-first-note/index.html` and so on. The bundler derives an
  * output path from where its input sits, so entries parked in a `pages/` folder
  * come out at `build/pages/…`. Putting them where they belong is what makes the
  * output paths right.
@@ -109,7 +109,7 @@ function escapeHtml(s) {
 }
 
 /**
- * Write one HTML entry per route and return Rollup's `input` map.
+ * Write one HTML entry per route and return the bundler's `input` map.
  *
  * Every entry is the same shell. The only thing that differs is `data-route`,
  * which tells the app which page it is, and `data-base`, the depth prefix links
@@ -183,7 +183,14 @@ export default defineConfig(() => {
     build: {
       outDir: OUT_DIR,
       emptyOutDir: true,
-      rollupOptions: { input },
+      // rolldownOptions, not rollupOptions: Vite 8 bundles with rolldown. The
+      // old name still works as a deprecated alias, but CodePen's examples use
+      // this one and there's no reason to sit on the alias.
+      rolldownOptions: { input },
+      // The output is prerendered HTML plus a module bundle for hydration —
+      // every browser that runs it supports modern syntax by definition, so
+      // there's nothing to gain from downlevelling it.
+      target: 'esnext',
     },
     plugins: [
       react(),
