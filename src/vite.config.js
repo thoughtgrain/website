@@ -184,6 +184,13 @@ function generateEntries(routes, site) {
     const abs = path.join(ROOT, ...segments, 'index.html');
     mkdirSync(path.dirname(abs), { recursive: true });
 
+    // `base` does double duty: it's the prefix the app hands to Link, and it's
+    // how the module script finds itself. That src has to be RELATIVE — a
+    // root-absolute /app/main.jsx resolves fine under a plain `vite build` but
+    // not under CodePen's, which doesn't map / to the Vite root. Relative works
+    // in both, as long as it climbs the right number of levels: an earlier
+    // version used a flat `./app/main.jsx` everywhere and every page below the
+    // root looked for its script in its own folder.
     const base = baseFor(segments);
 
     writeFileSync(abs, `<!doctype html>
@@ -200,7 +207,7 @@ function generateEntries(routes, site) {
   </head>
   <body>
     <div id="root" data-route="${route}" data-base="${base}"></div>
-    <script type="module" src="/app/main.jsx"></script>
+    <script type="module" src="${base}app/main.jsx"></script>
   </body>
 </html>
 `);

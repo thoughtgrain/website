@@ -6,6 +6,11 @@
  * `buildContent`, which is what keeps the routes the config generates and the
  * pages the app renders from drifting apart.
  *
+ * The patterns are relative to this file rather than root-absolute. Both work
+ * under a plain `vite build`, but a root-absolute path assumes the bundler maps
+ * `/` to the Vite root, and CodePen's doesn't — that assumption is what made
+ * every generated entry fail to resolve its own script tag.
+ *
  * `eager: true` inlines the files into the bundle rather than code-splitting
  * them — 30 KB of content total, so a request per note would cost more than it
  * saves. `query: '?raw'` gets the text rather than letting Vite try to parse
@@ -14,20 +19,20 @@
 
 import { buildContent } from './lib/content-model.js';
 
-const rawFiles = import.meta.glob('/content/**/*.mdx', {
+const rawFiles = import.meta.glob('../content/**/*.mdx', {
   query: '?raw',
   import: 'default',
   eager: true,
 });
 
-const jsonFiles = import.meta.glob('/content/*.json', {
+const jsonFiles = import.meta.glob('../content/*.json', {
   import: 'default',
   eager: true,
 });
 
 // The MDX component templates. Same shape the Node loaders build with
 // readdirSync, so buildContent can't tell the two apart.
-const componentFiles = import.meta.glob('/components/*.html', {
+const componentFiles = import.meta.glob('../components/*.html', {
   query: '?raw',
   import: 'default',
   eager: true,

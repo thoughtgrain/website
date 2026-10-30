@@ -15,7 +15,7 @@ import Html from '../components/Html.jsx';
 import FeedLink from '../components/FeedLink.jsx';
 
 /** Any product image committed under src/assets/products/, by slug. */
-const images = import.meta.glob('/assets/products/*.{jpg,jpeg,png,webp,avif,gif}', {
+const images = import.meta.glob('../../assets/products/*.{jpg,jpeg,png,webp,avif,gif}', {
   eager: true,
   import: 'default',
 });
