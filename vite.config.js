@@ -23,6 +23,7 @@
  */
 
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { compile as compileMdx } from '@mdx-js/mdx';
@@ -429,8 +430,67 @@ let usingBuilder = false;
  * the fallback plugin along with it. Handing it `contentPlugins()` gives it
  * exactly what it needs to compile the app and nothing that can recurse.
  */
+/**
+ * Find react-dom's Node server renderer as an absolute file path.
+ *
+ * The SSR entry imports `react-dom/server.node`, and on CodePen that doesn't
+ * resolve. Nor does `react-dom/server`. That is not a conditional-exports
+ * problem, because `./server.node` is conditioned only on `default`; the whole
+ * server family is simply unreachable by specifier there.
+ *
+ * It is on disk, though. The client build bundles React into a 350 KB chunk,
+ * and a bundler cannot bundle what it cannot read. So rather than ask the
+ * resolver for a package subpath, ask Node where the package is and then point
+ * at the file inside it. `server.node.js` sits at the package root next to
+ * `index.js`, so once the directory is known there is nothing left to resolve.
+ *
+ * Returns the attempts as well as the answer: when this fails it fails on a
+ * machine I can't reach, and the list of what was tried is the whole
+ * diagnosis.
+ */
+function findReactServerEntry() {
+  const require = createRequire(import.meta.url);
+  const attempts = [];
+
+  for (const spec of ['react-dom/server.node', 'react-dom/server']) {
+    try {
+      const found = require.resolve(spec);
+      attempts.push(`resolved ${spec}`);
+      return { entry: found, attempts };
+    } catch (err) {
+      attempts.push(`could not resolve ${spec} (${err.code || 'failed'})`);
+    }
+  }
+
+  try {
+    const dir = path.dirname(require.resolve('react-dom/package.json'));
+    attempts.push(`react-dom package dir: ${dir}`);
+    for (const file of ['server.node.js', 'server.js', 'server.browser.js']) {
+      const candidate = path.join(dir, file);
+      if (existsSync(candidate)) {
+        attempts.push(`using ${file} directly`);
+        return { entry: candidate, attempts };
+      }
+    }
+    attempts.push(`no server entry file in ${dir}`);
+  } catch (err) {
+    attempts.push(`could not locate react-dom at all (${err.code || 'failed'})`);
+  }
+
+  return { entry: null, attempts };
+}
+
 async function buildSsrAndPrerender(routes, outDir) {
   const { build } = await import('vite');
+
+  const { entry: reactServer, attempts } = findReactServerEntry();
+  attempts.forEach((a) => note(`  react-dom: ${a}`));
+  if (!reactServer) {
+    throw new Error(
+      'react-dom\'s server renderer is not reachable from this build, so the '
+      + 'pages cannot be prerendered here.',
+    );
+  }
 
   const result = await build({
     configFile: false,
@@ -449,7 +509,16 @@ async function buildSsrAndPrerender(routes, outDir) {
     //
     // which is what CodePen's build produced. See entry-server.jsx, which also
     // avoids the conditional subpath entirely.
-    resolve: { conditions: ['node', 'import', 'module', 'default'] },
+    //
+    // The alias is the part that actually matters on CodePen. Both server
+    // specifiers fail to resolve there, so both are pinned to the absolute
+    // path found above and the resolver is taken out of the question.
+    resolve: {
+      conditions: ['node', 'import', 'module', 'default'],
+      alias: [
+        { find: /^react-dom\/server(\.node|\.browser|\.edge)?$/, replacement: reactServer },
+      ],
+    },
     ssr: { target: 'node' },
 
     build: {

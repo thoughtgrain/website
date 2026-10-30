@@ -174,9 +174,22 @@ Then I shipped it and the host's build failed outright:
 Rolldown failed to resolve import "react-dom/server"
 ```
 
-`configFile: false` buys isolation, and isolation means the nested build inherits nothing: not the host's resolver settings, not mine. `react-dom/server` is a conditional export, with branches for node, browser, workerd, deno and edge-light, and a resolver applying none of those conditions matches no branch at all. So the entry now imports `react-dom/server.node`, which is conditioned only on `default` and is the same implementation the `node` condition would have picked.
+`configFile: false` buys isolation, and isolation means the nested build inherits nothing: not the host's resolver settings, not mine. My first guess was conditional exports. `react-dom/server` has branches for node, browser, workerd, deno and edge-light, and a resolver applying none of those conditions matches no branch at all, so I switched the entry to `react-dom/server.node`, which is conditioned only on `default`.
 
-`react-dom/server.browser` is also unconditional, and I tried it first. It renders all fifty-one pages, prints the summary, and then never exits. Its scheduler drives work through a `MessageChannel`, which in Node is an open handle that nothing closes. The markup is byte-for-byte identical; the process simply doesn't come back. A hang is a worse failure than a crash, because nothing tells you it happened.
+That failed identically. Which was the useful result, because it ruled out the explanation I liked: it isn't the conditions. The entire server family is unreachable by specifier on that host, while `react` and `react-dom/client` resolve fine, because the client bundle contains three hundred and fifty kilobytes of React and a bundler cannot bundle what it cannot read.
+
+So the package is on disk and I was asking the wrong question. Instead of asking the resolver for a subpath, ask Node where the package lives and then point at the file inside it:
+
+```js
+const dir = path.dirname(require.resolve('react-dom/package.json'));
+const entry = path.join(dir, 'server.node.js');
+```
+
+`server.node.js` sits at the package root next to `index.js`. Once the directory is known there is nothing left to resolve, and an alias pins both specifiers to that absolute path. It's less elegant than a correct import and it works on a machine whose resolver I can't inspect, which is the trade this whole project keeps making.
+
+<MarginaliaPin text="A dead end that eliminates a hypothesis is worth more than a fix you can't explain." rotate="2" />
+
+One wrong turn on the way, worth recording. `react-dom/server.browser` is also unconditional, and I tried it first. It renders all fifty-one pages, prints the summary, and then never exits. Its scheduler drives work through a `MessageChannel`, which in Node is an open handle that nothing closes. The markup is byte-for-byte identical; the process simply doesn't come back. A hang is a worse failure than a crash, because nothing tells you it happened.
 
 The real lesson from that round, though, is the one I should have applied from the start: a build step I added should never be able to take the deploy down. The fallback is wrapped now.
 
