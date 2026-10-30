@@ -254,23 +254,52 @@ async function prerender(routes, entryFile, outDir = OUT_DIR) {
   pruneImportmaps(outDir);
 }
 
-/** Every bare specifier the emitted JavaScript actually imports. */
-function specifiersImportedBy(dir) {
-  const found = new Set();
-  const pattern = /(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^."'][^"']*)["']/g;
+/**
+ * Every bare specifier reachable from the pages themselves.
+ *
+ * Reachable is the operative word, and the first version of this got it
+ * wrong by scanning every `.js` under the output directory. That is not the
+ * same set. CodePen copies the project's own files into its output, so
+ * `node-loader.js` lands in there next to the bundle, `import … from 'yaml'`
+ * and all, and a naive scan concludes a browser is about to import `yaml`.
+ * It is build-time Node code that no page has ever loaded.
+ *
+ * So start from what the pages actually reference, follow the relative
+ * imports between built chunks, and collect the bare specifiers found along
+ * the way. A file nothing links to contributes nothing.
+ */
+function specifiersImportedByPages(outDir) {
+  const bare = new Set();
+  const pattern = /(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^"']+)["']/g;
+  const seen = new Set();
+  const queue = [];
 
-  const walk = (d) => {
-    for (const entry of readdirSync(d, { withFileTypes: true })) {
-      const file = path.join(d, entry.name);
-      if (entry.isDirectory()) { walk(file); continue; }
-      if (!/\.m?js$/.test(entry.name)) continue;
-      const code = readFileSync(file, 'utf8');
-      for (const m of code.matchAll(pattern)) found.add(m[1]);
+  const collectEntries = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) { collectEntries(file); continue; }
+      if (entry.name !== 'index.html') continue;
+      const html = readFileSync(file, 'utf8');
+      for (const m of html.matchAll(/<(?:script[^>]*\ssrc|link[^>]*\shref)=["']([^"']+)["']/gi)) {
+        if (/^(?:https?:)?\/\//.test(m[1]) || !/\.m?js$/.test(m[1])) continue;
+        queue.push(path.resolve(path.dirname(file), m[1]));
+      }
     }
   };
 
-  if (existsSync(dir)) walk(dir);
-  return found;
+  if (existsSync(outDir)) collectEntries(outDir);
+
+  while (queue.length) {
+    const file = queue.pop();
+    if (seen.has(file) || !existsSync(file)) continue;
+    seen.add(file);
+    for (const m of readFileSync(file, 'utf8').matchAll(pattern)) {
+      if (m[1].startsWith('.')) queue.push(path.resolve(path.dirname(file), m[1]));
+      else bare.add(m[1]);
+    }
+  }
+
+  return bare;
 }
 
 /**
@@ -298,7 +327,7 @@ function specifiersImportedBy(dir) {
  * entry the app genuinely does import survives untouched.
  */
 export function pruneImportmaps(outDir) {
-  const imported = specifiersImportedBy(outDir);
+  const imported = specifiersImportedByPages(outDir);
   let pruned = 0;
   let cleared = 0;
 

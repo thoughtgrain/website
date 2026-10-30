@@ -104,6 +104,20 @@ config.plugins = [...(config.plugins || []), {
 }
 </script>\n`);
   },
+
+  // The host also copies the project's own files into its output, so
+  // node-loader.js lands in dist beside the bundle with its `import … from
+  // 'yaml'` intact. That is exactly what made the first version of the
+  // importmap pruning fail: it scanned every .js in the output, found that
+  // import, and kept an entry no page uses. Reproduced here so it can't
+  // happen quietly again.
+  generateBundle() {
+    this.emitFile({
+      type: 'asset',
+      fileName: 'node-loader.js',
+      source: readFileSync(path.join(work, 'node-loader.js'), 'utf8'),
+    });
+  },
 }];
 
 await build({ ...config, configFile: false, logLevel: 'warn' });
