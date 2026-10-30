@@ -88,29 +88,16 @@ const config = await factory({ command: 'build', mode: 'production' });
 delete config.builder;
 delete config.environments;
 
-// The host's packages block scans for npm imports and writes an esm.sh
-// importmap into the top of every page. It finds `yaml` in node-loader.js,
-// which is build-time Node code the browser never runs. Reproduced here so
-// the pruning that removes it again is actually exercised.
+// The host copies the project's own files into its output, so node-loader.js
+// lands in dist beside the bundle. Reproduced because it has already fooled
+// one pass that read the output directory and assumed everything in it was
+// something a page loads.
+//
+// Not reproduced: the esm.sh importmap the host writes into every page. That
+// injection happens after the build finishes, so no plugin here could model
+// it honestly and nothing inside the build can see or affect it.
 config.plugins = [...(config.plugins || []), {
-  name: 'simulate-host-importmap',
-  transformIndexHtml(html) {
-    return html.replace('<head>', `<head>\n<script type="importmap">
-{
-  "imports": {
-    "yaml": "https://esm.sh/yaml@^2.9.1",
-    "yaml/": "https://esm.sh/yaml@^2.9.1/"
-  }
-}
-</script>\n`);
-  },
-
-  // The host also copies the project's own files into its output, so
-  // node-loader.js lands in dist beside the bundle with its `import … from
-  // 'yaml'` intact. That is exactly what made the first version of the
-  // importmap pruning fail: it scanned every .js in the output, found that
-  // import, and kept an entry no page uses. Reproduced here so it can't
-  // happen quietly again.
+  name: 'simulate-host-file-copy',
   generateBundle() {
     this.emitFile({
       type: 'asset',
@@ -127,11 +114,14 @@ console.log(`\n${readFileSync(report, 'utf8')}`);
 
 const prerendered = readFileSync(report, 'utf8').includes('#root is FILLED');
 
-// The injected importmap is for a package only the build uses, so no page
-// should still be carrying it.
+// `yaml` is build-time only. If a page ever imports it, the host's scanner
+// was right after all and the createRequire in node-loader.js is hiding
+// something real.
 const page = readFileSync(path.join(work, 'dist', 'index.html'), 'utf8');
-const stillMapped = page.includes('importmap');
-console.log(`[sim] importmap left in the output: ${stillMapped ? 'YES' : 'no'}`);
+const script = page.match(/<script[^>]*\ssrc="([^"]+)"/)?.[1];
+const bundle = script ? readFileSync(path.resolve(work, 'dist', script), 'utf8') : '';
+const browserWantsYaml = /(?:\bfrom\s*|\bimport\s*\(?\s*)["']yaml["']/.test(bundle);
+console.log(`[sim] the page bundle imports yaml: ${browserWantsYaml ? 'YES' : 'no'}`);
 
 rmSync(work, { recursive: true, force: true });
 
@@ -139,8 +129,8 @@ if (!prerendered) {
   console.error('[sim] FAILED: the host would not prerender this build');
   process.exit(1);
 }
-if (stillMapped) {
-  console.error('[sim] FAILED: an unused importmap survived into the output');
+if (browserWantsYaml) {
+  console.error('[sim] FAILED: the browser bundle really does import yaml');
   process.exit(1);
 }
 console.log('[sim] passed');

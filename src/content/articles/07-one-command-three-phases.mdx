@@ -221,11 +221,19 @@ Babel goes into the throwaway copy rather than into `package.json`, because that
 
 It paid for itself a second time almost immediately. The host scans the project for npm imports and writes an esm.sh importmap into every page, and it finds `node-loader.js`, which parses frontmatter with `yaml`. So fifty-one pages shipped a line offering the browser a YAML parser, for a package that only ever runs in Node and whose work is finished before a page exists. Harmless, since nothing imports it and an importmap is a lookup table rather than a preload, but wrong in a way worth fixing.
 
-The fix is not to hide the import. Whatever decides to write that importmap is plausibly the same thing deciding what gets installed, and trading a build that works for a few hundred bytes is a poor deal. Instead the prerender pass, which already has the finished output in its hands, drops importmap entries that no emitted module imports, and removes the block entirely when nothing is left. By name would have been easier and worse; by evidence means an entry the app genuinely needs survives.
+My first instinct was to strip it from the built pages rather than touch the source, on the reasoning that whatever writes that importmap is plausibly the same thing deciding what gets installed, and trading a working build for a few hundred bytes is a poor deal. So the prerender pass learned to drop importmap entries that no emitted module imports.
 
-The first version of that didn't work, and failed in a way worth keeping. It decided what was imported by scanning every `.js` file in the output directory, which sounds equivalent to asking what the pages import and is not. The host copies the project's own files into its output, so `node-loader.js` sits in there beside the bundle with its `yaml` import intact, and the scan dutifully concluded the browser needed a YAML parser. The thing being pruned was the evidence for keeping it.
+It didn't work, and the first version didn't work twice over, which is the useful part.
 
-It now starts from what the pages actually reference, follows the relative imports between built chunks, and ignores anything nothing links to. The simulation copies `node-loader.js` into the output too, so that specific mistake fails the test rather than reaching a page: with the old scan it reports the importmap surviving and exits non-zero, and with the new one it doesn't.
+The first version decided what was imported by scanning every `.js` file in the output directory. That sounds equivalent to asking what the pages import and isn't: the host copies the project's own files into its output, so `node-loader.js` sits in there beside the bundle with its `yaml` import intact, and the scan concluded the browser needed a YAML parser. The thing being pruned was the evidence for keeping it. Starting instead from what the pages actually reference fixed that, and the map still arrived.
+
+Which it was always going to, for a reason the build report had been telling me for two rounds. It records the size of `index.html` at the moment the build ends, and it said **8,427 bytes**. The same page built locally, adjusted for the host's shorter asset filenames, is 8,427 bytes exactly. An importmap block is 144. So at the moment my build finished, there wasn't one: the host injects it afterwards, and no pass inside the build can see a thing that doesn't exist yet.
+
+I had written that number into the report myself, specifically so a disagreement between the build and the browser would be visible, and then spent two rounds not reading it.
+
+<PullquoteNoCite text="I built the instrument, then ignored what it said twice." />
+
+So the hundred lines of pruning are gone, because code that provably cannot run is worse than no code, and the real fix is the one I had talked myself out of: don't write an import statement the scanner can find. `createRequire` loads the parser at build time, `yaml` stays in devDependencies so it is still installed, and the only thing that changes is what a tool reading the source sees. The comment explaining it carefully avoids spelling out the import, because the scanner reads source and a comment is source.
 
 ## Failing softly
 
