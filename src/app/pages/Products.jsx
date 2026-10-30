@@ -56,7 +56,7 @@ export function ProductsIndex() {
             <li key={p.slug}>
               <Link className="product-card" to={`/products/${p.slug}/`}>
                 <div className="product-card__cover"><Cover product={p} /></div>
-                <h3 className="product-card__title">{p.title}</h3>
+                <h2 className="product-card__title">{p.title}</h2>
                 {p.price && <div className="product-card__price">{p.price}</div>}
                 <p className="product-card__note">{p.note}</p>
               </Link>

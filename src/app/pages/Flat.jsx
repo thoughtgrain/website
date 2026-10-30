@@ -210,7 +210,7 @@ export function Gear() {
 
         {(gear.sections || []).map((s) => (
           <section className="gear-section" key={s.section}>
-            <h3>{s.section}</h3>
+            <h2>{s.section}</h2>
             <ul className="gear-list">
               {(s.items || []).map((g) => (
                 <li className="gear-row" key={g.name}>

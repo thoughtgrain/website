@@ -104,7 +104,7 @@ function Related({ items }) {
   if (!items.length) return null;
   return (
     <div className="reader__related">
-      <h3 className="section__title section__title--sm">Related</h3>
+      <h2 className="section__title section__title--sm">Related</h2>
       <div className="grid grid--2">
         {items.map((r) => (
           <Link className="essay-card essay-card--compact" to={r.url} key={r.slug}>

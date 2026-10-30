@@ -21,7 +21,7 @@ export function NoteItem({ note }) {
         <Link to={`/notes/${note.slug}/`} className="note-item__link">
           {note.image ? (
             <figure className="note-item__figure">
-              <img src={note.image} alt={alt} loading="lazy" />
+              <img src={note.image} alt={alt} width={note.imageWidth} height={note.imageHeight} loading="lazy" decoding="async" />
               {caption && <Html as="figcaption" className="note-item__caption" html={caption} />}
             </figure>
           ) : (
@@ -37,7 +37,7 @@ export function NoteItem({ note }) {
 export default function NoteList({ groups }) {
   return groups.map((group) => (
     <section className="notes-month" key={group.month}>
-      <h3 className="notes-month__label">{group.month}</h3>
+      <h2 className="notes-month__label">{group.month}</h2>
       <ul className="note-list">
         {group.notes.map((n) => <NoteItem note={n} key={n.slug} />)}
       </ul>

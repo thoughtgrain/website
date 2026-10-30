@@ -85,9 +85,9 @@ function ReadingIndex() {
         if (!group.length) return null;
         return (
           <section className="reading-group" key={g.status}>
-            <h3 className="notes-month__label">
+            <h2 className="notes-month__label">
               {g.label} <span className="reading-group__count">{group.length}</span>
-            </h3>
+            </h2>
             <ul className="book-grid">
               {group.map((r) => (
                 <li key={r.slug}>
@@ -97,7 +97,7 @@ function ReadingIndex() {
                         <span className="reading-card__spine-title">{r.title}</span>
                       </div>
                     </div>
-                    <h4 className="book-card__title">{r.title}</h4>
+                    <h3 className="book-card__title">{r.title}</h3>
                     <div className="book-card__author">{r.author}</div>
                     <p className="book-card__note">{r.note}</p>
                   </Link>
@@ -125,7 +125,7 @@ function MusicIndex() {
                 <span className="album-card__year">{m.year}</span>
                 {m.tag && <span className="album-card__tag">&middot; {m.tag}</span>}
               </div>
-              <h3 className="album-card__title">{m.title}</h3>
+              <h2 className="album-card__title">{m.title}</h2>
               <div className="album-card__artist">{m.artist}</div>
               <p className="album-card__note">{m.note}</p>
             </Link>
@@ -151,7 +151,7 @@ function MoviesIndex() {
               </div>
               <div className="movie-row__body">
                 <span className="movie-row__date">{m.date}</span>
-                <h3 className="movie-row__title">{m.title} <em>({m.year})</em></h3>
+                <h2 className="movie-row__title">{m.title} <em>({m.year})</em></h2>
                 <div className="movie-row__director">dir. {m.director}</div>
                 <p className="movie-row__note">{m.note}</p>
               </div>
@@ -182,7 +182,7 @@ function PodcastsIndex() {
                 <div className="cover-placeholder cover-placeholder--paper cover-placeholder--square">{p.title}</div>
               </div>
               <div className="podcast-card__body">
-                <h3 className="podcast-card__title">{p.title}</h3>
+                <h2 className="podcast-card__title">{p.title}</h2>
                 <div className="podcast-card__host">{p.host}</div>
                 <p className="podcast-card__note">{p.note}</p>
                 <span className="podcast-card__status">&middot; {p.status}</span>
@@ -212,7 +212,7 @@ function BookshelfIndex() {
     <KindPage kind="bookshelf">
       {sections.map((s) => (
         <section className="bookshelf-section" key={s.name}>
-          <h3 className="bookshelf-section__title">{s.name}</h3>
+          <h2 className="bookshelf-section__title">{s.name}</h2>
           <ul className="book-grid">
             {s.books.map((b) => (
               <li key={b.slug}>
@@ -220,7 +220,7 @@ function BookshelfIndex() {
                   <div className="book-card__cover">
                     <div className="cover-placeholder cover-placeholder--paper cover-placeholder--book">{b.title}</div>
                   </div>
-                  <h4 className="book-card__title">{b.title}</h4>
+                  <h3 className="book-card__title">{b.title}</h3>
                   <div className="book-card__author">
                     {b.author} <span className="book-card__year">&middot; {b.year}</span>
                   </div>
@@ -464,7 +464,7 @@ export function Enjoying({ route }) {
                   <span className="kicker">{item.kindLabel}</span>
                   {item.subMeta && <span className="essay-card__date">&middot; {item.subMeta}</span>}
                 </div>
-                <h3 className="essay-card__title">{item.title}</h3>
+                <h2 className="essay-card__title">{item.title}</h2>
                 <div className="essay-card__author">{item.byline}</div>
                 <p className="essay-card__dek">{item.note}</p>
               </Link>

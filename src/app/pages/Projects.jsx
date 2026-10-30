@@ -45,7 +45,7 @@ function Tile({ project }) {
           <span className="kicker">{project.status || ''}</span>
           <span className="project-tile__year">{project.year || ''}</span>
         </div>
-        <h4 className="project-tile__title">{project.title || ''}</h4>
+        <h3 className="project-tile__title">{project.title || ''}</h3>
         <p className="project-tile__blurb">{project.summary || ''}</p>
       </div>
     </Link>
@@ -59,9 +59,9 @@ function Groups({ list }) {
     if (!members.length) return null;
     return (
       <section className="projects-group" key={g.key}>
-        <h3 className="projects-group__label">
+        <h2 className="projects-group__label">
           {g.label} <span className="projects-group__count">{members.length}</span>
-        </h3>
+        </h2>
         <div className="grid grid--projects">
           {members.map((p) => <Tile project={p} key={p.slug} />)}
         </div>

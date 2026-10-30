@@ -41,7 +41,7 @@ function Card({ item, hidden }) {
         <span className="kicker">{item.kind}</span>
         <span className="essay-card__date">{item.date} &middot; {item.read}</span>
       </div>
-      <h3 className="essay-card__title">{item.title}</h3>
+      <h2 className="essay-card__title">{item.title}</h2>
       <p className="essay-card__dek">{item.summary}</p>
       <div className="essay-card__tags">
         {item.tagList.map((t) => <span className="tag" key={t}>{t}</span>)}

@@ -24,7 +24,7 @@ export default function Note({ route }) {
 
   return (
     <main id="main">
-      <article className="container--narrow section note-reader">
+      <article id={note.slug} className="container--narrow section note-reader">
         <Link className="btn btn--link reader__back" to="/notes/">
           <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12,19 5,12 12,5" /></svg>
           <span className="reader__back-label">All notes</span>
@@ -42,7 +42,7 @@ export default function Note({ route }) {
         <div className="note-reader__body prose">
           {note.image && (
             <figure className="note-reader__figure">
-              <img src={note.image} alt={note.imageAlt} loading="lazy" />
+              <img src={note.image} alt={note.imageAlt} width={note.imageWidth} height={note.imageHeight} loading="lazy" decoding="async" />
               {note.caption && <figcaption className="note-reader__caption">{note.caption}</figcaption>}
             </figure>
           )}

@@ -17,10 +17,10 @@ export default function Home() {
   return (
     <main id="main" className="home">
       <section className="hero">
-        <p className="hero__lede">
+        <h1 className="hero__lede">
           Notes and a few small projects on design as a form of <em>care</em>,
           by {site.ownerName}.
-        </p>
+        </h1>
         <p className="hero__body">
           I’m accessibility lead at Superhuman (formerly known as Grammarly).
           Most of what shows up here is about what happens when you treat design

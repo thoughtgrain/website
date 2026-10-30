@@ -166,7 +166,12 @@ body::after {
   color: var(--ink-900);
 }
 [data-theme="dark"] .section__title { color: var(--fg); }
-.section__title--sm { font-size: 1.25rem; }
+.section__title--sm,
+.reader .section__title--sm { font-size: 1.25rem; }
+/* "Related" on an article page is a section title that happens to be an h2
+   inside .reader, and the body's own `.reader h2` rule (0,1,1) would
+   otherwise beat .section__title (0,1,0) on margin and colour. */
+.reader .section__title { margin: 0; color: var(--ink-900); }
 
 /* List-style essay/project/reading containers used on the home page */
 .essay-list {
@@ -1022,7 +1027,7 @@ body::after {
 
 /* Bookshelf */
 .bookshelf-section { margin-bottom: 56px; }
-.bookshelf-section h3 {
+.bookshelf-section h2 {
   font-family: var(--font-mono);
   font-size: 11.5px;
   letter-spacing: 0.12em;
@@ -1079,7 +1084,7 @@ body::after {
 
 /* Gear */
 .gear-section { margin-bottom: 56px; }
-.gear-section h3 {
+.gear-section h2 {
   font-family: var(--font-mono); font-size: 11.5px;
   letter-spacing: 0.12em; color: var(--fg-subtle);
   text-transform: none; margin: 0 0 20px;
