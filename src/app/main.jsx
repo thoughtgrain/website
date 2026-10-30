@@ -1,18 +1,23 @@
 /**
- * main.jsx: mount one page.
+ * main.jsx: the one script every page loads.
  *
  * Every generated HTML entry loads this same module; the only thing that
  * differs is `data-route` on #root, which says which page this file is. That's
- * what makes it a multi-page build: fifty real HTML files at fifty real URLs,
- * each rendering one route, rather than one page swapping content on the
+ * what makes it a multi-page build: one real HTML file per route at its real
+ * URL, each rendering one route, rather than one page swapping content on the
  * client.
  *
- * There is no router. The server already resolved which page this is, a router
- * here would re-implement what the filesystem is doing, and cost 50 KB to do it.
+ * There is no router. The server already resolved which page this is, and a
+ * router here would re-implement what the filesystem is doing.
+ *
+ * Nor, for most pages, is there any React. The pages arrive prerendered, and
+ * the drawer, theme toggle, tag filter and paper grain are plain DOM scripts.
+ * React is only needed where a page has state to drive, which today means the
+ * interactive figures in the build series. So this module does three things:
+ * loads the stylesheet, starts the enhancers, and, only if the page needs it,
+ * fetches the chunk that holds React and the app. On the 45 pages that don't,
+ * the JavaScript that loads is about 2 KB instead of 105.
  */
-
-import { StrictMode } from 'react';
-import { createRoot, hydrateRoot } from 'react-dom/client';
 
 // Cascade order is load-bearing: tokens define the variables, kit styles the
 // components that use them, site handles per-page work. Alphabetical would
@@ -21,31 +26,19 @@ import '../css/tokens.css';
 import '../css/kit.css';
 import '../css/site.css';
 
-import App from './App';
+// The progressive enhancers query the DOM, so they use ready() rather than
+// assuming DOMContentLoaded is still ahead of them. They used to be imported
+// after React had rendered, which gated a 2 KB theme toggle behind a 96 KB
+// framework and made the dark theme flash light on every load.
+import './enhancers.js';
 
 const rootEl = document.getElementById('root');
-const route = rootEl.dataset.route || '/';
-const base = rootEl.dataset.base || './';
 
-const tree = (
-  <StrictMode>
-    <App route={route} base={base} />
-  </StrictMode>
-);
+// A prerendered page with no interactive figure has nothing for React to do.
+// An empty root means `vite dev`, where nothing has been prerendered and the
+// whole page still has to be drawn client-side.
+const needsReact = !rootEl.firstChild || rootEl.querySelector('.demo');
 
-// Pages ship prerendered, so the markup is already here and React only has to
-// attach to it. `createRoot` would throw it away and rebuild from scratch,
-// which flashes and wastes the work. The empty-root fallback keeps `vite dev`
-// working, where nothing has been prerendered.
-if (rootEl.firstChild) {
-  hydrateRoot(rootEl, tree);
-} else {
-  createRoot(rootEl).render(tree);
+if (needsReact) {
+  import('./hydrate').then(({ mount }) => mount(rootEl));
 }
-
-// The progressive enhancers (theme toggle, drawer, paper grain) query the DOM,
-// so they load after the first render rather than at import time. They use
-// ready() rather than listening for DOMContentLoaded directly, by the time a
-// dynamically imported module runs, that event has already fired and a listener
-// for it would never run at all.
-import('./enhancers.js');
