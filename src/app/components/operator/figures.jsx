@@ -98,6 +98,61 @@ export function ScreenMotion({ machine: id, name = 'motion', caption }) {
 }
 
 /**
+ * The link from the case study to the demonstration: a dark card the width
+ * of the column with the featured machine's rest frame and a plain invitation.
+ * `href` is relative to the case study's own directory, so "demo/" resolves
+ * to /projects/<slug>/demo/ without the component knowing the slug.
+ */
+export function SeeItWork({ href = 'demo/', machine: id, title = 'Watch it design a screen', text }) {
+  const m = machineById(id);
+  const rest = m && m.cells.find((c) => c.kind === 'frame' && c.name === 'rest');
+  return (
+    <a className="see-it" href={href}>
+      {rest && <span className="see-it__frame"><Sprite machine={m} cell={rest} alt="" /></span>}
+      <span className="see-it__text">
+        <span className="see-it__kicker">The demonstration</span>
+        <span className="see-it__title">{title}</span>
+        <span className="see-it__dek">
+          {text || `${m ? `${m.name}\u2019s` : 'One'} session replayed step by step from the server’s own records, then every machine’s session and every screen they produced.`}
+        </span>
+        <span className="see-it__go" aria-hidden="true">&rarr;</span>
+      </span>
+    </a>
+  );
+}
+
+/**
+ * The device's eight greys with their contrast against black, as a strip.
+ * Numbers from opxy/tokens.json; the floors are WCAG's 4.5:1 for text and
+ * 3:1 for parts that carry meaning.
+ */
+const GREYS = [
+  ['#323232', '1.6'], ['#4B4B4B', '2.4'], ['#646464', '3.6'], ['#7D7D7D', '5.1'],
+  ['#969696', '7.1'], ['#AFAFAF', '9.6'], ['#CDCDCD', '13.2'],
+];
+export function GreyRamp({ caption }) {
+  return (
+    <figure className="screen-figure grey-ramp">
+      <ul className="grey-ramp__strip">
+        {GREYS.map(([hex, ratio]) => {
+          const n = Number(ratio);
+          const role = n >= 4.5 ? 'text' : n >= 3 ? 'parts' : 'ground';
+          return (
+            <li key={hex} className={`grey-ramp__step grey-ramp__step--${role}`} style={{ '--g': hex }}>
+              <span className="grey-ramp__swatch" />
+              <span className="grey-ramp__hex">{hex.toLowerCase()}</span>
+              <span className="grey-ramp__ratio">{ratio}:1</span>
+              <span className="grey-ramp__role">{role}</span>
+            </li>
+          );
+        })}
+      </ul>
+      {caption && <figcaption>{caption}</figcaption>}
+    </figure>
+  );
+}
+
+/**
  * One sentence of totals, computed. The prose used to state counts and was
  * wrong about them within a week, so the archive counts itself.
  */
@@ -111,4 +166,6 @@ export function ScreensSummary() {
   );
 }
 
-export const screenFigures = { ScreenCells, ScreenSweep, ScreenPass, ScreenSheet, ScreenMotion, ScreensSummary };
+export const screenFigures = {
+  ScreenCells, ScreenSweep, ScreenPass, ScreenSheet, ScreenMotion, ScreensSummary, SeeItWork, GreyRamp,
+};

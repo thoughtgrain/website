@@ -17,86 +17,98 @@ tag3: "MCP"
 repo: "https://github.com/thoughtgrain/operator-design"
 ---
 
-<Dropcap text="The OP-XY has a screen 480 pixels wide and 220 tall, in eight greys, and the open-xy SDK lets a custom machine draw on it. I wanted every machine I design to use that space well, and I wanted an agent to be able to do the work with me without the results turning into clip art. This is how that became an MCP server." />
+<Dropcap text="Here is a screen. It is 480 pixels wide and 220 tall, it can show eight shades of grey, and it sits on a synthesizer about the size of a paperback. If you write a machine for the OP-XY, that rectangle is yours to draw in. This is the story of how I taught an agent to draw in it with me, and what we had to build so that neither of us could cheat." />
 
-## Premise
+## What are we even drawing?
 
-A machine on the OP-XY is a synth, an effect, or something that plays other tracks, and when it is selected the screen is its to draw. Stock machines draw well: the drum page draws the instrument, the filter page draws the curve you are shaping. A custom machine that ships with a panel of four numbers looks like what it is, a port with the screen left over.
+Let's start with what a machine is. On the OP-XY, a machine is a synth, an effect, or something that plays notes into another track. When you select one, the screen belongs to it. Teenage Engineering take that seriously: the drum page draws the drum, the filter page draws the curve you are bending. You turn a knob, a thing on the screen moves, and it moves by about as much as the sound changed.
 
-So the design brief was simple to say and hard to repeat: one subject the sound acts on, drawn in the device's greys, where every knob visibly moves something in proportion to what it does to the sound. Doing it once is a design job. Doing it thirty times, with an agent drawing most of the candidates, needed a process the agent could not drift away from. The [operator-design repo](https://github.com/thoughtgrain/operator-design) is that process, and the MCP server is what makes it enforceable rather than advisory.
+Now picture a machine someone ported over from a Eurorack module. Four parameters, four numbers in the header, and under them, nothing. It works. It just looks like a spreadsheet cell in a room full of instruments.
 
-<ScreenCells machine="kiln" cells="rest,playing" caption="What it produces. Kiln at rest and while playing: a struck ceramic bowl whose glaze damps it and whose cracks make it inharmonic, drawn as hidden-line 3D with the mallet head the brightest thing." />
+So the brief for every screen I design is one sentence long. Find the one object the sound acts on, draw it in the device's greys, and make every knob move something you can see, in proportion to what you hear.
 
-## Write it down before you build it
+<ScreenCells machine="kiln" cells="rest,playing" caption="Meet Kiln, a struck ceramic bowl. Glaze damps it, cracks make it ring out of tune. On the left it is at rest; on the right a note is playing. Everything you see is one of eight greys on black." />
 
-The server came last. First I wrote the guidelines as plain documents, because a tool that enforces rules nobody has agreed is just friction.
+Here's the thing. One screen is a design job. Thirty screens, with an agent drawing most of the candidates, is a process problem. The first few rounds taught me that an agent will cheerfully draw you an orrery for a reverb, five times in a row, with total confidence. A style guide was not going to be enough. I needed rules that could say no.
 
-- **Constraints with sources.** Every hard number (480 by 220, the eight greys, text no smaller than 8 pixels, mutable paths of at most 64 points, about twenty changed nodes per frame) links to the line in open-xy's docs it came from, pinned to a commit. When the SDK moves, I know what to re-check.
-- **A protocol with gates.** Nine phases, from "does this sound earn a screen at all" to a handoff someone else can implement from. Each has an output and a condition I do not pass until it holds.
-- **Patterns as descriptions, not assets.** What has worked on this screen (a section drawing, a diagram beside a trace, a stack in depth) and which kinds of machine each fits. Never traced, only borrowed from.
-- **Craft and accessibility.** One drawing language per screen, three line weights, one brightest element, no text in the drawing, contrast ratios for every grey against black, and the single-cue rule: a state never rides on a shade alone.
+## Eight greys and a ruler
 
-The documents are the product. Everything the server does is a way of reading them, running them, or protecting them.
+Before any of the fun parts, the numbers, because the device does not negotiate.
 
-## Turning the documents into tools
+<GreyRamp caption="The OP-XY's grey ramp, with each grey's contrast against the black screen. Text needs 4.5:1, so the darkest grey I let words wear is #7d7d7d. Parts that carry meaning need 3:1. Everything darker is ground: meshes, fills, the floor a drawing stands on." />
 
-The server is stdlib Python with nothing to install. It registers the repo as an MCP server for Claude Code, Claude Desktop, Codex, LM Studio and Ollama, each through one setup command that merges into the client's existing config. Its tools fall into four groups.
+Then the rest of it. Text no smaller than 8 pixels, in a font I cannot legally install on my laptop. A drawing is made of bound shapes with at most 64 points each, and only a handful of them may change outline. The device can redraw about twenty nodes a frame before it starts to stutter. And the one that shapes everything else: nothing moves at rest. An idle machine is a still picture.
 
-- **Knowledge.** The guide by document and section, a search across all of them, the categories, the patterns filtered by category, the device numbers from `tokens.json`, and the library of audited screens. The agent reads the protocol the same way I do, and quotes it back when it stops to ask.
-- **Checks.** The scripts I already ran by hand, wrapped: lint a definition against the SDK's contract, lint frames against the device drawing rules, measure how much of the screen each control changes against its floor, tile a contact sheet. And one new one, render a frame to a PNG at 1:1 and hand it back as an image, so a vision model looks at the drawing instead of reasoning about SVG text.
-- **Design passes.** A small state machine for the five-variant rule, below.
-- **Training.** The pipeline by which a lesson from one screen becomes a change to the guidelines, further below.
+I wrote all of that down first, before any tool existed, and I gave every number a link to the line in open-xy's documentation it came from, pinned to a commit. That sounds fussy. It is also the reason I can tell, months later, which rules are the device's and which are mine.
 
-The compact profile cuts that to sixteen tools with short descriptions so it fits a small local model's context. The same server, the same records.
+The same went for the process (nine phases, each with a gate I do not pass until it holds), the patterns that have worked on this screen before (a section drawing, a diagram beside a trace, a stack in depth), and the craft rules that keep a passing screen from looking like clip art: one drawing language, three line weights, one brightest thing, no text in the picture. The documents are the product. Everything below is a way of reading them, running them, or protecting them.
 
-## Making five enforceable
+## Why five?
 
-Every pass that generates design produces exactly five variants. Two or three candidates kept collapsing into my first idea plus two strawmen; five forces directions I would not have tried, and five is still few enough to judge side by side at 1:1. As a rule in a document it held for about a week. As a tool it holds.
+Try this experiment. Ask for three ideas and look at what comes back. Nine times out of ten you get the first idea, plus two strawmen built to make the first idea look good. I did this to myself for weeks before I noticed.
 
-`design_pass_start` assigns five directions before anything is drawn: for a subject pass, five angles on the machine's own idea (the mechanism, the material, a scene, a cutaway, the rule made physical) crossed with five ways of drawing. Patterns that fit the category are listed in each brief as inspiration, never assigned. The call returns five designer briefs, and in Claude Code those run as five parallel subagents, each writing only into its own folder.
+So every pass that generates design produces exactly five variants, and they have to be properly different, not five nudges of one idea. Five is enough to force a couple of directions I would never have tried. It is still few enough to lay side by side at the device's own size and judge with your eyes.
 
-`design_pass_submit` then measures what came back. Every variant has to be a drawn 480 by 220 rest frame, linted clean with no text in the drawing; a pass of written proposals is sent back. Subjects must differ pairwise in at least two of angle, drawing language and wording, with word overlap under 0.6. Frames must differ pairwise on at least 4% of the body's pixels at 1:1. A pass with a near-duplicate comes back as `needs_revision`, and the only way forward is a new direction for the weakest one, never four.
+As a sentence in a document, that rule held for about a week.
 
-<ScreenPass machine="kiln" pass="02-subject" caption="Kiln's second subject pass: the mechanism, the material, a scene, an exploded view, a cutaway. Five directions handed out first, five drawings back, ten pairs checked. The pick was v1, for how it would move rather than how it looked at rest." />
+## Rules a server can hold
 
-## The pick stays with a person
+This is where the MCP server comes in. It is the repo itself, turned into tools an agent can call, and the design pass is the part I built first because it is the part that kept slipping.
 
-The server never chooses. `design_pass_select` records which variant, who picked it and why, and refuses a call without a reason. `design_pass_reject` records that the person wanted none of the five, and closes the pass so a new one can start with that reason as its focus. A reviewer can rank the five in the notes, and the notes say in so many words that the ranking is not the pick.
+`design_pass_start` hands out five directions before anything is drawn. For a subject pass that means five angles on the machine's own idea (the mechanism, the material, a scene, a cutaway, the rule made into a physical thing) crossed with five ways of drawing. It returns five little briefs, and in Claude Code those run as five parallel designer agents, each one writing only into its own folder. Nobody sees anybody else's drawing until all five exist.
 
-That sounds like ceremony until you read the records back. Kiln's first subject pass was five real directions, from a glaze-tile field to an orrery of the bowl's modes, and I turned them all down with one line: none of the five land, five new unique directions. The next pass started from that line. The decision, the reason and the time are in the file beside the drawings, and the [demonstration](demo/) replays them exactly as they happened.
+`design_pass_submit` then measures what came back. Every variant has to be a drawn frame, linted clean, with no words in the picture. A pass of written proposals is bounced. Subjects have to differ pairwise in at least two of angle, drawing language and wording, with word overlap under 0.6. Rest frames have to differ on at least 4% of the body's pixels. Anything too alike comes back marked `needs_revision`, and the only way forward is a new direction for the weakest one. Never four.
 
-<ScreenPass machine="kiln" pass="01-subject" caption="The pass I rejected. A glaze-tile field, a section with a star chart, a modal schematic, an oscilloscope, an orrery. Each a real direction; none of them a bowl you would recognise at arm's length." />
+<ScreenPass machine="kiln" pass="02-subject" caption="Kiln's second subject pass. Five directions handed out first: the mechanism, the material, a scene, an exploded view, a cutaway. Five drawings back. Ten pairs checked. I picked v1, for how it would move rather than how it sat still." />
 
-## Checks that look at pixels
+Does that feel like a lot of ceremony? It did to me too, until I read a pass record back. Every direction, every drawing, every pair's overlap score, and the state the pass ended in, all in one file next to the pictures. The process stopped being something I remembered and became something I could look at.
 
-The rule I care about most comes from open-xy's own guidance: a control should be seen as much as it is heard. Each control gets one visual channel (rotation, position, uniform scale, shape, shade, count) and its travel scales with how much it changes the sound, scored one to five at intake. The floors are numbers: 24 pixels of position, 30 degrees of rotation, 1.6 times of scale, 12 items of count, 16 pixels of shape change. Shade alone never clears a floor.
+## Who picks?
 
-The perceptibility tool renders the 0, 50 and 100 frames for each control and measures how much of the screen changed. A control under its floor goes back a phase and gets more travel; the score is never lowered to make it pass. The contact sheet puts every frame on one page so the eye can do the check the tool cannot: do the moving parts keep clear of each other at the extremes?
+Not the server. I want to be really clear about that, because it would have been easy to let it.
 
-<ScreenSweep machine="kiln" control="glaze" caption="Kiln, glaze at 0, 50 and 100. The glaze line climbs the inside of the bowl and the hatched interior grows with it: position, about 40 pixels of travel, for the control with the largest audible effect." />
+`design_pass_select` records which variant, who picked it, and why, and it refuses a call without a reason. `design_pass_reject` records that the person looked at all five and wanted none of them, and closes the pass so a new one can start with that reason as its brief. A reviewer can rank the five in the notes, and the notes say in so many words that a ranking is not a pick.
 
-<ScreenSheet machine="kiln" kind="contact" caption="Kiln's contact sheet, tiled by the server at 1:1: rest, playing, and every control at 0, 50 and 100 with the others at their defaults." />
+Kiln's first subject pass is my favourite example, because I turned it down. Five real directions: a field of glaze tiles, a section with a star chart over it, a modal schematic, an oscilloscope, an orrery of the bowl's own modes. I can tell you exactly what I said, because it is in the file: none of the five land, five new unique directions. The next pass started from that line, and it is the one above.
 
-## Teaching it
+<ScreenPass machine="kiln" pass="01-subject" caption="The pass I rejected. Each one is a real direction, drawn and linted. None of them is a bowl you would recognise from across the room." />
 
-When a screen teaches the guidelines something (a pattern that worked, a pitfall that cost a week, a category nothing fits), it goes back into the documents through training mode rather than an edit. A proposal is drafted by one agent, audited by a second against open-xy and the constraints, reviewed by a third for whether it stays true to the device's look and will help the next designer, then run through a deterministic gate: the verdicts match the current version of the changes, the three agents are different, every edit applies cleanly. Only then does it wait for a person, who approves it from a terminal.
+## Seen as much as heard
 
-Nothing touches the real documents before that approval. Every check runs on a temporary copy with the proposal applied. The gate also refuses any proposal that changes the number five.
+My favourite rule in open-xy's own guidance is that a control should be seen as much as it is heard. A quiet control with a huge visual swing is lying to you. A loud one with a tiny mark leaves you guessing.
 
-## Running it anywhere
+So each control gets one visual channel (rotation, position, uniform scale, shape, shade, count), and how far it travels scales with how much it changes the sound, which I score from one to five at intake. The floors are numbers, not vibes: 24 pixels of position, 30 degrees of rotation, 1.6 times of scale, 12 items of count, 16 pixels of shape change. A change in shade never clears a floor on its own, because a small grey step is the easiest thing on this screen to miss.
 
-Grey is the default, and colour is an override set per client in its MCP config, so a person decides it once in a file and no agent can switch it on by asking. Red is refused either way, because the device uses it for recording. The server can point at a machine's own checkout instead of the repo, and at a local copy of open-xy so it can run the SDK's own checker on a finished machine. With a local model it can also run the auditor and reviewer itself, through any OpenAI-compatible endpoint, while approval still stays with a person.
+The server has a tool for this. It renders each control's 0, 50 and 100 frames and measures how much of the screen actually changed. A control under its floor goes back a phase and gets more travel. The score is never lowered to make the test pass.
 
-<ScreenMotion machine="kiln" name="motion" caption="Kiln's motion, from the spec the protocol asks for after the frames: the mallet swings down to the rim and back on a note, and the lip shivers in the bowl's own mode shapes. Nothing moves at rest." />
+<ScreenSweep machine="kiln" control="glaze" caption="Kiln's glaze at 0, 50 and 100. Watch the glaze line climb the inside of the bowl and the hatching grow with it: position, about 40 pixels of travel, for the control with the biggest audible effect." />
 
-## What it produced
+<ScreenSheet machine="kiln" kind="contact" caption="And the contact sheet, tiled by the server at 1:1, so the eye can do the check the tool cannot. Do the moving parts keep clear of each other at the extremes? Here, yes." />
 
-The [demonstration](demo/) replays the sessions from the records the server wrote: the directions, the five drawings, the uniqueness tables, the rankings and my decisions, with their timestamps. Under the featured session is every other machine's, and under those every screen they produced, <ScreensSummary />, each at the device's own size and each linked to the step that made it.
+## What the server is, mechanically
 
-Behind that page the files are packed rather than shipped one by one: one lossless atlas per machine, pixel-identical to the source frames, three short videos for the motion clips, and one index that says where everything sits and what was said about it. Four hundred images arrive as about fifty files and four megabytes.
+Plain Python, standard library only, nothing to install. One setup command registers it with Claude Code, Claude Desktop, Codex, LM Studio or Ollama, merging into whatever config is already there. Its tools come in four groups.
 
-## Where it is going
+**Knowledge.** The guidelines by document and section, a search across them, the categories, the patterns filtered by category, the device numbers, the library of audited screens. The agent reads the protocol the same way I do, and quotes it back when it stops to ask me something.
 
-Everything only a device can prove is still marked pending: caption widths in the real font, how the rasterizer treats the thinnest lines, whether the motion feels right in the hand. The next step is photographs from an OP-XY beside each contact sheet, and the first entries into the library of screens that passed audit.
+**Checks.** The scripts I had been running by hand, wrapped: lint a definition against the SDK's contract, lint frames against the device's drawing rules, measure perceptibility, tile a contact sheet. Plus one new one that renders a frame to a PNG and hands it back as an image, so a vision model looks at the drawing instead of reasoning about SVG text.
+
+**Design passes.** The little state machine above.
+
+**Training.** When a screen teaches the guidelines something (a pattern that worked, a pitfall that cost a week), the lesson goes back into the documents through a pipeline rather than an edit. One agent drafts the proposal, a second audits it against the constraints, a third reviews it for whether it stays true to the device's look, then a deterministic gate checks the mechanics, and then a person approves it from a terminal. Nothing touches the real documents before that. The gate also refuses any proposal that tries to change the number five.
+
+There is a compact profile of sixteen tools with short descriptions, so the whole thing fits in a small local model's context. Grey is the default, and colour is an override a person sets once in a config file, so no agent can switch it on by asking nicely. Red is refused either way, because the device uses it for recording.
+
+## Go and watch it
+
+I could keep describing this, but the whole point of recording everything is that you do not have to take my word for it. The demonstration replays Kiln's session from the files the server wrote: the directions, the five drawings as they came in, the uniqueness table, the reviewer's ranking, my decisions with their timestamps. Then every other machine's session, and under those every screen they produced, <ScreensSummary />, each one at the device's own size and each linked to the step that made it.
+
+<SeeItWork machine="kiln" href="demo/" />
+
+<ScreenMotion machine="kiln" name="motion" caption="One more thing before you go: Kiln's motion. The mallet swings down to the rim and back on a note, and the lip shivers in the bowl's own mode shapes. Nothing moves at rest, which is the rule the whole screen is built around." />
+
+## What's next
+
+Everything only a device can prove is still marked pending: how the real font measures, how the rasterizer treats the thinnest lines, whether the motion feels right in the hand. The next step is photographs from an OP-XY beside each contact sheet, and the first entries into the library of screens that have passed audit.
 
 The repo is built to hold more modules beside this one (sequencing workflows, preset design, sound-design notes) without disturbing it. For now it is one module, one protocol, one server, and a growing stack of five-at-a-time decisions with a person's name on each.

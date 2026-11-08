@@ -57,36 +57,55 @@
   text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px;
 }
 
-.operator-subnav { margin-top: var(--s-3); border-bottom: 1px solid var(--rule); }
-.operator-subnav ul {
-  display: flex; gap: var(--s-5); align-items: baseline;
-  list-style: none; margin: 0; padding: 0;
-  overflow-x: auto;
-}
-.operator-subnav a {
-  display: inline-block; position: relative;
-  padding: 10px 0 12px;
-  font-size: 14px; color: var(--fg-muted); text-decoration: none; white-space: nowrap;
-}
-.operator-subnav a:hover,
-.operator-subnav a:focus-visible { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
-.operator-subnav a[aria-current="page"] { color: var(--fg); }
-.operator-subnav a[aria-current="page"]::after {
-  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
-  background: var(--fg);
-}
-/* "Demonstration / Kiln": the trail is the session you are in. */
-.operator-subnav__trail {
-  font-size: 14px; color: var(--fg-subtle); white-space: nowrap;
-  padding: 10px 0 12px;
-}
-.operator-subnav__trail::before { content: '/'; margin-right: var(--s-5); color: var(--fg-faint); }
+/* "Operator design / Demonstration / Kiln": where you are, under the project. */
+.operator-trail ol { display: flex; flex-wrap: wrap; gap: 0 10px; list-style: none; margin: 0; padding: 0; }
+.operator-trail li { font-size: 14px; color: var(--fg-subtle); }
+.operator-trail li + li::before { content: '/'; margin-right: 10px; color: var(--fg-faint); }
+.operator-trail li:first-child a { font-family: var(--font-display); font-size: 1.125rem; letter-spacing: var(--tracking-tight); }
+.operator-trail a { color: var(--fg); text-decoration: none; }
+.operator-trail a:hover, .operator-trail a:focus-visible { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.operator-trail [aria-current="page"] { color: var(--fg-subtle); }
+.operator-mast__row { padding-bottom: var(--s-3); border-bottom: 1px solid var(--rule); }
 
 /* The study and the demonstration sit a little closer to the masthead than
    a reader does to the site nav. */
 .operator .reader { padding-top: var(--s-6); }
 .operator .section { padding-top: var(--s-6); }
 .operator .page-header { padding-top: var(--s-4); }
+
+/* ---- The link from the study to the demonstration ---- */
+.see-it {
+  display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 1fr); gap: var(--s-5); align-items: center;
+  margin: var(--s-7) 0; padding: var(--s-4);
+  background: #0b0b0b; color: var(--xy-6);
+  border: 1px solid var(--xy-1); border-radius: 4px;
+  text-decoration: none;
+}
+/* Three classes deep on purpose: the site's generic hover rule for links,
+   a:not(.btn):not(.skip-link):hover, weighs (0,3,1) and would tint this
+   card's text the page accent, a dark grey on a dark card. */
+.operator .reader a.see-it,
+.operator .reader a.see-it:hover,
+.operator .reader a.see-it:focus-visible { color: var(--xy-6); text-decoration: none; }
+.see-it:hover, .see-it:focus-visible { border-color: var(--xy-5); }
+.see-it__frame .sprite { box-shadow: 0 0 0 1px var(--xy-1); }
+.see-it__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; position: relative; padding-right: 32px; }
+.see-it__kicker { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--xy-4); }
+.see-it__title { font-family: var(--font-display); font-size: 1.5rem; line-height: 1.15; color: var(--xy-7); }
+.see-it:hover .see-it__title, .see-it:focus-visible .see-it__title { text-decoration: underline; text-underline-offset: 4px; }
+.see-it__dek { font-size: 14.5px; line-height: 1.5; color: var(--xy-6); }
+.see-it__go { position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-size: 1.5rem; color: var(--xy-7); }
+@media (max-width: 560px) { .see-it { grid-template-columns: 1fr; } }
+
+/* ---- The grey ramp ---- */
+.grey-ramp__strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; list-style: none; margin: 0; padding: 12px; background: #000; border-radius: 4px; }
+.grey-ramp__step { display: flex; flex-direction: column; gap: 4px; font-family: var(--font-mono); font-size: 11px; color: var(--xy-5); min-width: 0; }
+.grey-ramp__swatch { display: block; height: 44px; background: var(--g); border-radius: 2px; }
+.grey-ramp__hex { color: var(--xy-6); }
+.grey-ramp__ratio { color: var(--xy-7); }
+.grey-ramp__role { color: var(--xy-4); }
+.grey-ramp__step--text .grey-ramp__role { color: var(--xy-7); }
+@media (max-width: 560px) { .grey-ramp__strip { grid-template-columns: repeat(4, minmax(0, 1fr)); } .grey-ramp__hex { display: none; } }
 .operator-study__repo { text-decoration: underline; text-underline-offset: 3px; }
 
 /* ---- The device frame ----

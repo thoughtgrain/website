@@ -2,10 +2,10 @@
  * Shell.jsx: the frame every page of the OP-XY project sits in.
  *
  * The site's nav stays where it is. Under it, inside <main>, the project gets
- * a masthead of its own: its title (a link back to the study), its status, and
- * a two-item sub-navigation between the case study and the demonstration.
- * That is the whole "project UI": enough to say you have stepped into one
- * thing with two rooms, and no more chrome than that.
+ * a masthead of its own: the project's title (a link back to the case study)
+ * and, on the pages beneath it, a trail saying where you are: "Operator
+ * design / Demonstration / Kiln". The demonstration is its own page that the
+ * case study links to, not a tab beside it, so there is no tab bar here.
  *
  * `.operator` on <main> is also where the monochrome accent is set (see
  * operator.css). Everything inside inherits the device's greys as its accent;
@@ -14,32 +14,34 @@
 
 import Link from '../../Link';
 
-export function OperatorShell({ project, current, trail, children }) {
+/**
+ * @param {object} props
+ * @param {object} props.project  the project entry
+ * @param {Array<{label: string, to: string}>} [props.trail]  pages above this one, nearest last
+ * @param {string} [props.here]  this page's name, when it is not the case study
+ */
+export function OperatorShell({ project, trail = [], here, children }) {
   const base = `/projects/${project.slug}/`;
-  const items = [
-    { key: 'study', label: 'Case study', to: base },
-    { key: 'demo', label: 'Demonstration', to: `${base}demo/` },
-  ];
+  const crumbs = [{ label: project.title, to: base }, ...trail];
 
   return (
     <main id="main" className="operator">
       <header className="operator-mast container">
         <div className="operator-mast__row">
-          <Link className="operator-mast__title" to={base}>{project.title}</Link>
+          {here ? (
+            <nav className="operator-trail" aria-label="You are here">
+              <ol>
+                {crumbs.map((c) => (
+                  <li key={c.to}><Link to={c.to}>{c.label}</Link></li>
+                ))}
+                <li aria-current="page">{here}</li>
+              </ol>
+            </nav>
+          ) : (
+            <span className="operator-mast__title">{project.title}</span>
+          )}
           <Link className="operator-mast__up" to="/projects/">All projects</Link>
         </div>
-        <nav className="operator-subnav" aria-label={`${project.title} sections`}>
-          <ul>
-            {items.map((it) => (
-              <li key={it.key}>
-                <Link to={it.to} {...(current === it.key ? { 'aria-current': 'page' } : {})}>{it.label}</Link>
-              </li>
-            ))}
-            {/* On a machine page the trail names which session you are in, so
-                the sub-nav reads "Demonstration / Kiln" without a third level. */}
-            {trail && <li className="operator-subnav__trail" aria-current="location">{trail}</li>}
-          </ul>
-        </nav>
       </header>
       {children}
     </main>

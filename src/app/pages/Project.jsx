@@ -63,7 +63,7 @@ function OperatorProject({ project }) {
   const tagsJoined = [project.tag1, project.tag2, project.tag3].filter(Boolean).join(' · ');
 
   return (
-    <OperatorShell project={project} current="study">
+    <OperatorShell project={project}>
       <article className="reader operator-study">
         <div className="reader__kicker"><span className="kicker">{project.status}</span></div>
         <h1>{project.title}</h1>

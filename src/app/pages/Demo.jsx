@@ -39,7 +39,7 @@ function NotFound() {
 
 function NoIndex({ project }) {
   return (
-    <OperatorShell project={project} current="demo">
+    <OperatorShell project={project} here="Demonstration">
       <div className="container section">
         <h1>Demonstration</h1>
         <p className="lead">The session records are assembled when the site is published; this copy was rendered without them.</p>
@@ -75,10 +75,10 @@ export function Demo({ route }) {
   const demoHref = (path = '') => `/projects/${project.slug}/demo/${path}`;
 
   return (
-    <OperatorShell project={project} current="demo">
+    <OperatorShell project={project} here="Demonstration">
       <div className="container section screens">
         <header className="page-header page-header--left">
-          <span className="kicker">Demonstration</span>
+          <span className="kicker">The demonstration</span>
           <h1>Watch it design a screen</h1>
           <p className="lead">
             This is {featured.name}&rsquo;s real session, replayed from the records the server wrote as it ran:
@@ -230,13 +230,8 @@ export function Machine({ route }) {
   const s = statusOf(m);
 
   return (
-    <OperatorShell project={project} current="demo" trail={m.name}>
+    <OperatorShell project={project} trail={[{ label: 'Demonstration', to: demoHref() }]} here={m.name}>
       <article className="container section machine">
-        <Link className="btn btn--link reader__back" to={demoHref()}>
-          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12,19 5,12 12,5" /></svg>
-          <span className="reader__back-label">All sessions</span>
-        </Link>
-
         <header className="machine__head">
           <span className="kicker">{cat.singular || m.category} &middot; {m.kind}</span>
           <h1>{m.name}</h1>
