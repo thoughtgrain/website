@@ -1,0 +1,4 @@
+{
+  "_comment": "Where the OP-XY screen assets live. They are built by scripts/opxy-assets.mjs and hosted separately from the site, so this is the one place the URL is written. Must end with a slash. Until the real host is set, the pages render with alt text and the index still works.",
+  "assetsBase": "https://assets.example/opxy/"
+}

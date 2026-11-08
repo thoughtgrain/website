@@ -1,0 +1,125 @@
+---
+slug: operator-design
+title: "Operator design"
+summary: "A protocol, an MCP server and a few hundred screens: how I taught an agent to design what an OP-XY machine draws, five variants at a time, and kept a record of every one."
+kind: "Project"
+category: "Design"
+layout: "operator"
+heroMachine: "kiln"
+plate: "cocoa"
+glyph: "O"
+label: "Design system"
+status: "In progress"
+year: "2026"
+tag1: "Design"
+tag2: "OP-XY"
+tag3: "MCP"
+repo: "https://github.com/thoughtgrain/operator-design"
+---
+
+<Dropcap text="The OP-XY has a screen 480 pixels wide and 220 tall, in eight greys, and the open-xy SDK lets a custom machine draw on it. That sentence is the whole brief, and it took me a repo to answer it." />
+
+## Premise
+
+A machine on the OP-XY is a synth, an effect, or something that plays other tracks, and when it is selected the screen is its to draw. Stock machines use that space well: the drum page draws the instrument, the filter page draws the curve you are shaping. A custom machine that ships with a panel of four numbers looks like what it is, a port with the screen left over.
+
+So I wanted every machine I design to have a picture: one subject the sound acts on, drawn in the device's own greys, where every knob visibly moves something in proportion to what it does to the sound. Then I wanted to do that thirty times without the results turning into clip art, and without me redrawing the same lighthouse for every engine with a sweep in it.
+
+The [operator-design repo](https://github.com/thoughtgrain/operator-design) is the answer. It is a design system in the old sense, a written way of working rather than a component library: the constraints with their sources, a protocol with gates, a pattern catalogue, craft rules, an accessibility checklist, and an MCP server so an agent can run all of it with the real tools instead of reading the docs and hoping.
+
+<ScreenCells machine="kiln" cells="rest,playing" caption="Kiln at rest and while playing. A struck ceramic bowl whose glaze damps it and whose cracks make it inharmonic, drawn as hidden-line 3D with the mallet head the brightest thing." />
+
+## What the screen allows
+
+Before any design question, the numbers. They come from open-xy's own docs, and every row in the constraints file links to its source, so when the SDK moves I know what to re-check.
+
+- 480 by 220, black. The stock header takes the top 20 pixels: four control titles over four values, in a stepped grey bar.
+- Eight greys, from `#323232` up to `#CDCDCD`. Grey means inactive, bright means active. Red is reserved for recording and locks, so it never appears in machine artwork.
+- The device font is Univers Next Pro Light, nothing under 8 pixels, labels of eight characters or fewer, lower case.
+- Drawings are bound SVG: a handful of mutable paths with at most 64 points each, nodes that can translate, scale uniformly and turn about their own origin, and a redraw budget of about twenty changed nodes per frame.
+- Idle is still. Nothing loops at rest, every ease settles in under a fifth of a second, and nothing flashes more than three times a second.
+
+None of this is taste. The device rasterizer has its own faults (near-reversal turns, strokes traced back on themselves, points too close together), and the linter in the repo checks for every one of them before a frame goes anywhere near hardware.
+
+## The protocol
+
+The process is nine phases, each with an output and a gate I do not pass until it holds. The expensive mistakes, a wrong subject or a blown node budget, are cheap to catch early and painful to catch on a device, so the order matters more than the speed.
+
+1. **Does it earn a screen?** If I cannot name one object or scene the sound acts on, the machine keeps the stock page and the protocol ends.
+2. **Intake.** What it sounds like in two sentences, and where its controls come from. A port gets a port map: every source control, its range, its curve, its fate.
+3. **Listen and rank.** Each control's audible effect scored one to five. That score later sizes how far the control moves on screen.
+4. **Subject.** Five candidate subjects, each drawn as a rest frame. The person picks. I never pick.
+5. **Map and budget.** One visual channel per control, no two controls on the same channel of the same part, and the node budget declared.
+6. **Frames.** Five rest-frame variants of the chosen subject, a pick, then the full set: rest, playing, and every control at 0, 50 and 100.
+7. **Motion.** What moves on each trigger, from what to what, over how long, and what reduced motion does instead.
+8. **Review.** The craft check beside a reference at 1:1, then the accessibility checklist, each item answered with evidence or marked pending device.
+9. **Handoff.** Enough for someone who has never read the brief to write the machine's display code from the frames and the document.
+
+The frames phase ends with a contact sheet, because the only way to see whether every control reads is to see them all at once.
+
+<ScreenSheet machine="kiln" kind="contact" caption="Kiln's contact sheet: rest, playing, and every control at 0, 50 and 100. Each row is one knob; each row has to change visibly enough for the score that knob was given." />
+
+## Five, every time
+
+Every pass that generates design produces exactly five variants, and they have to be different, not five nudges of one idea. Two or three candidates kept collapsing into my first thought plus two strawmen. Five forces a couple of directions I would not have tried, and five is still few enough to judge side by side at 1:1.
+
+Uniqueness is checked, not asserted. Each variant is handed its own direction before anything is drawn: an angle on the machine's idea crossed with a way of drawing. Subjects have to differ pairwise in at least two of angle, drawing language and wording. Frames have to differ by at least 4% of body pixels. A pass with a duplicate does not close; the weakest duplicate is revised into a new direction, never dropped to four.
+
+Kiln's first subject pass is a good example of why this is a rule and not a suggestion. Five real directions, from a tile field to an orrery of the bowl's modes, and none of them landed.
+
+<ScreenPass machine="kiln" pass="01-subject" caption="Kiln, subject pass 1: a glaze-tile field, a section with a star chart, a modal schematic, an oscilloscope, an orrery. Rejected, with the note: none of the five land, five new unique directions." />
+
+The second pass took that rejection as its brief and came back with the mechanism, the material, a scene, an exploded view and a cutaway. The first was picked, for how it would move rather than how it looked at rest.
+
+<ScreenPass machine="kiln" pass="02-subject" caption="Kiln, subject pass 2. The pick was the mallet over the bowl: a backswing for strike, a rising glaze line, a hairline crack that forks, a rim that stiffens as the body fires." />
+
+The pick is always the person's. The MCP tools can rank the five; choosing stays with whoever owns the machine, and the reason is recorded in the pass file beside the variants.
+
+## Every control has to be seen
+
+The rule I care about most comes from open-xy's own guidance: a control should be seen as much as it is heard. A quiet control with a huge visual swing lies to the player, and a loud one with a tiny mark leaves them guessing.
+
+So each control gets one primary visual channel (rotation, position, uniform scale, shape, shade, count), and its travel scales with the audible score from intake. The floors are numbers: at least 24 pixels of position, 30 degrees of rotation, 1.6 times of scale, 12 items of count, 16 pixels of shape change. Shade on its own never clears a floor, because a small grey step is the easiest thing on this screen to miss. A tool renders the 0, 50 and 100 frames and measures how much of the screen changed; a control under its floor goes back a phase and gets more travel, and the score is never lowered to make it pass.
+
+<ScreenSweep machine="kiln" control="glaze" caption="Kiln, glaze at 0, 50 and 100. The glaze line climbs the inside of the bowl and the hatched interior grows with it. Position, about 40 pixels of travel." />
+
+## Craft, not just compliance
+
+The constraints and the floors make a screen work. They do not stop it looking childish. An early revision of another machine passed every gate and still read like clip art next to the reference screens. The craft rules came out of that comparison.
+
+- **One drawing language**, named before anything is drawn, from the subject's own world: hidden-line 3D, a patent section, a cutaway, bold closed outlines. Then every element is drawn in it. No icons.
+- **Three line weights**, used consistently, and strokes that stay the same width at every scale.
+- **One brightest element.** Outlines first; fills only as dark bodies behind bright lines.
+- **A state is not a grey fill.** Rows of mid-grey discs are what a colour UI looks like with the colour taken out. A line drawing shows state with a heavier stroke, a part that moves or appears, or hatching for something present but inactive.
+- **Picture, not panel.** Text and numbers live in the header. The drawing carries no labels, captions or scale figures, because the header already says all of that and labels turn a picture back into a dashboard.
+- **Think in 3D.** If a screen shows depth, model the scene and project it through one camera. Four rounds of hand-bent ellipses taught me that.
+
+The review for this is a side-by-side, the rest frame beside a reference at 1:1, with seven questions. Any no goes back to the frames phase. Gates prove a screen works; this is where it is judged for whether it looks authored.
+
+<ScreenSheet machine="bell" kind="before-after" caption="Bell, before and after the craft review. Same subject, same controls; the difference is the language it is drawn in." />
+
+## An agent at the controls
+
+The repo is also an MCP server, in stdlib Python with nothing to install. It gives a client the guidelines as searchable resources, the checks as tools (lint a definition, lint frames, measure perceptibility, build a contact sheet, render a frame to PNG so a vision model looks at it rather than reasoning about SVG text), and the design passes as a small state machine: start a pass and receive five directions, submit five variants, select one or reject the lot with a reason.
+
+The passes are where the structure pays off. An agent cannot submit four variants, cannot submit two that fail the uniqueness check, and cannot pick. It can draft, lint, measure and argue; the decision comes back to a person, and the record of that decision is a file next to the drawings.
+
+There is a training mode too, for when a screen teaches the guidelines something: a new pattern, a pitfall, a category nothing fits. A proposal goes draft, audit, review, gate, approval, with a different agent at each stage and a person at the end, and nothing touches the docs until they say so. The person who wrote a pattern is the worst-placed to spot what is wrong with it.
+
+Grey is the default and colour is an override set per client in its config, not in a conversation, so no agent can switch it on by asking.
+
+<ScreenMotion machine="kiln" name="motion" caption="Kiln's motion: the mallet swings down to the rim and back on a note, and the bowl answers. Nothing moves at rest." />
+
+## The archive
+
+Everything the process produced is in the [screens archive](screens/): <ScreensSummary />. Each is at the device's own 480 by 220, grouped by category and machine, and each links to the text that produced it, the subject in one sentence, what every control does to it, and the risks the pass recorded, so the drawings and the reasoning stay together.
+
+The archive is also searchable by that text. Type a drawing language and you get every variant drawn that way across every machine; type a control name and you get the machines that have one; type a pattern code and you get the candidates that leaned on it.
+
+Behind the page, the files are packed rather than shipped one by one: one lossless atlas per machine, pixel-identical to the source frames, three short videos for the motion clips, and one index that says where everything sits. Four hundred images arrive as about fifty files and four megabytes.
+
+## Where it is going
+
+Everything only a device can prove is still marked pending: caption widths in the real font, how the rasterizer treats the thinnest lines, whether the motion feels right in the hand. The next step is photographs from an OP-XY beside each contact sheet, and the first entries into the library of screens that passed audit.
+
+The repo is built to hold more modules beside this one (sequencing workflows, preset design, sound-design notes) without disturbing it. For now it is one module, one protocol, and a growing stack of five-at-a-time decisions.

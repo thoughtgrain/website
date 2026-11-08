@@ -31,6 +31,18 @@ export const MAKING_CATEGORIES = [
 /** The five standing pages with no collection behind them, plus the specimen. */
 export const FLAT_ROUTES = ['now', 'about', 'learning', 'gear', 'colophon', 'styles'];
 
+/**
+ * The machines in the OP-XY screen archive, from src/content/screens.json.
+ *
+ * That file is generated beside the full index by scripts/opxy-assets.mjs and
+ * carries only what the route list and the page titles need: id, name,
+ * category, a line of description. A project whose frontmatter says
+ * `layout: operator` gets a screens page and one page per machine.
+ */
+export const machinesOf = (content) => ((content.data || {}).screens || {}).machines || [];
+
+export const hasScreens = (project) => project.layout === 'operator';
+
 /** How many items per page of the paginated /enjoying/ stream. */
 export const ENJOYING_PER_PAGE = 12;
 
@@ -166,7 +178,13 @@ export function routesFor(content) {
 
   routes.push('/projects/');
   MAKING_CATEGORIES.forEach((c) => routes.push(`/projects/cat/${c.slug}/`));
-  content.projects.forEach((p) => routes.push(`/projects/${p.slug}/`));
+  content.projects.forEach((p) => {
+    routes.push(`/projects/${p.slug}/`);
+    if (hasScreens(p)) {
+      routes.push(`/projects/${p.slug}/screens/`);
+      machinesOf(content).forEach((m) => routes.push(`/projects/${p.slug}/screens/${m.id}/`));
+    }
+  });
 
   ['reading', 'music', 'movies', 'podcasts', 'bookshelf'].forEach((kind) => {
     if (!content[kind].length) return;
@@ -221,7 +239,7 @@ export function metaFor(route, content) {
 
   const seg = route === '/' ? [] : route.slice(1, -1).split('/');
   if (!seg.length) return page(null);
-  const [a, b, c] = seg;
+  const [a, b, c, d] = seg;
 
   if (a === 'notes') {
     if (!b) return page('Notes');
@@ -249,6 +267,16 @@ export function metaFor(route, content) {
       return page(cat ? `${cat.label} projects` : 'Projects', cat?.dek);
     }
     const p = find(content.projects, b);
+    if (c === 'screens' && p) {
+      if (!d) {
+        return page(
+          `Screens, ${p.title}`,
+          'Every frame, pass variant and sheet from the OP-XY screen designs, filtered by machine, kind and the text that produced each one.',
+        );
+      }
+      const m = machinesOf(content).find((x) => x.id === d);
+      return page(m ? `${m.name}, ${p.title}` : p.title, m?.description || p.summary);
+    }
     return page(p?.title, p?.summary);
   }
   if (a === 'products') {

@@ -33,6 +33,7 @@ import { defineConfig } from 'vite';
 
 import { buildContent, metaFor, routesFor } from './src/app/lib/content-model.js';
 import { renderFeeds } from './src/app/lib/feeds.js';
+import { searchIndex } from './src/app/lib/opxy-search.js';
 import { readContent, readData } from './node-loader.js';
 
 const ROOT = import.meta.dirname;
@@ -309,6 +310,23 @@ function writeReport(outDir) {
 }
 
 /**
+ * The OP-XY screen index, written by scripts/opxy-assets.mjs.
+ *
+ * Read lazily and memoised: it is half a megabyte of JSON that only the
+ * server render and the search-index emit need, and a build without it (the
+ * generator never run) should still produce a site, just one whose archive
+ * pages say the index is missing.
+ */
+const OPXY_MANIFEST = path.join(ROOT, 'src', 'opxy', 'manifest.json');
+let opxyManifestSource;
+function readOpxyManifest() {
+  if (opxyManifestSource !== undefined) return opxyManifestSource;
+  opxyManifestSource = existsSync(OPXY_MANIFEST) ? readFileSync(OPXY_MANIFEST, 'utf8') : null;
+  if (!opxyManifestSource) note('src/opxy/manifest.json is missing, so the screen archive renders empty');
+  return opxyManifestSource;
+}
+
+/**
  * Read the content and write the entries, once per process, however many times
  * the config is evaluated.
  */
@@ -336,6 +354,33 @@ function prepare() {
  */
 function contentPlugins() {
   return [
+    /**
+     * Hand the server render the OP-XY screen index, and the browser nothing.
+     *
+     * src/app/opxy-manifest.js exports null. During the server render this
+     * swaps that body for the generated JSON, so the archive pages render
+     * from the full index; in the client bundle the file stays as written and
+     * the pages, already prerendered, never need it. The alternative, a JSON
+     * import in the components, would put 540 KB into the chunk that loads
+     * on the pages with interactive figures, for nothing they draw.
+     *
+     * A transform on a real file rather than a virtual module id, because the
+     * host scans the source for package names and a bare specifier would be
+     * mistaken for one.
+     */
+    {
+      name: 'opxy-manifest',
+      enforce: 'pre',
+      transform(code, id, options) {
+        if (!/[\\/]src[\\/]app[\\/]opxy-manifest\.js(\?.*)?$/.test(id)) return null;
+        const ssr = Boolean(options?.ssr) || this.environment?.config?.consumer === 'server';
+        if (!ssr) return null;
+        const json = readOpxyManifest();
+        if (!json) return null;
+        return { code: `export default ${json.trim()};\n`, map: null };
+      },
+    },
+
     /**
      * Give `React.createElement` a React to call.
      *
@@ -801,6 +846,15 @@ export default defineConfig(() => {
           feeds.forEach(({ fileName, source }) => {
             this.emitFile({ type: 'asset', fileName, source });
           });
+
+          // The text behind every OP-XY screen, for the archive's search box.
+          // Fetched by src/js/opxy-filter.js the first time someone types, so
+          // the page itself carries only the thumbnails.
+          const manifestJson = readOpxyManifest();
+          const search = manifestJson ? searchIndex(JSON.parse(manifestJson)) : null;
+          if (search) {
+            this.emitFile({ type: 'asset', fileName: 'opxy/search.json', source: JSON.stringify(search) });
+          }
 
           // A copy of the XSL stylesheet beside every feed.xml.
           //

@@ -15,3 +15,4 @@ import '../js/theme.js';
 import '../js/nav.js';
 import '../js/texture.js';
 import '../js/tag-filter.js';
+import '../js/opxy-filter.js';

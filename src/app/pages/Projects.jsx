@@ -12,6 +12,8 @@ import { content } from '../content.js';
 import { MAKING_CATEGORIES } from '../lib/content-model.js';
 import Link from '../Link';
 import FeedLink from '../components/FeedLink';
+import { Sprite } from '../components/operator/Sprite';
+import { machineById } from '../opxy.js';
 
 /** Lifecycle buckets, in display order. */
 const GROUPS = [
@@ -33,9 +35,23 @@ function bucketFor(status) {
   return 'in-flight';
 }
 
+/**
+ * A project that names a `heroMachine` gets that machine's rest frame as a
+ * thumbnail, a real picture of the work. Everything else keeps the plain row;
+ * the coloured plates are still in the markup for the stylesheet's sake but
+ * have not been shown since the index became a list.
+ */
 function Tile({ project }) {
+  const hero = project.heroMachine ? machineById(project.heroMachine) : null;
+  const rest = hero && hero.cells.find((c) => c.kind === 'frame' && c.name === 'rest');
+
   return (
-    <Link className="project-tile" to={`/projects/${project.slug}/`}>
+    <Link className={`project-tile${rest ? ' project-tile--thumb' : ''}`} to={`/projects/${project.slug}/`}>
+      {rest && (
+        <span className="project-tile__thumb">
+          <Sprite machine={hero} cell={rest} alt="" />
+        </span>
+      )}
       <div className={`project-tile__plate project-tile__plate--${project.plate || 'cocoa'}`}>
         <div className="project-tile__glyph">{project.glyph || ''}</div>
         <div className="project-tile__plate-label">{project.label || ''}</div>

@@ -19,6 +19,7 @@
  */
 
 import { demoComponents } from './demos';
+import { screenFigures } from './operator/figures';
 
 export function Dropcap({ text }) {
   return <p className="dropcap">{text}</p>;
@@ -75,4 +76,6 @@ export function Footnote({ id }) {
 export const mdxComponents = {
   Dropcap, Pullquote, PullquoteNoCite, MarginaliaPin, Footnote,
   ...demoComponents,
+  // The OP-XY case study's figures: screens looked up by machine and name.
+  ...screenFigures,
 };

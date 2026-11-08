@@ -1,0 +1,292 @@
+/* =========================================================================
+   Operator design: the OP-XY project's own pages.
+
+   Scoped to `.operator`, the <main> every page of the project renders into.
+   Two ideas: the accent inside the project is the device's own grey ramp, not
+   the site's rust, so the pages read as one piece of work; and every screen
+   is shown in a black box at the device's 480:220, never cropped or tinted.
+   Depends on tokens.css, kit.css and site.css.
+   ========================================================================= */
+
+.operator {
+  /* The OP-XY header bar's eight steps, from opxy/tokens.json. */
+  --xy-0: #000000;
+  --xy-1: #323232;
+  --xy-2: #4b4b4b;
+  --xy-3: #646464;
+  --xy-4: #7d7d7d;
+  --xy-5: #969696;
+  --xy-6: #afafaf;
+  --xy-7: #cdcdcd;
+
+  /* Monochrome accent. #4B4B4B on the cream page is about 8:1, so links,
+     chips and focus rings all clear 4.5:1 and 3:1 with room to spare. */
+  --accent: var(--xy-2);
+  --accent-hover: var(--xy-1);
+  --accent-soft: var(--xy-5);
+  --marginalia: var(--xy-2);
+  --cocoa-700: var(--xy-2);
+  --cocoa-600: var(--xy-3);
+}
+[data-theme="dark"] .operator {
+  /* #AFAFAF on the near-black page is about 8:1 as well. */
+  --accent: var(--xy-6);
+  --accent-hover: var(--xy-7);
+  --accent-soft: var(--xy-3);
+  --marginalia: var(--xy-6);
+  --cocoa-700: var(--xy-6);
+  --cocoa-600: var(--xy-5);
+}
+
+/* ---- Masthead and sub-navigation ---- */
+.operator-mast { padding-top: var(--s-5); }
+.operator-mast__row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: var(--s-4); flex-wrap: wrap;
+}
+.operator-mast__title {
+  font-family: var(--font-display); font-weight: 500; font-size: 1.125rem;
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg); text-decoration: none;
+}
+.operator-mast__up { font-size: 14px; color: var(--fg-muted); text-decoration: none; }
+.operator-mast__title:hover, .operator-mast__title:focus-visible,
+.operator-mast__up:hover, .operator-mast__up:focus-visible {
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px;
+}
+
+.operator-subnav { margin-top: var(--s-3); border-bottom: 1px solid var(--rule); }
+.operator-subnav ul {
+  display: flex; gap: var(--s-5); align-items: baseline;
+  list-style: none; margin: 0; padding: 0;
+  overflow-x: auto;
+}
+.operator-subnav a {
+  display: inline-block; position: relative;
+  padding: 10px 0 12px;
+  font-size: 14px; color: var(--fg-muted); text-decoration: none; white-space: nowrap;
+}
+.operator-subnav a:hover,
+.operator-subnav a:focus-visible { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.operator-subnav a[aria-current="page"] { color: var(--fg); }
+.operator-subnav a[aria-current="page"]::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+  background: var(--fg);
+}
+/* "Screens / Kiln": the trail is the page you are on, in the archive. */
+.operator-subnav__trail {
+  font-size: 14px; color: var(--fg-subtle); white-space: nowrap;
+  padding: 10px 0 12px;
+}
+.operator-subnav__trail::before { content: '/'; margin-right: var(--s-5); color: var(--fg-faint); }
+
+/* The study and the archive sit a little closer to the masthead than a
+   reader does to the site nav. */
+.operator .reader { padding-top: var(--s-6); }
+.operator .section { padding-top: var(--s-6); }
+.operator .page-header { padding-top: var(--s-4); }
+.operator-study__repo { text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---- The device frame ----
+   A box at 480:220 showing one cell of an atlas. The image is the whole
+   atlas, `cols` boxes wide and `rows` boxes tall, shifted by whole boxes.
+   Percentages, so the box can be any width and the frame still lands. */
+.sprite {
+  display: block; position: relative; overflow: hidden;
+  aspect-ratio: 480 / 220;
+  background: var(--xy-0, #000);
+  border-radius: 2px;
+}
+.sprite img {
+  position: absolute; display: block;
+  left: calc(var(--col, 0) * -100%);
+  top: calc(var(--row, 0) * -100%);
+  width: calc(var(--cols, 1) * 100%);
+  height: calc(var(--rows, 1) * 100%);
+  max-width: none;
+  image-rendering: auto;
+}
+.sprite--strip img { left: 0; width: 100%; }
+
+/* Sheets and clips are their own files. Shown no wider than the page, and a
+   single frame no wider than its own 480 px, because these are line drawings
+   made for 1:1 and upscaling them only softens the lines. */
+.sheet { display: block; width: 100%; height: auto; background: var(--xy-0, #000); border-radius: 2px; }
+.motion { display: block; width: 100%; max-width: 480px; height: auto; aspect-ratio: 480 / 220; background: var(--xy-0, #000); border-radius: 2px; }
+
+/* ---- Figures in the case study ---- */
+.screen-figure { margin: var(--s-6) 0; }
+.screen-figure__row {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr));
+}
+.screen-figure__row > .sprite:only-child { max-width: 480px; }
+.screen-figure__cell { display: block; position: relative; }
+.screen-figure__tag {
+  position: absolute; left: 6px; bottom: 6px;
+  font-family: var(--font-mono); font-size: 11px; line-height: 1;
+  padding: 3px 5px; border-radius: 2px;
+  color: var(--xy-7); background: rgba(0, 0, 0, 0.72);
+}
+.screen-figure figcaption,
+.sweep figcaption,
+.operator-hero figcaption,
+.machine__hero figcaption,
+.machine__sheet figcaption,
+.machine__motion figcaption {
+  margin-top: 8px;
+  font-family: var(--font-body); font-size: 14px; line-height: 1.5;
+  color: var(--fg-muted);
+}
+@media (max-width: 560px) {
+  .screen-figure__row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .screen-figure__row > .sprite:only-child,
+  .screen-figure--sheet .screen-figure__row,
+  .screen-figure--motion .screen-figure__row { grid-template-columns: 1fr; }
+}
+
+.operator-hero { margin: var(--s-5) 0 var(--s-7); }
+.operator-hero .sprite { max-width: 480px; }
+
+/* ---- The archive: filters ---- */
+.screens-filter { max-width: none; }
+.screens-filter__js { display: flex; flex-direction: column; gap: 12px; }
+.screens-search { display: flex; flex-direction: column; gap: 6px; max-width: 40ch; }
+.screens-search .input { font-size: 15px; padding-left: 0; }
+
+/* ---- The archive: sections ---- */
+.screens-cat { margin-top: var(--s-7); }
+.screens-cat__title {
+  display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-4);
+  padding-bottom: 10px; margin-bottom: var(--s-3);
+  border-bottom: 1px solid var(--border);
+}
+.screens-count { font-family: var(--font-mono); font-size: 13px; font-weight: 400; color: var(--fg-subtle); }
+.screens-cat__dek { color: var(--fg-muted); max-width: 56ch; margin: 0 0 var(--s-5); }
+
+.screens-machine { margin-top: var(--s-6); }
+.screens-machine__title {
+  display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-4); flex-wrap: wrap;
+  font-size: 1.25rem; margin: 0 0 4px;
+}
+.screens-machine__title a { color: inherit; text-decoration: none; }
+.screens-machine__title a:hover,
+.screens-machine__title a:focus-visible { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.screens-machine__dek { font-size: 15px; color: var(--fg-muted); margin: 0 0 var(--s-4); max-width: 60ch; }
+
+.screens-grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; gap: 16px 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 560px) { .screens-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 360px) { .screens-grid { grid-template-columns: 1fr; } }
+
+.screens-cell { display: block; text-decoration: none; color: var(--fg-muted); }
+.screens-cell__label {
+  display: block; margin-top: 6px;
+  font-family: var(--font-mono); font-size: 11px; line-height: 1.4;
+  color: var(--fg-subtle);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.screens-cell:hover .screens-cell__label,
+.screens-cell:focus-visible .screens-cell__label {
+  color: var(--fg); text-decoration: underline; text-underline-offset: 3px;
+}
+.screens-cell:hover .sprite { box-shadow: 0 0 0 1px var(--fg-subtle); }
+.screens .empty-state { padding: var(--s-6) 0; text-align: left; }
+
+/* ---- One machine ---- */
+.machine__head .kicker { display: inline-block; margin-bottom: var(--s-3); }
+.machine__head h1 { margin-bottom: var(--s-3); }
+.machine__head .lead { max-width: 56ch; margin: 0 0 var(--s-5); }
+.machine__hero { margin: 0 0 var(--s-6); }
+.machine__hero .sprite { max-width: 480px; }
+
+.machine__facts {
+  display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px var(--s-5);
+  margin: 0 0 var(--s-7); padding: var(--s-4) 0;
+  border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+}
+.machine__facts dt { font-family: var(--font-mono); font-size: 11px; color: var(--fg-subtle); padding-top: 4px; }
+.machine__facts dd { margin: 0; font-size: 15px; line-height: 1.55; color: var(--fg); max-width: 60ch; }
+@media (max-width: 480px) {
+  .machine__facts { grid-template-columns: 1fr; gap: 2px; }
+  .machine__facts dd { margin-bottom: 10px; }
+}
+
+.machine__section { margin-top: var(--s-7); }
+.machine__section h2 {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  font-size: var(--t-h3); margin-bottom: var(--s-3);
+}
+.machine__section > p { color: var(--fg-muted); max-width: 60ch; }
+
+.sweep { margin: var(--s-5) 0; }
+.sweep--one .sprite { max-width: 480px; }
+.sweep__row { display: grid; gap: 8px; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); }
+@media (max-width: 480px) { .sweep__row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* The pass state is a word, in mono, so it never depends on colour. */
+.pass__state {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: var(--r-pill); border: 1px solid var(--border);
+  color: var(--fg-muted);
+}
+.pass__state--selected { color: var(--fg); border-color: var(--fg-subtle); }
+.pass__focus { font-family: var(--font-display); font-style: italic; font-size: 1.0625rem; }
+.pass__decision { font-size: 15px; color: var(--fg); max-width: 60ch; }
+.pass__decision strong { font-family: var(--font-mono); font-weight: 500; font-size: 13px; }
+.variant__picked {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 2px 6px; margin-right: 8px; border-radius: var(--r-pill);
+  color: var(--bg); background: var(--fg);
+  vertical-align: middle;
+}
+.variant--picked .sprite { box-shadow: 0 0 0 2px var(--fg); }
+
+.variants { list-style: none; margin: var(--s-4) 0 0; padding: 0; }
+.variant { padding: var(--s-5) 0; border-top: 1px solid var(--rule); }
+.variant figure {
+  margin: 0;
+  display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 1fr); gap: var(--s-5);
+  align-items: start;
+}
+.variant .sprite { width: 100%; }
+.variant figcaption { font-size: 15px; line-height: 1.55; }
+.variant__subject { margin: 0 0 6px; font-size: 15px; color: var(--fg); max-width: none; }
+.variant__n {
+  font-family: var(--font-mono); font-size: 12px; color: var(--fg-subtle);
+  margin-right: 8px;
+}
+.variant__tags { font-family: var(--font-mono); font-size: 11px; color: var(--fg-subtle); margin: 0 0 10px; }
+.variant__controls { margin: 0 0 10px; padding-left: 1.1em; }
+.variant__controls li { font-size: 14px; line-height: 1.5; color: var(--fg-muted); margin-bottom: 4px; }
+.variant__risks summary {
+  font-size: 13px; color: var(--fg-subtle); cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--fg-faint);
+}
+.variant__risks summary:hover, .variant__risks summary:focus-visible { color: var(--fg); }
+.variant__risks ul { margin: 8px 0 0; padding-left: 1.1em; }
+.variant__risks li { font-size: 14px; line-height: 1.5; color: var(--fg-muted); margin-bottom: 4px; }
+/* A search hit lands here; give the frame room under the sticky nav. */
+.variant[id] { scroll-margin-top: 88px; }
+.variant:target { box-shadow: -12px 0 0 -9px var(--fg-subtle); }
+@media (max-width: 560px) {
+  .variant figure { grid-template-columns: 1fr; gap: var(--s-3); }
+}
+
+.machine__sheet, .machine__motion { margin: var(--s-5) 0; }
+
+.machine__pager {
+  display: flex; justify-content: space-between; gap: var(--s-4);
+  margin-top: var(--s-8); padding-top: var(--s-5); border-top: 1px solid var(--rule);
+  font-size: 15px;
+}
+.machine__pager a { text-decoration: none; color: var(--fg-muted); }
+.machine__pager a:hover, .machine__pager a:focus-visible { text-decoration: underline; text-underline-offset: 4px; }
+
+/* ---- The projects index: a tile with a real picture ----
+   The thumbnail sits above the words, at the tile's own width, capped so a
+   single-column index does not turn it into a hero. */
+.project-tile__thumb { display: block; max-width: 320px; margin-bottom: 14px; }

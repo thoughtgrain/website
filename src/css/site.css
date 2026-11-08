@@ -218,6 +218,14 @@ body::after {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
 }
+/* Rows size to their own tiles. The generic .grid rule below equalises rows,
+   which was invisible while every tile was three lines of text and became a
+   hundred pixels of nothing under the first row once one tile carried a
+   thumbnail. Two classes, because that rule comes later and would win a tie. */
+.grid.grid--projects {
+  grid-auto-rows: auto;
+  align-items: start;
+}
 @media (max-width: 1024px) {
   .grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid--projects { grid-template-columns: repeat(2, minmax(0, 1fr)); }

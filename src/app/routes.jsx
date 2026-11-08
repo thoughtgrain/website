@@ -19,6 +19,7 @@ import Writing from './pages/Writing';
 import Article from './pages/Article';
 import Projects from './pages/Projects';
 import Project from './pages/Project';
+import { Screens, Machine } from './pages/Screens';
 import Styles from './pages/Styles';
 import { Now, About, Learning, Gear, Colophon } from './pages/Flat';
 import { KindIndex, KindReader, Enjoying } from './pages/Enjoying';
@@ -39,6 +40,10 @@ const ROUTES = [
 
   [/^\/projects\/$/, Projects],
   [/^\/projects\/cat\/[^/]+\/$/, Projects],
+  // The screen archive hangs off a project: /projects/<slug>/screens/ and one
+  // page per machine under it. Longer patterns first, same reason as the tags.
+  [/^\/projects\/[^/]+\/screens\/$/, Screens],
+  [/^\/projects\/[^/]+\/screens\/[^/]+\/$/, Machine],
   [/^\/projects\/[^/]+\/$/, Project],
 
   [new RegExp(`^/(${KINDS})/$`), KindIndex],

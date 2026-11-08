@@ -123,6 +123,17 @@ const bundle = script ? readFileSync(path.resolve(work, 'dist', script), 'utf8')
 const browserWantsYaml = /(?:\bfrom\s*|\bimport\s*\(?\s*)["']yaml["']/.test(bundle);
 console.log(`[sim] the page bundle imports yaml: ${browserWantsYaml ? 'YES' : 'no'}`);
 
+// The OP-XY archive only renders if the `opxy-manifest` transform swapped the
+// index in during the nested SSR build. If that detection fails on the host's
+// path, the page still builds and simply says the archive is missing, which
+// is exactly the kind of quiet degradation this script exists to catch.
+const screens = readdirSync(path.join(work, 'dist', 'projects'), { withFileTypes: true })
+  .filter((d) => d.isDirectory())
+  .map((d) => path.join(work, 'dist', 'projects', d.name, 'screens', 'index.html'))
+  .filter((p) => { try { readFileSync(p); return true; } catch { return false; } });
+const archiveCells = screens.reduce((n, p) => n + (readFileSync(p, 'utf8').match(/data-cell/g) || []).length, 0);
+console.log(`[sim] screen archive pages: ${screens.length}, cells rendered: ${archiveCells}`);
+
 rmSync(work, { recursive: true, force: true });
 
 if (!prerendered) {
@@ -131,6 +142,10 @@ if (!prerendered) {
 }
 if (browserWantsYaml) {
   console.error('[sim] FAILED: the browser bundle really does import yaml');
+  process.exit(1);
+}
+if (screens.length && !archiveCells) {
+  console.error('[sim] FAILED: the screen archive rendered without its index');
   process.exit(1);
 }
 console.log('[sim] passed');
