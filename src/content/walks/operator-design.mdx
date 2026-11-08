@@ -1,0 +1,235 @@
+---
+slug: operator-design
+project: operator-design
+title: "Watch it design a screen"
+---
+
+Here's a question to hold onto as we go: how do you get an agent to design something *with* you, without it quietly designing something else? My answer turned out to be a string of small steps, each one refusing to be skipped. Let's walk through them with <Name />, one at a time.
+
+Every figure on this page is built from the files the MCP server wrote while the session ran: the briefs, the drawings, the measurements, the decisions and the times they were made. The buttons don't change what happened. They let you look at it from the angles the process did.
+
+## Does it even need a screen?
+
+The very first question is whether to draw anything at all. Every OP-XY machine gets a stock page for free: a header with its four control names and their values. For plenty of machines, that's all you need. A custom screen has to earn its place by having one thing the sound acts on, something you could point at.
+
+Flip between the two and ask yourself which one tells you more about the sound.
+
+<StockOrScreen />
+
+For <Name />, the brief answers in one sentence: <Field name="subject" />. If I can't write that sentence, the machine keeps the stock page and the protocol ends right there. That sounds like giving up, and it's the opposite. A screen that can't name its subject is worse than no screen.
+
+## Writing down what it sounds like
+
+Before anyone draws, the machine gets described in words: what it is, what it sounds like, which controls it has and where they came from. Then the server runs its definition through the same rules the SDK will enforce, so nothing gets designed on top of a control that's about to change.
+
+<Intake />
+
+This is the paperwork step, and I've learned not to skip it. Every later step leans on it. The drawing has to be *of* this sound, and the knobs it shows have to be *these* knobs.
+
+<Reached when="scores">
+
+## How much does each knob matter?
+
+Here's the step that surprises people, because it's about listening rather than looking. Each control gets a score from one to five for how much it changes the sound across its whole range.
+
+Why would a drawing care? Because later, every knob has to move something on screen, and *how far* it moves is set by this score. A knob that barely changes the sound shouldn't make the picture leap. A knob that transforms it shouldn't twitch. The score turns "proportional" from a feeling into a number.
+
+Pick a control to read what it does to the sound, and what its score commits the drawing to.
+
+<Scores />
+
+On <Name />, <Field name="loudest" /> scored a <Field name="loudestScore" />, the highest on the machine.
+
+<Reached when="frames">
+
+Hold onto that. It comes back when the frames do.
+
+</Reached>
+
+</Reached>
+
+## Five directions, before a single line
+
+Now the drawing starts. Well, almost. First, `design_pass_start` writes five briefs.
+
+Each brief pairs a different angle on what the machine *is* (its mechanism, its material, a scene it lives in, a cutaway of it at work) with a different way of drawing. The five briefs go to five designer agents that work at the same time and never see each other's work.
+
+Why fix the directions before anything is drawn? Because if you ask for five ideas and let them emerge, you get one idea and four echoes of it. I did that to myself for weeks. Handing out the directions first is the only way I've found to get five honest attempts.
+
+Start with the briefs, then see what came back.
+
+<Directions pass="first" />
+
+## Are they really five?
+
+Five drawings came back. But "five different drawings" is a claim, and the server checks it. `design_pass_submit` compares every pair, ten of them for five drawings, and refuses the pass if any two are too alike.
+
+<Reached when="subjectPass" pass="first">
+
+For a pass of subjects, a pair has to differ in at least two of three things: the angle, the way of drawing, and the wording of the subject. Wording is measured by counting the words two subjects share. Click any square to put that pair side by side, with their shared words highlighted.
+
+</Reached>
+
+<Reached when="framesPass" pass="first">
+
+For a pass of frames, the check is pixels: any two rest frames have to differ on at least 4% of the screen's body. Click any square to put that pair side by side.
+
+</Reached>
+
+<Uniqueness pass="first" />
+
+If a pair fails, the pass comes back as `needs_revision`, and the only fix is a new direction for the weaker drawing. Never dropping to four. That rule is the whole point. It's what stops "five ideas" from quietly becoming three.
+
+## Who picks?
+
+Not the server. Not the reviewer either. This is the part of the process I'm most stubborn about.
+
+A reviewer agent reads all five and ranks them, with a reason for each. That ranking is useful, it's often right, and it's deliberately not a decision. The decision is the person's, and the server won't record one without a name and a reason attached.
+
+Try putting the five in the reviewer's order, then look at what was actually decided.
+
+<Decision pass="first" />
+
+<Reached when="rejected" pass="first">
+
+For <Name />'s first pass, the answer was none of them. That's allowed, and it's recorded just like a pick: “<Field name="rejectReason" pass="first" />.” A rejection isn't a dead end. As we'll see, it becomes the brief for the next pass.
+
+</Reached>
+
+<Reached when="picked !second" pass="first">
+
+Here the pick was <Field name="pick" pass="first" />: “<Field name="pickReason" pass="first" />.”
+
+</Reached>
+
+<Reached when="disagreed !second" pass="first">
+
+Notice the gap: the reviewer put <Field name="rankTop" pass="first" /> first. That gap is exactly why a ranking isn't a pick. A reviewer judges the drawing. I'm choosing what I'll live with on the device, and my reason sits on the record next to theirs.
+
+</Reached>
+
+<Reached when="picked second" pass="first">
+
+Here the pick was <Field name="pick" pass="first" />: “<Field name="pickReason" pass="first" />.” A pick isn't always the end of the drawing, though, as the next pass shows.
+
+</Reached>
+
+<Reached when="second">
+
+## Trying again, from the reason
+
+Every pass after the first starts from how the last one ended. The reason I gave goes straight into the next `design_pass_start` as its focus, so all five new directions have to answer it. For <Name />, the next brief began: “<Field name="focus" />.”
+
+<Reached when="middle">
+
+<Name /> took more than two passes. Here are the ones in between, in brief.
+
+<OtherPasses />
+
+</Reached>
+
+The last pass, briefs first:
+
+<Directions pass="last" />
+
+And how it was decided:
+
+<Decision pass="last" />
+
+<Reached when="disagreed">
+
+Notice the gap. The reviewer put <Field name="rankTop" /> first; I picked <Field name="pick" />, because “<Field name="pickReason" />.” That gap is exactly why a ranking isn't a pick. A reviewer judges the drawing. I'm choosing what I'll live with on the device, and my reason sits on the record next to theirs.
+
+</Reached>
+
+<Reached when="agreed">
+
+This time the reviewer and I landed on the same one, <Field name="pick" />: “<Field name="pickReason" />.” That happens, and it's nice when it does. It still doesn't make the ranking a pick.
+
+</Reached>
+
+<Reached when="open">
+
+This pass is still open. The five are drawn and checked, and they're waiting for a person to choose.
+
+</Reached>
+
+</Reached>
+
+<Reached when="extras">
+
+## Tidying, and keeping
+
+Sometimes a picked drawing needs small fixes: a stray label, a clipped edge, spacing that was off. That isn't a new idea, so it doesn't get five variants. It's the same drawing, cleaned, with a note saying exactly what changed. And now and then a variant that wasn't picked is worth keeping anyway, for another machine or as a reference.
+
+<Extras />
+
+</Reached>
+
+<Reached when="frames">
+
+## Seen as much as heard
+
+With a subject chosen, the full set of frames gets drawn: the screen at rest, the screen while a note plays, and every control at 0, 50 and 100, with everything else left at its default.
+
+This is where the scores come back. The server renders each control's frames and measures how much of the screen actually changes, against the floor that control's score set. Too little, and the control goes back a phase for more travel. The score never gets lowered to make the test pass.
+
+Pick a control and drag.
+
+<Reached when="scores">
+
+Then try the one that mattered most, <Field name="loudest" />, against a quieter one, and see whether the picture agrees with your ears.
+
+</Reached>
+
+<Sweep />
+
+Under the screen is the plan the picked drawing came with. Compare it with what you see. Where they differ, the frames are where the plan got worked out.
+
+<Reached when="contact">
+
+## Everything at once
+
+A slider is good for one control at a time. The contact sheet is for all of them together, and it's the check no tool can do for me: do the moving parts stay clear of each other at their extremes? It's judged at 1:1, because that's the only size this screen will ever be.
+
+<Contact />
+
+</Reached>
+
+<Reached when="beforeAfter">
+
+## Does it look like someone meant it?
+
+Passing every check doesn't make a screen good. A drawing can clear every floor and still look like clip art. So before review, the rest frame goes beside a reference at 1:1 and gets asked a few blunt questions: is every element in one drawing language, is there exactly one brightest thing, does anything look like an icon?
+
+<BeforeAfter />
+
+</Reached>
+
+</Reached>
+
+<Reached when="restOnly">
+
+## A rest frame, for now
+
+<Name /> has stopped, for now, at its rest frame: the picked drawing, cleaned up and linted, sitting in its final place. The full set of frames, every control at 0, 50 and 100, comes next.
+
+</Reached>
+
+<Reached when="motion">
+
+## Still, until it isn't
+
+Motion comes last, and it has one rule that shapes everything else: nothing moves at rest. An idle machine is a still picture. When a note arrives, the subject answers first, then settles, in less than a fifth of a second for anything a knob does.
+
+<MotionStep />
+
+</Reached>
+
+## Where it stands
+
+So where did <Name /> end up? The server can answer that too.
+
+<Status />
+
+Everything still pending is pending on purpose. Some of it is mine to finish. The rest, like how the real font measures and whether the motion feels right under your fingers, can only be proven on an OP-XY, and the record says so rather than guessing.

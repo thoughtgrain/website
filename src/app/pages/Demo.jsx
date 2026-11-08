@@ -2,16 +2,19 @@
  * Demo.jsx: /projects/:slug/demo/ and /projects/:slug/demo/:machine/
  *
  * The demonstration of the MCP server. Not a description of it: the pages
- * replay the sessions it actually ran, from the records it wrote.
+ * walk through the sessions it actually ran, from the records it wrote.
  *
- *   Demo      the featured machine's session as a player (see Session.jsx),
- *             then every other machine's session as a row, then the whole
- *             output as a filterable grid of thumbnails. The grid is
- *             prerendered in full; src/js/opxy-filter.js makes it live.
+ *   Demo      the featured machine's session as a walk-through: the prose in
+ *             src/content/walks/<project>.mdx, one section per step, each
+ *             with a figure built from the records (components/operator/
+ *             walk.jsx). Then every other machine, then the whole output as
+ *             a filterable grid of thumbnails, prerendered in full and made
+ *             live by src/js/opxy-filter.js.
  *
- *   Machine   one machine's session, in full, with each frame and variant
- *             anchored by id so a hit in the grid lands on the step that
- *             produced it.
+ *   Machine   the same walk-through for one machine. Same words, that
+ *             machine's evidence; steps it never reached are left out. Each
+ *             frame and variant is anchored by id, so a hit in the grid lands
+ *             on the step that produced it.
  *
  * Both read the manifest, which is only present during the server render.
  * Should a page ever render without it, it says so instead of showing an
@@ -23,7 +26,8 @@ import { relativeHref } from '../base.js';
 import Link from '../Link';
 import { OperatorShell } from '../components/operator/Shell';
 import { Sprite } from '../components/operator/Sprite';
-import { Session, statusOf } from '../components/operator/Session';
+import { WalkContext, walkComponents, statusOf } from '../components/operator/walk';
+import { mdxComponents } from '../components/mdx';
 import {
   opxy, machines, machineById, cellLabel, totals, KIND_LABELS,
 } from '../opxy.js';
@@ -45,6 +49,22 @@ function NoIndex({ project }) {
         <p className="lead">The session records are assembled when the site is published; this copy was rendered without them.</p>
       </div>
     </OperatorShell>
+  );
+}
+
+/** The walk-through prose for a project, from src/content/walks/. */
+const walkFor = (project) => (content.walks || []).find((w) => w.project === project.slug) || null;
+
+/** One machine's walk-through: the shared prose, with this machine in context. */
+function Walk({ m, walk }) {
+  if (!walk) return null;
+  const Body = walk.Body;
+  return (
+    <WalkContext.Provider value={{ m, manifest: opxy }}>
+      <div className="walk prose">
+        <Body components={{ ...mdxComponents, ...walkComponents }} />
+      </div>
+    </WalkContext.Provider>
   );
 }
 
@@ -73,36 +93,27 @@ export function Demo({ route }) {
   const t = totals();
   const cats = Object.keys(opxy.categories);
   const demoHref = (path = '') => `/projects/${project.slug}/demo/${path}`;
+  const walk = walkFor(project);
 
   return (
     <OperatorShell project={project} here="Demonstration">
       <div className="container section screens">
         <header className="page-header page-header--left">
           <span className="kicker">The demonstration</span>
-          <h1>Watch it design a screen</h1>
+          <h1>{walk?.title || 'Watch it design a screen'}</h1>
           <p className="lead">
-            This is {featured.name}&rsquo;s real session, replayed from the records the server wrote as it ran:
-            the directions it handed out, the five drawings that came back, what the uniqueness check measured,
-            and the decisions I made, in my words at the time. Below it, every other machine&rsquo;s session,
-            and every screen they produced.
+            One machine, {featured.name}, from an idea to a set of frames, a step at a time. {featured.description}
           </p>
         </header>
 
-        <section className="featured" aria-labelledby="featured-title">
-          <h2 id="featured-title" className="featured__title">
-            <Link to={demoHref(`${featured.id}/`)}>{featured.name}</Link>
-            <span className="kicker">{opxy.categories[featured.category]?.singular} &middot; {featured.kind}</span>
-          </h2>
-          {featured.description && <p className="featured__dek">{featured.description}</p>}
-          <Session m={featured} manifest={opxy} />
-        </section>
+        <Walk m={featured} walk={walk} />
 
         <section className="sessions" aria-labelledby="sessions-title">
           <h2 id="sessions-title" className="screens-cat__title">
-            Every session <span className="screens-count">{t.machines}</span>
+            Walk through another machine <span className="screens-count">{t.machines}</span>
           </h2>
           <p className="screens-cat__dek">
-            One row per machine: how many passes it took, what was picked, how far it got. Each opens the full replay.
+            The same steps, with each machine&rsquo;s own record underneath them. Some got further than others; a walk stops where the work did.
           </p>
           <ul className="session-list">
             {machines().map((m) => {
@@ -244,7 +255,7 @@ export function Machine({ route }) {
           </p>
         </header>
 
-        <Session m={m} manifest={opxy} />
+        <Walk m={m} walk={walkFor(project)} />
 
         <nav className="machine__pager" aria-label="Other machines">
           {prev ? <Link to={demoHref(`${prev.id}/`)} rel="prev">&larr; {prev.name}</Link> : <span />}

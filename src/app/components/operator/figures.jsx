@@ -113,7 +113,7 @@ export function SeeItWork({ href = 'demo/', machine: id, title = 'Watch it desig
         <span className="see-it__kicker">The demonstration</span>
         <span className="see-it__title">{title}</span>
         <span className="see-it__dek">
-          {text || `${m ? `${m.name}\u2019s` : 'One'} session replayed step by step from the server’s own records, then every machine’s session and every screen they produced.`}
+          {text || `${m ? `${m.name}\u2019s` : 'One'} session, one step at a time: what the server did at each, why that step exists, and the records to poke at. Then every machine, and every screen they produced.`}
         </span>
         <span className="see-it__go" aria-hidden="true">&rarr;</span>
       </span>

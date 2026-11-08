@@ -298,7 +298,12 @@ body::after {
   border: 1px solid var(--border); background: transparent;
   color: var(--fg-muted); cursor: pointer;
   text-decoration: none;
-  transition: all var(--dur-fast) var(--ease-out);
+  /* Named properties, not `all`: with `all` the focus ring faded in from the
+     chip's own text colour, so for 120ms a keyboard user's ring was
+     paper on paper. */
+  transition: color var(--dur-fast) var(--ease-out),
+              background-color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out);
 }
 .filter-bar__btn:hover,
 .filter-bar button:hover,

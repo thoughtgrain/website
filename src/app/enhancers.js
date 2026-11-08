@@ -16,4 +16,4 @@ import '../js/nav.js';
 import '../js/texture.js';
 import '../js/tag-filter.js';
 import '../js/opxy-filter.js';
-import '../js/opxy-session.js';
+import '../js/opxy-walk.js';
