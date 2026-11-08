@@ -1,4 +1,4 @@
-/* Live filters for the OP-XY screens page (/projects/<slug>/screens/).
+/* Live filters for the grid on the OP-XY demonstration page (/projects/<slug>/demo/).
  *
  * Progressive enhancement over a grid that is already complete in the HTML.
  * Without this script the category chips are jump links to each category's
@@ -12,7 +12,7 @@
  *   - the current filter is kept in the query string, so a filtered view can
  *     be linked to and survives a reload
  *
- * Markup contract (rendered by src/app/pages/Screens.jsx):
+ * Markup contract (rendered by src/app/pages/Demo.jsx):
  *
  *   <div data-screens-filter data-search="…/opxy/search.json">
  *     <div data-cat-bar>  <a data-cat="all|engines|…" aria-pressed>…</a>  </div>

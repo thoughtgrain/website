@@ -2,10 +2,12 @@
    Operator design: the OP-XY project's own pages.
 
    Scoped to `.operator`, the <main> every page of the project renders into.
-   Two ideas: the accent inside the project is the device's own grey ramp, not
-   the site's rust, so the pages read as one piece of work; and every screen
-   is shown in a black box at the device's 480:220, never cropped or tinted.
-   Depends on tokens.css, kit.css and site.css.
+   Three ideas: the accent inside the project is the device's own grey ramp,
+   not the site's rust, so the pages read as one piece of work; every screen
+   is shown in a black box at the device's 480:220, never cropped or tinted;
+   and the session replay is a console in those same greys, because it is a
+   record of a server talking to an agent and a person, and should look like
+   one. Depends on tokens.css, kit.css and site.css.
    ========================================================================= */
 
 .operator {
@@ -73,15 +75,15 @@
   content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
   background: var(--fg);
 }
-/* "Screens / Kiln": the trail is the page you are on, in the archive. */
+/* "Demonstration / Kiln": the trail is the session you are in. */
 .operator-subnav__trail {
   font-size: 14px; color: var(--fg-subtle); white-space: nowrap;
   padding: 10px 0 12px;
 }
 .operator-subnav__trail::before { content: '/'; margin-right: var(--s-5); color: var(--fg-faint); }
 
-/* The study and the archive sit a little closer to the masthead than a
-   reader does to the site nav. */
+/* The study and the demonstration sit a little closer to the masthead than
+   a reader does to the site nav. */
 .operator .reader { padding-top: var(--s-6); }
 .operator .section { padding-top: var(--s-6); }
 .operator .page-header { padding-top: var(--s-4); }
@@ -104,7 +106,6 @@
   width: calc(var(--cols, 1) * 100%);
   height: calc(var(--rows, 1) * 100%);
   max-width: none;
-  image-rendering: auto;
 }
 .sprite--strip img { left: 0; width: 100%; }
 
@@ -129,11 +130,7 @@
   color: var(--xy-7); background: rgba(0, 0, 0, 0.72);
 }
 .screen-figure figcaption,
-.sweep figcaption,
-.operator-hero figcaption,
-.machine__hero figcaption,
-.machine__sheet figcaption,
-.machine__motion figcaption {
+.operator-hero figcaption {
   margin-top: 8px;
   font-family: var(--font-body); font-size: 14px; line-height: 1.5;
   color: var(--fg-muted);
@@ -148,31 +145,212 @@
 .operator-hero { margin: var(--s-5) 0 var(--s-7); }
 .operator-hero .sprite { max-width: 480px; }
 
-/* ---- The archive: filters ---- */
-.screens-filter { max-width: none; }
+/* =========================================================================
+   The session replay
+   ========================================================================= */
+
+.featured { margin-top: var(--s-6); }
+.featured__title {
+  display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-4); flex-wrap: wrap;
+  font-size: var(--t-h3); margin: 0 0 4px;
+}
+.featured__title a { color: inherit; text-decoration: none; }
+.featured__title a:hover, .featured__title a:focus-visible { text-decoration: underline; text-underline-offset: 4px; }
+.featured__dek { color: var(--fg-muted); max-width: 60ch; margin: 0 0 var(--s-4); }
+
+.session { margin: var(--s-4) 0 0; }
+.session__bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.session__pos { font-family: var(--font-mono); font-size: 11px; color: var(--fg-subtle); margin-left: auto; }
+
+/* The console. Device black with the device's greys, in both themes: it is
+   the one place on the site that is not paper, because it is the machine. */
+.console {
+  --c-bg: #0b0b0b;
+  --c-ink: var(--xy-6);      /* 9:1 on the console */
+  --c-bright: var(--xy-7);   /* 13:1 */
+  --c-dim: var(--xy-4);      /* 5:1, the smallest text here is 11px mono */
+  --c-rule: #232323;
+  position: relative;
+  list-style: none; margin: 0; padding: 8px 0 14px;
+  background: var(--c-bg); color: var(--c-ink);
+  border: 1px solid var(--xy-1); border-radius: 4px;
+  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.55;
+}
+.console--live { max-height: 72vh; overflow-y: auto; scroll-behavior: smooth; overscroll-behavior: contain; }
+.console--done { max-height: none; }
+/* The console's own ring sits on the page, not on the console, so it takes
+   the page's ink; rings inside it sit on black and take the bright grey. */
+.console:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+.console :focus-visible { outline: 2px solid var(--c-bright); outline-offset: 2px; }
+.console a { color: var(--c-bright); }
+.console p { margin: 0; max-width: none; }
+.console ul, .console ol { margin: 0; padding-left: 1.2em; }
+.console b { font-weight: 500; color: var(--c-bright); }
+
+.step {
+  display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 0 14px;
+  padding: 10px 16px;
+}
+.step__who {
+  color: var(--c-dim); font-size: 11px; padding-top: 2px; white-space: nowrap;
+}
+.step__body { min-width: 0; }
+.step--by-you { border-left: 2px solid var(--c-bright); padding-left: 14px; }
+.step--by-you .step__who { color: var(--c-bright); }
+.step--by-reviewer .step__who { color: var(--xy-5); }
+.step--picked .sprite { box-shadow: 0 0 0 2px var(--c-bright); }
+
+.step--phase {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding: 18px 16px 6px; margin-top: 6px;
+  border-top: 1px dashed var(--xy-1);
+}
+.step--phase:first-child { border-top: 0; margin-top: 0; padding-top: 10px; }
+.step__phase { color: var(--xy-5); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.step__when { color: var(--c-dim); font-size: 11px; }
+
+/* A fresh step fades in while the session plays; not when motion is reduced. */
+@media (prefers-reduced-motion: no-preference) {
+  .console--live .step.is-new { animation: stepIn 260ms var(--ease-out) both; }
+  @keyframes stepIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+}
+
+/* Tool calls. */
+.call { display: block; color: var(--c-ink); word-break: break-word; background: none; padding: 0; font-size: inherit; }
+.call__tool { color: var(--c-bright); }
+.call__args { color: var(--xy-5); }
+.call__key { color: var(--xy-5); }
+.call__val { color: var(--c-ink); }
+.call__result {
+  margin-top: 8px; padding: 8px 10px;
+  background: #000; border: 1px solid var(--c-rule); border-radius: 3px;
+  color: var(--c-ink);
+}
+.call__line { margin: 0 0 4px; }
+.call__line:last-child { margin-bottom: 0; }
+.call__line--next { color: var(--xy-5); margin-top: 6px; }
+.call__problems li { color: var(--c-bright); }
+.call__status { list-style: none; padding: 0; }
+.call__status li::before { content: '· '; color: var(--c-dim); }
+
+/* Tables inside results: directions, uniqueness pairs, scores. */
+.ctable { border-collapse: collapse; width: 100%; margin: 6px 0; font-size: 12px; }
+.ctable th { text-align: left; font-weight: 400; color: var(--c-dim); padding: 2px 10px 4px 0; border-bottom: 1px solid var(--c-rule); }
+.ctable td { padding: 4px 10px 4px 0; border-top: 1px solid var(--c-rule); vertical-align: top; color: var(--c-ink); }
+.ctable td:first-child { color: var(--c-bright); white-space: nowrap; }
+.ctable td.ok { color: var(--c-bright); }
+.ctable td.bad { color: var(--c-bright); text-decoration: underline; }
+
+/* Documents the agent wrote: the brief, the motion spec. Body type, because
+   they are prose, set against the console's mono. */
+.doc { border-left: 2px solid var(--xy-2); padding: 2px 0 2px 14px; }
+.doc__file { font-size: 11px; color: var(--c-dim); margin-bottom: 6px; }
+.doc__section { color: var(--xy-5); }
+.doc__text { font-family: var(--font-body); font-size: 14.5px; line-height: 1.55; color: var(--c-bright); margin: 0 0 6px; }
+.doc__text--dim { color: var(--c-ink); }
+.doc__rows { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 16px; margin: 0; }
+.doc__rows dt { color: var(--c-dim); font-size: 11px; padding-top: 3px; }
+.doc__rows dd { margin: 0; font-family: var(--font-body); font-size: 14px; line-height: 1.5; color: var(--c-bright); }
+.doc .ctable td { font-family: var(--font-body); font-size: 13.5px; }
+.doc .ctable td:first-child, .doc .ctable td:last-child { font-family: var(--font-mono); font-size: 12px; }
+
+/* Notes: the reviewer's ranking, the agent's remarks. */
+.note__title { font-family: var(--font-body); font-size: 14px; line-height: 1.5; color: var(--c-ink); margin: 0 0 8px; }
+.note__ranking { font-family: var(--font-body); font-size: 14px; line-height: 1.5; color: var(--c-ink); }
+.note__ranking li { margin-bottom: 4px; }
+
+/* A variant: the drawing beside the words that made it. */
+.vcard { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 14px; align-items: start; }
+.vcard .sprite { box-shadow: 0 0 0 1px var(--xy-1); }
+.vcard__text { min-width: 0; font-family: var(--font-body); font-size: 14px; line-height: 1.5; }
+.vcard__subject { color: var(--c-bright); margin: 0 0 4px; }
+.vcard__n { font-family: var(--font-mono); font-size: 12px; color: var(--xy-5); margin-right: 8px; }
+.vcard__badge {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 2px 6px; margin-right: 8px; border-radius: var(--r-pill);
+  color: var(--c-bg); background: var(--c-bright); vertical-align: middle;
+}
+.vcard__tags { font-family: var(--font-mono); font-size: 11px; color: var(--c-dim); margin: 0 0 8px; }
+.vcard__controls { margin: 0 0 8px; }
+.vcard__controls li, .vcard__risks li { color: var(--c-ink); margin-bottom: 3px; font-size: 13.5px; }
+.vcard__note { color: var(--c-ink); font-size: 13.5px; }
+.vcard__risks summary { font-size: 12.5px; color: var(--c-dim); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.vcard__risks summary:hover, .vcard__risks summary:focus-visible { color: var(--c-bright); }
+.vcard__risks ul { margin-top: 6px; }
+
+/* The frame set. */
+.fgrid { display: flex; flex-direction: column; gap: 10px; }
+.fgrid__row { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; align-items: start; }
+.fgrid__label { font-size: 11px; color: var(--c-dim); padding-top: 4px; }
+.fgrid__cells { display: grid; gap: 6px; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); }
+.fgrid__cells--one { grid-template-columns: minmax(0, 1fr); max-width: 480px; }
+.fgrid .sprite { box-shadow: 0 0 0 1px var(--xy-1); }
+.console .sheet, .console .sprite--strip { box-shadow: 0 0 0 1px var(--xy-1); margin-top: 8px; }
+.console .motion { margin-top: 4px; box-shadow: 0 0 0 1px var(--xy-1); }
+
+/* A search hit lands on a step; give it room under the sticky nav. */
+.step[id] { scroll-margin-top: 88px; }
+.step:target { background: #161616; }
+
+@media (max-width: 560px) {
+  .step { grid-template-columns: 1fr; gap: 4px; padding: 10px 12px; }
+  .step--phase { flex-direction: column; gap: 2px; }
+  .vcard { grid-template-columns: 1fr; }
+  .fgrid__row { grid-template-columns: 1fr; gap: 6px; }
+  .doc__rows { grid-template-columns: 1fr; gap: 2px; }
+  .doc__rows dd { margin-bottom: 8px; }
+}
+
+/* ---- Every session: one row per machine ---- */
+.sessions { margin-top: var(--s-8); }
+.session-list { list-style: none; margin: 0; padding: 0; }
+.session-row { border-top: 1px solid var(--rule); }
+.session-row__link {
+  display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: var(--s-4); align-items: center;
+  padding: 12px 0; text-decoration: none; color: var(--fg);
+}
+.session-row__face .sprite { box-shadow: 0 0 0 1px var(--rule); }
+.session-row__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.session-row__name { font-family: var(--font-display); font-size: 1.125rem; line-height: 1.2; color: var(--fg); }
+.session-row__bits { font-size: 14px; color: var(--fg-muted); }
+.session-row__link:hover .session-row__name,
+.session-row__link:focus-visible .session-row__name { text-decoration: underline; text-underline-offset: 4px; }
+.session-row--featured .session-row__name::after {
+  content: 'above'; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--fg-subtle); margin-left: 10px; vertical-align: middle;
+}
+@media (max-width: 480px) {
+  .session-row__link { grid-template-columns: 96px minmax(0, 1fr); }
+}
+
+/* ---- The grid of every screen ---- */
+.archive { margin-top: var(--s-8); }
+.screens-filter { max-width: none; margin-top: var(--s-5); }
 .screens-filter__js { display: flex; flex-direction: column; gap: 12px; }
 .screens-search { display: flex; flex-direction: column; gap: 6px; max-width: 40ch; }
 .screens-search .input { font-size: 15px; padding-left: 0; }
 
-/* ---- The archive: sections ---- */
 .screens-cat { margin-top: var(--s-7); }
 .screens-cat__title {
   display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-4);
   padding-bottom: 10px; margin-bottom: var(--s-3);
   border-bottom: 1px solid var(--border);
 }
+.screens-cat__title--sub { font-size: var(--t-h3); }
 .screens-count { font-family: var(--font-mono); font-size: 13px; font-weight: 400; color: var(--fg-subtle); }
 .screens-cat__dek { color: var(--fg-muted); max-width: 56ch; margin: 0 0 var(--s-5); }
 
 .screens-machine { margin-top: var(--s-6); }
 .screens-machine__title {
   display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-4); flex-wrap: wrap;
-  font-size: 1.25rem; margin: 0 0 4px;
+  font-size: 1.125rem; margin: 0 0 10px;
 }
 .screens-machine__title a { color: inherit; text-decoration: none; }
 .screens-machine__title a:hover,
 .screens-machine__title a:focus-visible { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
-.screens-machine__dek { font-size: 15px; color: var(--fg-muted); margin: 0 0 var(--s-4); max-width: 60ch; }
 
 .screens-grid {
   list-style: none; margin: 0; padding: 0;
@@ -196,87 +374,11 @@
 .screens-cell:hover .sprite { box-shadow: 0 0 0 1px var(--fg-subtle); }
 .screens .empty-state { padding: var(--s-6) 0; text-align: left; }
 
-/* ---- One machine ---- */
+/* ---- One machine's page ---- */
 .machine__head .kicker { display: inline-block; margin-bottom: var(--s-3); }
 .machine__head h1 { margin-bottom: var(--s-3); }
-.machine__head .lead { max-width: 56ch; margin: 0 0 var(--s-5); }
-.machine__hero { margin: 0 0 var(--s-6); }
-.machine__hero .sprite { max-width: 480px; }
-
-.machine__facts {
-  display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px var(--s-5);
-  margin: 0 0 var(--s-7); padding: var(--s-4) 0;
-  border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
-}
-.machine__facts dt { font-family: var(--font-mono); font-size: 11px; color: var(--fg-subtle); padding-top: 4px; }
-.machine__facts dd { margin: 0; font-size: 15px; line-height: 1.55; color: var(--fg); max-width: 60ch; }
-@media (max-width: 480px) {
-  .machine__facts { grid-template-columns: 1fr; gap: 2px; }
-  .machine__facts dd { margin-bottom: 10px; }
-}
-
-.machine__section { margin-top: var(--s-7); }
-.machine__section h2 {
-  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
-  font-size: var(--t-h3); margin-bottom: var(--s-3);
-}
-.machine__section > p { color: var(--fg-muted); max-width: 60ch; }
-
-.sweep { margin: var(--s-5) 0; }
-.sweep--one .sprite { max-width: 480px; }
-.sweep__row { display: grid; gap: 8px; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); }
-@media (max-width: 480px) { .sweep__row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-
-/* The pass state is a word, in mono, so it never depends on colour. */
-.pass__state {
-  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
-  padding: 3px 8px; border-radius: var(--r-pill); border: 1px solid var(--border);
-  color: var(--fg-muted);
-}
-.pass__state--selected { color: var(--fg); border-color: var(--fg-subtle); }
-.pass__focus { font-family: var(--font-display); font-style: italic; font-size: 1.0625rem; }
-.pass__decision { font-size: 15px; color: var(--fg); max-width: 60ch; }
-.pass__decision strong { font-family: var(--font-mono); font-weight: 500; font-size: 13px; }
-.variant__picked {
-  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
-  padding: 2px 6px; margin-right: 8px; border-radius: var(--r-pill);
-  color: var(--bg); background: var(--fg);
-  vertical-align: middle;
-}
-.variant--picked .sprite { box-shadow: 0 0 0 2px var(--fg); }
-
-.variants { list-style: none; margin: var(--s-4) 0 0; padding: 0; }
-.variant { padding: var(--s-5) 0; border-top: 1px solid var(--rule); }
-.variant figure {
-  margin: 0;
-  display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 1fr); gap: var(--s-5);
-  align-items: start;
-}
-.variant .sprite { width: 100%; }
-.variant figcaption { font-size: 15px; line-height: 1.55; }
-.variant__subject { margin: 0 0 6px; font-size: 15px; color: var(--fg); max-width: none; }
-.variant__n {
-  font-family: var(--font-mono); font-size: 12px; color: var(--fg-subtle);
-  margin-right: 8px;
-}
-.variant__tags { font-family: var(--font-mono); font-size: 11px; color: var(--fg-subtle); margin: 0 0 10px; }
-.variant__controls { margin: 0 0 10px; padding-left: 1.1em; }
-.variant__controls li { font-size: 14px; line-height: 1.5; color: var(--fg-muted); margin-bottom: 4px; }
-.variant__risks summary {
-  font-size: 13px; color: var(--fg-subtle); cursor: pointer;
-  text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--fg-faint);
-}
-.variant__risks summary:hover, .variant__risks summary:focus-visible { color: var(--fg); }
-.variant__risks ul { margin: 8px 0 0; padding-left: 1.1em; }
-.variant__risks li { font-size: 14px; line-height: 1.5; color: var(--fg-muted); margin-bottom: 4px; }
-/* A search hit lands here; give the frame room under the sticky nav. */
-.variant[id] { scroll-margin-top: 88px; }
-.variant:target { box-shadow: -12px 0 0 -9px var(--fg-subtle); }
-@media (max-width: 560px) {
-  .variant figure { grid-template-columns: 1fr; gap: var(--s-3); }
-}
-
-.machine__sheet, .machine__motion { margin: var(--s-5) 0; }
+.machine__head .lead { max-width: 56ch; margin: 0 0 var(--s-3); }
+.machine__status { display: block; margin: 0 0 var(--s-5); }
 
 .machine__pager {
   display: flex; justify-content: space-between; gap: var(--s-4);

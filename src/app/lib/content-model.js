@@ -37,7 +37,8 @@ export const FLAT_ROUTES = ['now', 'about', 'learning', 'gear', 'colophon', 'sty
  * That file is generated beside the full index by scripts/opxy-assets.mjs and
  * carries only what the route list and the page titles need: id, name,
  * category, a line of description. A project whose frontmatter says
- * `layout: operator` gets a screens page and one page per machine.
+ * `layout: operator` gets a demonstration page and one session page per
+ * machine.
  */
 export const machinesOf = (content) => ((content.data || {}).screens || {}).machines || [];
 
@@ -181,8 +182,8 @@ export function routesFor(content) {
   content.projects.forEach((p) => {
     routes.push(`/projects/${p.slug}/`);
     if (hasScreens(p)) {
-      routes.push(`/projects/${p.slug}/screens/`);
-      machinesOf(content).forEach((m) => routes.push(`/projects/${p.slug}/screens/${m.id}/`));
+      routes.push(`/projects/${p.slug}/demo/`);
+      machinesOf(content).forEach((m) => routes.push(`/projects/${p.slug}/demo/${m.id}/`));
     }
   });
 
@@ -267,15 +268,15 @@ export function metaFor(route, content) {
       return page(cat ? `${cat.label} projects` : 'Projects', cat?.dek);
     }
     const p = find(content.projects, b);
-    if (c === 'screens' && p) {
+    if (c === 'demo' && p) {
       if (!d) {
         return page(
-          `Screens, ${p.title}`,
-          'Every frame, pass variant and sheet from the OP-XY screen designs, filtered by machine, kind and the text that produced each one.',
+          `Demonstration, ${p.title}`,
+          'The MCP server at work: a real design session replayed from its records, every machine’s session, and every screen they produced.',
         );
       }
       const m = machinesOf(content).find((x) => x.id === d);
-      return page(m ? `${m.name}, ${p.title}` : p.title, m?.description || p.summary);
+      return page(m ? `${m.name} session, ${p.title}` : p.title, m?.description || p.summary);
     }
     return page(p?.title, p?.summary);
   }

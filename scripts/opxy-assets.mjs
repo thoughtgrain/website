@@ -77,6 +77,33 @@ function intake(brief) {
   return rows;
 }
 
+/**
+ * The parts of brief.md the session replay narrates: the phase 0 subject
+ * sentence, what lint_definition reported, and the phase 2 scores.
+ */
+function briefFacts(brief) {
+  const subject = (brief.match(/^- Subject in one sentence:\s*(.+)$/m) || [])[1] || null;
+  const lint = (brief.match(/lint_definition\.py[^\n]*?→\s*([^\n]+)/) || [])[1] || null;
+  const scores = [];
+  const section = (brief.split(/^## 2[^\n]*$/m)[1] || '').split(/^## /m)[0];
+  for (const m of section.matchAll(/^\|\s*(\d+)\s+([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*(\d)\s*\|\s*$/gm)) {
+    scores.push({ control: m[2], effect: m[3], score: Number(m[4]) });
+  }
+  return { subject, lintDefinition: lint && lint.replace(/\*\*/g, '').trim(), scores };
+}
+
+/** `1. v3: why` lines under "## Ranking" in a pass's notes.md. */
+function ranking(notes) {
+  const section = (notes.split(/^## Ranking[^\n]*$/m)[1] || '').split(/^## /m)[0];
+  return [...section.matchAll(/^\d+\.\s*(v\d)\s*[:·.]\s*(.+)$/gm)].map((m) => ({ variant: m[1], note: m[2].trim() }));
+}
+
+/** The first real paragraph of a markdown file (after the title, skipping build notes). */
+function firstParagraph(md) {
+  return md.split(/\n\s*\n/).map((p) => p.trim())
+    .find((p) => p && !p.startsWith('#') && !/^Everything here comes from/.test(p)) || null;
+}
+
 mkdirSync(OUT, { recursive: true });
 mkdirSync(path.dirname(MANIFEST), { recursive: true });
 
@@ -99,6 +126,8 @@ for (const category of Object.keys(CATEGORIES)) {
     const definition = readJson(path.join(rec, 'definition.json')) || {};
     const brief = existsSync(path.join(rec, 'brief.md')) ? readFileSync(path.join(rec, 'brief.md'), 'utf8') : '';
     const intakeRows = intake(brief);
+    const facts = briefFacts(brief);
+    const motionMd = existsSync(path.join(rec, 'frames', 'motion.md')) ? readFileSync(path.join(rec, 'frames', 'motion.md'), 'utf8') : '';
     const name = definition.name || id[0].toUpperCase() + id.slice(1);
     const controls = (definition.parameters || []).map((p) => ({ id: p.id, label: p.label || p.id }));
     const labelOf = (cid) => controls.find((c) => c.id === cid)?.label || cid;
@@ -121,14 +150,26 @@ for (const category of Object.keys(CATEGORIES)) {
             angle: c.angle || null,
           };
         }
+        const notesMd = existsSync(path.join(passesDir, step, 'notes.md')) ? readFileSync(path.join(passesDir, step, 'notes.md'), 'utf8') : '';
         passes[step] = {
           number: pj.number ?? Number(step.split('-')[0]),
           kind: pj.kind || step.split('-')[1],
           state: pj.state || null,
           focus: pj.focus || null,
+          created: pj.created || null,
+          // What design_pass_start handed out before anything was drawn.
+          directions: (pj.directions || []).map((d) => ({
+            variant: d.variant, angle: d.angle || null, pattern: d.pattern || null, patternName: d.patternName || null,
+            drawingLanguage: d.drawingLanguage || null, stretch: Boolean(d.stretch),
+            composition: d.composition || null, camera: d.camera || null, emphasis: d.emphasis || null,
+          })),
+          // What design_pass_submit measured.
+          uniqueness: pj.uniqueness ? { pairs: pj.uniqueness.pairs || [], problems: pj.uniqueness.problems || [], checked: pj.uniqueness.checked || null } : null,
+          // The reviewer's or designer's ranking from notes.md; never the pick.
+          ranking: ranking(notesMd),
           // The decision the person made at the end of the pass, in their words.
-          pick: pj.selection ? { variant: pj.selection.variant, reason: pj.selection.reason || '' } : null,
-          rejected: pj.rejection ? pj.rejection.reason || '' : null,
+          pick: pj.selection ? { variant: pj.selection.variant, reason: pj.selection.reason || '', chosenBy: pj.selection.chosenBy || null, at: pj.selection.at || null } : null,
+          rejected: pj.rejection ? { reason: pj.rejection.reason || '', chosenBy: pj.rejection.chosenBy || null, at: pj.rejection.at || null } : null,
           variants,
         };
       }
@@ -178,6 +219,8 @@ for (const category of Object.keys(CATEGORIES)) {
         const from = Object.keys(passes).find((s) => s.startsWith('01-')) || null;
         const t = (from && passes[from].variants[variant]) || {};
         Object.assign(cell, { variant, fromPass: from, ...t });
+        const cleanMd = from ? path.join(passesDir, from, variant, 'clean.md') : null;
+        if (cleanMd && existsSync(cleanMd)) cell.cleanNote = firstParagraph(readFileSync(cleanMd, 'utf8'));
         cell.alt = `${name}, cleaned variant ${variant.slice(1)}${t.subject ? `: ${firstSentence(t.subject)}` : ''}`;
       } else if (cell.kind === 'kept') {
         const [folder2] = rest; // e.g. v4-reference, v1-sequencer
@@ -213,7 +256,11 @@ for (const category of Object.keys(CATEGORIES)) {
     manifest.machines.push({
       id, name, category, kind: machineJson.kind || CATEGORIES[category].singular,
       description: machineJson.description || '', concept: intakeRows.Concept || '', soundsLike: intakeRows['Sounds like'] || '',
-      controls, passes: Object.fromEntries(Object.entries(passes).map(([k, v]) => [k, { number: v.number, kind: v.kind, state: v.state, focus: v.focus, pick: v.pick, rejected: v.rejected }])),
+      controls,
+      intake: { subject: facts.subject, controlSource: intakeRows['Control source'] || null, lintDefinition: facts.lintDefinition },
+      scores: facts.scores,
+      passes: Object.fromEntries(Object.entries(passes).map(([k, { variants: _v, ...v }]) => [k, v])),
+      frames: motionMd ? { lint: (motionMd.match(/Lint: ([^.\n(]*)/) || [])[1]?.trim() || null, summary: firstParagraph(motionMd) } : null,
       atlas: { file: atlasFile, cols: COLS, rows, count: standard.length },
       cells, sheets: sheetRecs, gifs,
     });

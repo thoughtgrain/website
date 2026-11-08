@@ -3,7 +3,7 @@
  *
  * The site's nav stays where it is. Under it, inside <main>, the project gets
  * a masthead of its own: its title (a link back to the study), its status, and
- * a two-item sub-navigation between the case study and the screen archive.
+ * a two-item sub-navigation between the case study and the demonstration.
  * That is the whole "project UI": enough to say you have stepped into one
  * thing with two rooms, and no more chrome than that.
  *
@@ -18,7 +18,7 @@ export function OperatorShell({ project, current, trail, children }) {
   const base = `/projects/${project.slug}/`;
   const items = [
     { key: 'study', label: 'Case study', to: base },
-    { key: 'screens', label: 'Screens', to: `${base}screens/` },
+    { key: 'demo', label: 'Demonstration', to: `${base}demo/` },
   ];
 
   return (
@@ -35,8 +35,8 @@ export function OperatorShell({ project, current, trail, children }) {
                 <Link to={it.to} {...(current === it.key ? { 'aria-current': 'page' } : {})}>{it.label}</Link>
               </li>
             ))}
-            {/* On a machine page the trail names where in the archive you are,
-                so the sub-nav reads "Screens / Kiln" without a third level. */}
+            {/* On a machine page the trail names which session you are in, so
+                the sub-nav reads "Demonstration / Kiln" without a third level. */}
             {trail && <li className="operator-subnav__trail" aria-current="location">{trail}</li>}
           </ul>
         </nav>

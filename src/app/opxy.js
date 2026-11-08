@@ -58,7 +58,7 @@ export function cellLabel(machine, c) {
 /** candidate.json fields arrive as a list or a single string; always a list here. */
 export const asList = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 
-/** Totals for the ledes, so no page states a number the archive has outgrown. */
+/** Totals for the ledes, so no page states a number the record has outgrown. */
 export function totals() {
   const ms = machines();
   return {
