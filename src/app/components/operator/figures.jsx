@@ -101,7 +101,8 @@ export function ScreenMotion({ machine: id, name = 'motion', caption }) {
  * The link from the case study to the demonstration: a dark card the width
  * of the column with the featured machine's rest frame and a plain invitation.
  * `href` is relative to the case study's own directory, so "demo/" resolves
- * to /projects/<slug>/demo/ without the component knowing the slug.
+ * to its target without the component knowing the slug: the case study
+ * passes `../operator-design-demo/`.
  */
 export function SeeItWork({ href = 'demo/', machine: id, title = 'Watch it design a screen', text }) {
   const m = machineById(id);

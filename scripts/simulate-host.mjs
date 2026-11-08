@@ -130,10 +130,11 @@ console.log(`[sim] the page bundle imports yaml: ${browserWantsYaml ? 'YES' : 'n
 // to catch.
 const screens = readdirSync(path.join(work, 'dist', 'projects'), { withFileTypes: true })
   .filter((d) => d.isDirectory())
-  .map((d) => path.join(work, 'dist', 'projects', d.name, 'demo', 'index.html'))
+  .map((d) => path.join(work, 'dist', 'projects', d.name, 'index.html'))
   .filter((p) => { try { readFileSync(p); return true; } catch { return false; } });
-const archiveCells = screens.reduce((n, p) => n + (readFileSync(p, 'utf8').match(/data-cell/g) || []).length, 0);
-console.log(`[sim] screen archive pages: ${screens.length}, cells rendered: ${archiveCells}`);
+const demoPages = screens.filter((p) => readFileSync(p, 'utf8').includes('data-screens-filter'));
+const archiveCells = demoPages.reduce((n, p) => n + (readFileSync(p, 'utf8').match(/data-cell/g) || []).length, 0);
+console.log(`[sim] demonstration pages: ${demoPages.length}, cells rendered: ${archiveCells}`);
 
 rmSync(work, { recursive: true, force: true });
 
@@ -145,7 +146,7 @@ if (browserWantsYaml) {
   console.error('[sim] FAILED: the browser bundle really does import yaml');
   process.exit(1);
 }
-if (screens.length && !archiveCells) {
+if (!demoPages.length || !archiveCells) {
   console.error('[sim] FAILED: the screen archive rendered without its index');
   process.exit(1);
 }

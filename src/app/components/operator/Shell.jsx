@@ -2,10 +2,10 @@
  * Shell.jsx: the frame every page of the OP-XY project sits in.
  *
  * The site's nav stays where it is. Under it, inside <main>, the project gets
- * a masthead of its own: the project's title (a link back to the case study)
- * and, on the pages beneath it, a trail saying where you are: "Operator
- * design / Demonstration / Kiln". The demonstration is its own page that the
- * case study links to, not a tab beside it, so there is no tab bar here.
+ * a masthead of its own: the project's title and, on the pages beneath it, a
+ * trail saying where you are ("Watch it design a screen / Kiln"). The case
+ * study and the demonstration are separate projects that link to each other
+ * from here, not tabs of one page.
  *
  * `.operator` on <main> is also where the monochrome accent is set (see
  * operator.css). Everything inside inherits the device's greys as its accent;
@@ -18,9 +18,10 @@ import Link from '../../Link';
  * @param {object} props
  * @param {object} props.project  the project entry
  * @param {Array<{label: string, to: string}>} [props.trail]  pages above this one, nearest last
- * @param {string} [props.here]  this page's name, when it is not the case study
+ * @param {string} [props.here]  this page's name, when it is not the project's own page
+ * @param {{label: string, to: string}} [props.related]  the sibling project: the case study or the demonstration
  */
-export function OperatorShell({ project, trail = [], here, children }) {
+export function OperatorShell({ project, trail = [], here, related, children }) {
   const base = `/projects/${project.slug}/`;
   const crumbs = [{ label: project.title, to: base }, ...trail];
 
@@ -40,7 +41,10 @@ export function OperatorShell({ project, trail = [], here, children }) {
           ) : (
             <span className="operator-mast__title">{project.title}</span>
           )}
-          <Link className="operator-mast__up" to="/projects/">All projects</Link>
+          <span className="operator-mast__links">
+            {related && <Link className="operator-mast__up operator-mast__related" to={related.to}>{related.label}</Link>}
+            <Link className="operator-mast__up" to="/projects/">All projects</Link>
+          </span>
         </div>
       </header>
       {children}

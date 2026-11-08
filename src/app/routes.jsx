@@ -19,7 +19,7 @@ import Writing from './pages/Writing';
 import Article from './pages/Article';
 import Projects from './pages/Projects';
 import Project from './pages/Project';
-import { Demo, Machine } from './pages/Demo';
+import { Machine } from './pages/Demo';
 import Styles from './pages/Styles';
 import { Now, About, Learning, Gear, Colophon } from './pages/Flat';
 import { KindIndex, KindReader, Enjoying } from './pages/Enjoying';
@@ -40,12 +40,10 @@ const ROUTES = [
 
   [/^\/projects\/$/, Projects],
   [/^\/projects\/cat\/[^/]+\/$/, Projects],
-  // The demonstration hangs off a project: /projects/<slug>/demo/ and one
-  // session page per machine under it. Longer patterns first, same reason as
-  // the tags.
-  [/^\/projects\/[^/]+\/demo\/$/, Demo],
-  [/^\/projects\/[^/]+\/demo\/[^/]+\/$/, Machine],
   [/^\/projects\/[^/]+\/$/, Project],
+  // A demonstration project has one page per machine beneath it. After the
+  // category pattern above, which has the same shape.
+  [/^\/projects\/[^/]+\/[^/]+\/$/, Machine],
 
   [new RegExp(`^/(${KINDS})/$`), KindIndex],
   [new RegExp(`^/(${KINDS})/[^/]+/$`), KindReader],

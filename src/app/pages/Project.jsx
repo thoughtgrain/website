@@ -1,22 +1,23 @@
 /**
  * Project.jsx: /projects/:slug/
  *
- * Two shapes of page share this route. The default is the plain case-study
- * reader: plate, kicker, body. A project whose frontmatter says
- * `layout: operator` is the OP-XY screen design work, which carries its own
- * sub-navigation (the study and the screen archive) and a monochrome accent in
- * place of the site's rust, so the pages read as one project rather than as
- * one more article. The dispatch is here, on the frontmatter, rather than in
- * routes.jsx, because the URL is the same either way.
+ * Three shapes of page share this route, chosen by the frontmatter's
+ * `layout`. The default is the plain case-study reader: plate, kicker, body.
+ * `operator` is the OP-XY case study, in its own masthead with the device's
+ * greys as its accent. `walk` is the OP-XY demonstration, a separate project
+ * that walks through the server's sessions (see Demo.jsx). The dispatch is
+ * here rather than in routes.jsx because the URL has the same shape for all
+ * three.
  */
 
 import { content } from '../content.js';
-import { hasScreens } from '../lib/content-model.js';
+import { hasWalk } from '../lib/content-model.js';
 import Link from '../Link';
 import { mdxComponents } from '../components/mdx';
 import { OperatorShell } from '../components/operator/Shell';
 import { Sprite } from '../components/operator/Sprite';
 import { machineById } from '../opxy.js';
+import { Demo, ProjectLinks } from './Demo';
 
 function PlainProject({ project }) {
   // Tags joined into one string rather than looped, so the meta row reads as a
@@ -61,9 +62,10 @@ function OperatorProject({ project }) {
   const hero = project.heroMachine ? machineById(project.heroMachine) : null;
   const rest = hero && hero.cells.find((c) => c.kind === 'frame' && c.name === 'rest');
   const tagsJoined = [project.tag1, project.tag2, project.tag3].filter(Boolean).join(' · ');
+  const demo = project.demo ? content.projects.find((p) => p.slug === project.demo) : null;
 
   return (
-    <OperatorShell project={project}>
+    <OperatorShell project={project} related={demo ? { label: 'See the demonstration', to: `/projects/${demo.slug}/` } : null}>
       <article className="reader operator-study">
         <div className="reader__kicker"><span className="kicker">{project.status}</span></div>
         <h1>{project.title}</h1>
@@ -71,10 +73,11 @@ function OperatorProject({ project }) {
         <div className="reader__meta">
           <span className="kicker">{project.year}</span>
           {tagsJoined && <span className="kicker">&middot; {tagsJoined}</span>}
-          {project.repo && (
-            <a className="kicker operator-study__repo" href={project.repo} rel="noopener">Source on GitHub</a>
-          )}
         </div>
+        <ProjectLinks
+          project={project}
+          extra={demo ? <Link className="operator-links__a operator-links__a--demo" to={`/projects/${demo.slug}/`}>Watch it design a screen</Link> : null}
+        />
 
         {rest && (
           <figure className="operator-hero">
@@ -94,7 +97,7 @@ export default function Project({ route }) {
   const project = content.projects.find((p) => p.slug === slug);
   if (!project) return <main id="main"><div className="container section"><h1>Not found</h1></div></main>;
 
-  return hasScreens(project)
-    ? <OperatorProject project={project} />
-    : <PlainProject project={project} />;
+  if (hasWalk(project)) return <Demo route={route} />;
+  if (project.layout === 'operator') return <OperatorProject project={project} />;
+  return <PlainProject project={project} />;
 }

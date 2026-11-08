@@ -1,7 +1,8 @@
 /**
  * walk.jsx: one machine's design session, as a walk-through.
  *
- * The prose lives in src/content/walks/<project>.mdx and explains why each
+ * The prose is the body of a `layout: walk` project (src/content/projects/)
+ * and explains why each
  * step of the protocol exists. These components are what it places between
  * its paragraphs: one figure per step, built from the records the MCP server
  * wrote while the session ran (pass.json, brief.md, notes.md, motion.md, via
@@ -28,6 +29,7 @@
  */
 
 import { createContext, useContext } from 'react';
+import { relativeHref, useRoute } from '../../base.js';
 import { Motion, Sheet, Sprite, Strip } from './Sprite';
 import { asList, cellLabel } from '../../opxy.js';
 import { markRuns, sharedWords } from '../../lib/opxy-words.js';
@@ -863,7 +865,20 @@ export function Status() {
   );
 }
 
+/**
+ * Links in the walk's prose. The same body renders on the project page and,
+ * one level deeper, on every machine page, so a relative href can only be
+ * right on one of them. The prose writes root-relative paths and this
+ * resolves them against the page being rendered, the way Link does.
+ */
+export function WalkLink({ href = '', children, ...rest }) {
+  const route = useRoute();
+  const to = href.startsWith('/') ? relativeHref(route, href) : href;
+  return <a href={to} {...rest}>{children}</a>;
+}
+
 export const walkComponents = {
+  a: WalkLink,
   Reached, Field, Name,
   StockOrScreen, Intake, Scores, Directions, Uniqueness, Decision, OtherPasses,
   Sweep, Contact, BeforeAfter, Extras, MotionStep, Status,

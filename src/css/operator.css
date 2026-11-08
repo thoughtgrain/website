@@ -106,7 +106,6 @@
 .grey-ramp__role { color: var(--xy-4); }
 .grey-ramp__step--text .grey-ramp__role { color: var(--xy-7); }
 @media (max-width: 560px) { .grey-ramp__strip { grid-template-columns: repeat(4, minmax(0, 1fr)); } .grey-ramp__hex { display: none; } }
-.operator-study__repo { text-decoration: underline; text-underline-offset: 3px; }
 
 /* ---- The device frame ----
    A box at 480:220 showing one cell of an atlas. The image is the whole
@@ -486,3 +485,16 @@
    and a quiet mark so the eye finds it. */
 .operator [id^="cell-"] { scroll-margin-top: 96px; }
 .operator [id^="cell-"]:target .sprite { box-shadow: 0 0 0 2px var(--xy-7); }
+
+/* ---- Links out: the source, the SDK, the sibling project ---- */
+.operator-mast__links { display: inline-flex; gap: var(--s-4); flex-wrap: wrap; }
+.operator-mast__related { color: var(--fg); }
+.operator-links { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0 0 var(--s-5); }
+.operator .page-header .operator-links { margin: var(--s-4) 0 0; }
+.operator-links__a {
+  font-family: var(--font-mono); font-size: 12px; color: var(--fg);
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px;
+  text-decoration-color: color-mix(in oklch, var(--fg) 40%, transparent);
+}
+.operator-links__a::after { content: ' \2197'; text-decoration: none; display: inline-block; margin-left: 2px; }
+.operator-links__a--demo::after { content: ' \2192'; }

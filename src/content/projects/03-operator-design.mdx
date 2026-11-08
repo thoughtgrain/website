@@ -1,7 +1,7 @@
 ---
 slug: operator-design
 title: "Operator design"
-summary: "How I turned a screen-design protocol into an MCP server that drafts five, measures them, and never picks: the process of building it, and a replay of it at work."
+summary: "How I turned a screen-design protocol into an MCP server that drafts five, measures them, and never picks: why it works the way it does, and what building it taught me."
 kind: "Project"
 category: "Design"
 layout: "operator"
@@ -15,9 +15,11 @@ tag1: "Design"
 tag2: "OP-XY"
 tag3: "MCP"
 repo: "https://github.com/thoughtgrain/operator-design"
+sdk: "https://github.com/etcetc000/open-xy"
+demo: "operator-design-demo"
 ---
 
-<Dropcap text="Here is a screen. It is 480 pixels wide and 220 tall, it can show eight shades of grey, and it sits on a synthesizer about the size of a paperback. If you write a machine for the OP-XY, that rectangle is yours to draw in. This is the story of how I taught an agent to draw in it with me, and what we had to build so that neither of us could cheat." />
+<Dropcap text="Here is a screen. It is 480 pixels wide and 220 tall, it can show eight shades of grey, and it sits on a synthesizer about the size of a paperback. If you write a machine for the OP-XY with the open-xy SDK, that rectangle is yours to draw in. This is the story of how I taught an agent to draw in it with me, and what we had to build so that neither of us could cheat." />
 
 ## What are we even drawing?
 
@@ -39,7 +41,7 @@ Before any of the fun parts, the numbers, because the device does not negotiate.
 
 Then the rest of it. Text no smaller than 8 pixels, in a font I cannot legally install on my laptop. A drawing is made of bound shapes with at most 64 points each, and only a handful of them may change outline. The device can redraw about twenty nodes a frame before it starts to stutter. And the one that shapes everything else: nothing moves at rest. An idle machine is a still picture.
 
-I wrote all of that down first, before any tool existed, and I gave every number a link to the line in open-xy's documentation it came from, pinned to a commit. That sounds fussy. It is also the reason I can tell, months later, which rules are the device's and which are mine.
+I wrote all of that down first, before any tool existed, and I gave every number a link to the line in [open-xy](https://github.com/etcetc000/open-xy)'s documentation it came from, pinned to a commit. That sounds fussy. It is also the reason I can tell, months later, which rules are the device's and which are mine.
 
 The same went for the process (nine phases, each with a gate I do not pass until it holds), the patterns that have worked on this screen before (a section drawing, a diagram beside a trace, a stack in depth), and the craft rules that keep a passing screen from looking like clip art: one drawing language, three line weights, one brightest thing, no text in the picture. The documents are the product. Everything below is a way of reading them, running them, or protecting them.
 
@@ -53,7 +55,7 @@ As a sentence in a document, that rule held for about a week.
 
 ## Rules a server can hold
 
-This is where the MCP server comes in. It is the repo itself, turned into tools an agent can call, and the design pass is the part I built first because it is the part that kept slipping.
+This is where the MCP server comes in. It is [the repo itself](https://github.com/thoughtgrain/operator-design), turned into tools an agent can call, and the design pass is the part I built first because it is the part that kept slipping.
 
 `design_pass_start` hands out five directions before anything is drawn. For a subject pass that means five angles on the machine's own idea (the mechanism, the material, a scene, a cutaway, the rule made into a physical thing) crossed with five ways of drawing. It returns five little briefs, and in Claude Code those run as five parallel designer agents, each one writing only into its own folder. Nobody sees anybody else's drawing until all five exist.
 
@@ -101,9 +103,9 @@ There is a compact profile of sixteen tools with short descriptions, so the whol
 
 ## Go and watch it
 
-I could keep describing this, but the whole point of recording everything is that you do not have to take my word for it. The demonstration walks through Kiln's session one step at a time, built from the files the server wrote: the briefs before anything was drawn, the five drawings that came back, the pairs it compared, the reviewer's ranking against my decision, every knob from 0 to 100. Then the same walk for every other machine, and under those every screen they produced, <ScreensSummary />, each one at the device's own size and each linked to the step that made it.
+I could keep describing this, but the whole point of recording everything is that you do not have to take my word for it. [The demonstration](../operator-design-demo/) walks through Kiln's session one step at a time, built from the files the server wrote: the briefs before anything was drawn, the five drawings that came back, the pairs it compared, the reviewer's ranking against my decision, every knob from 0 to 100. Then the same walk for every other machine, and under those every screen they produced, <ScreensSummary />, each one at the device's own size and each linked to the step that made it.
 
-<SeeItWork machine="kiln" href="demo/" />
+<SeeItWork machine="kiln" href="../operator-design-demo/" />
 
 <ScreenMotion machine="kiln" name="motion" caption="One more thing before you go: Kiln's motion. The mallet swings down to the rim and back on a note, and the lip shivers in the bowl's own mode shapes. Nothing moves at rest, which is the rule the whole screen is built around." />
 

@@ -1,15 +1,17 @@
 /**
- * Demo.jsx: /projects/:slug/demo/ and /projects/:slug/demo/:machine/
+ * Demo.jsx: a demonstration project, /projects/:slug/ and /projects/:slug/:machine/
  *
- * The demonstration of the MCP server. Not a description of it: the pages
- * walk through the sessions it actually ran, from the records it wrote.
+ * A project whose frontmatter says `layout: walk` is a demonstration of the
+ * MCP server. Not a description of it: the pages walk through the sessions
+ * it actually ran, from the records it wrote. Project.jsx hands its route
+ * here; the machine pages beneath it are routed here directly.
  *
- *   Demo      the featured machine's session as a walk-through: the prose in
- *             src/content/walks/<project>.mdx, one section per step, each
- *             with a figure built from the records (components/operator/
- *             walk.jsx). Then every other machine, then the whole output as
- *             a filterable grid of thumbnails, prerendered in full and made
- *             live by src/js/opxy-filter.js.
+ *   Demo      the featured machine's session as a walk-through: the project's
+ *             own MDX body, one section per step, each with a figure built
+ *             from the records (components/operator/walk.jsx). Then every
+ *             other machine, then the whole output as a filterable grid of
+ *             thumbnails, prerendered in full and made live by
+ *             src/js/opxy-filter.js.
  *
  *   Machine   the same walk-through for one machine. Same words, that
  *             machine's evidence; steps it never reached are left out. Each
@@ -41,24 +43,41 @@ function NotFound() {
   return <main id="main"><div className="container section"><h1>Not found</h1></div></main>;
 }
 
+/** The case study this demonstration belongs to, for the masthead's cross-link. */
+function relatedFor(project) {
+  const study = project.caseStudy && content.projects.find((p) => p.slug === project.caseStudy);
+  return study ? { label: 'Read the case study', to: `/projects/${study.slug}/` } : null;
+}
+
+/** The outside links: the source, and the SDK it designs for. */
+export function ProjectLinks({ project, extra }) {
+  const links = [
+    project.repo && { href: project.repo, label: 'operator-design on GitHub' },
+    project.sdk && { href: project.sdk, label: 'open-xy on GitHub' },
+  ].filter(Boolean);
+  if (!links.length && !extra) return null;
+  return (
+    <p className="operator-links">
+      {extra}
+      {links.map((l) => <a key={l.href} className="operator-links__a" href={l.href} rel="noopener">{l.label}</a>)}
+    </p>
+  );
+}
+
 function NoIndex({ project }) {
   return (
-    <OperatorShell project={project} here="Demonstration">
+    <OperatorShell project={project}>
       <div className="container section">
-        <h1>Demonstration</h1>
+        <h1>{project.title}</h1>
         <p className="lead">The session records are assembled when the site is published; this copy was rendered without them.</p>
       </div>
     </OperatorShell>
   );
 }
 
-/** The walk-through prose for a project, from src/content/walks/. */
-const walkFor = (project) => (content.walks || []).find((w) => w.project === project.slug) || null;
-
-/** One machine's walk-through: the shared prose, with this machine in context. */
-function Walk({ m, walk }) {
-  if (!walk) return null;
-  const Body = walk.Body;
+/** One machine's walk-through: the project's prose, with this machine in context. */
+function Walk({ m, project }) {
+  const Body = project.Body;
   return (
     <WalkContext.Provider value={{ m, manifest: opxy }}>
       <div className="walk prose">
@@ -92,21 +111,21 @@ export function Demo({ route }) {
   const featured = (project.heroMachine && machineById(project.heroMachine)) || machines()[0];
   const t = totals();
   const cats = Object.keys(opxy.categories);
-  const demoHref = (path = '') => `/projects/${project.slug}/demo/${path}`;
-  const walk = walkFor(project);
+  const demoHref = (path = '') => `/projects/${project.slug}/${path}`;
 
   return (
-    <OperatorShell project={project} here="Demonstration">
+    <OperatorShell project={project} related={relatedFor(project)}>
       <div className="container section screens">
         <header className="page-header page-header--left">
           <span className="kicker">The demonstration</span>
-          <h1>{walk?.title || 'Watch it design a screen'}</h1>
+          <h1>{project.title}</h1>
           <p className="lead">
             One machine, {featured.name}, from an idea to a set of frames, a step at a time. {featured.description}
           </p>
+          <ProjectLinks project={project} />
         </header>
 
-        <Walk m={featured} walk={walk} />
+        <Walk m={featured} project={project} />
 
         <section className="sessions" aria-labelledby="sessions-title">
           <h2 id="sessions-title" className="screens-cat__title">
@@ -228,7 +247,7 @@ export function Machine({ route }) {
   if (!project) return <NotFound />;
   if (!opxy) return <NoIndex project={project} />;
 
-  const id = route.split('/').filter(Boolean)[3];
+  const id = route.split('/').filter(Boolean)[2];
   const m = machineById(id);
   if (!m) return <NotFound />;
 
@@ -237,11 +256,11 @@ export function Machine({ route }) {
   const prev = at > 0 ? all[at - 1] : null;
   const next = at < all.length - 1 ? all[at + 1] : null;
   const cat = opxy.categories[m.category] || {};
-  const demoHref = (path = '') => `/projects/${project.slug}/demo/${path}`;
+  const demoHref = (path = '') => `/projects/${project.slug}/${path}`;
   const s = statusOf(m);
 
   return (
-    <OperatorShell project={project} trail={[{ label: 'Demonstration', to: demoHref() }]} here={m.name}>
+    <OperatorShell project={project} here={m.name} related={relatedFor(project)}>
       <article className="container section machine">
         <header className="machine__head">
           <span className="kicker">{cat.singular || m.category} &middot; {m.kind}</span>
@@ -255,7 +274,7 @@ export function Machine({ route }) {
           </p>
         </header>
 
-        <Walk m={m} walk={walkFor(project)} />
+        <Walk m={m} project={project} />
 
         <nav className="machine__pager" aria-label="Other machines">
           {prev ? <Link to={demoHref(`${prev.id}/`)} rel="prev">&larr; {prev.name}</Link> : <span />}

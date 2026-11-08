@@ -43,7 +43,10 @@ function bucketFor(status) {
  */
 function Tile({ project }) {
   const hero = project.heroMachine ? machineById(project.heroMachine) : null;
-  const rest = hero && hero.cells.find((c) => c.kind === 'frame' && c.name === 'rest');
+  // `thumb` names a frame to show instead of the rest frame, so two projects
+  // about the same machine don't share a picture.
+  const rest = hero && (hero.cells.find((c) => c.kind === 'frame' && c.name === (project.thumb || 'rest'))
+    || hero.cells.find((c) => c.kind === 'frame' && c.name === 'rest'));
 
   return (
     <Link className={`project-tile${rest ? ' project-tile--thumb' : ''}`} to={`/projects/${project.slug}/`}>

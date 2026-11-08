@@ -1,0 +1,16 @@
+---
+slug: a-screen-designer-that-cannot-pick
+date: "Nov 08"
+month: "November 2026"
+title: "A screen designer that isn't allowed to pick"
+context: "after thirty machines"
+lede: "I built an MCP server that designs OP-XY screens five at a time, measures whether the five are really different, and then refuses to choose. The choosing is mine."
+---
+
+Every pick goes on the record with a name and a reason, and so does every "none of these". After thirty machines, that record turned out to be the most useful thing it makes.
+
+<ScreenCells machine="kiln" cells="rest" caption="Kiln, a struck ceramic bowl, at rest on the OP-XY's 480 by 220 screen." />
+
+It started as a protocol for drawing on the screen the [open-xy SDK](https://github.com/etcetc000/open-xy) gives a custom machine, and turned into a server once the rules kept slipping. The [case study](../../projects/operator-design/) is the long version of how that happened. If you'd rather see it work, [the demonstration](../../projects/operator-design-demo/) walks through one machine's session a step at a time, from the five briefs written before anything is drawn to every knob at 0, 50 and 100.
+
+Everything, the protocol, the server and the records both pages are built from, is [on GitHub](https://github.com/thoughtgrain/operator-design).

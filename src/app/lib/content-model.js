@@ -37,12 +37,11 @@ export const FLAT_ROUTES = ['now', 'about', 'learning', 'gear', 'colophon', 'sty
  * That file is generated beside the full index by scripts/opxy-assets.mjs and
  * carries only what the route list and the page titles need: id, name,
  * category, a line of description. A project whose frontmatter says
- * `layout: operator` gets a demonstration page and one session page per
- * machine.
+ * `layout: walk` is a demonstration, and gets one page per machine under it.
  */
 export const machinesOf = (content) => ((content.data || {}).screens || {}).machines || [];
 
-export const hasScreens = (project) => project.layout === 'operator';
+export const hasWalk = (project) => project.layout === 'walk';
 
 /** How many items per page of the paginated /enjoying/ stream. */
 export const ENJOYING_PER_PAGE = 12;
@@ -181,9 +180,8 @@ export function routesFor(content) {
   MAKING_CATEGORIES.forEach((c) => routes.push(`/projects/cat/${c.slug}/`));
   content.projects.forEach((p) => {
     routes.push(`/projects/${p.slug}/`);
-    if (hasScreens(p)) {
-      routes.push(`/projects/${p.slug}/demo/`);
-      machinesOf(content).forEach((m) => routes.push(`/projects/${p.slug}/demo/${m.id}/`));
+    if (hasWalk(p)) {
+      machinesOf(content).forEach((m) => routes.push(`/projects/${p.slug}/${m.id}/`));
     }
   });
 
@@ -240,7 +238,7 @@ export function metaFor(route, content) {
 
   const seg = route === '/' ? [] : route.slice(1, -1).split('/');
   if (!seg.length) return page(null);
-  const [a, b, c, d] = seg;
+  const [a, b, c] = seg;
 
   if (a === 'notes') {
     if (!b) return page('Notes');
@@ -268,15 +266,9 @@ export function metaFor(route, content) {
       return page(cat ? `${cat.label} projects` : 'Projects', cat?.dek);
     }
     const p = find(content.projects, b);
-    if (c === 'demo' && p) {
-      if (!d) {
-        return page(
-          `Demonstration, ${p.title}`,
-          'The MCP server at work: a real design session replayed from its records, every machine’s session, and every screen they produced.',
-        );
-      }
-      const m = machinesOf(content).find((x) => x.id === d);
-      return page(m ? `${m.name} session, ${p.title}` : p.title, m?.description || p.summary);
+    if (c && p && hasWalk(p)) {
+      const m = machinesOf(content).find((x) => x.id === c);
+      return page(m ? `${m.name}, ${p.title}` : p.title, m?.description || p.summary);
     }
     return page(p?.title, p?.summary);
   }

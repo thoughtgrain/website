@@ -1,16 +1,32 @@
 ---
-slug: operator-design
-project: operator-design
+slug: operator-design-demo
 title: "Watch it design a screen"
+summary: "One OP-XY screen, from an idea to a set of frames, a step at a time: what the operator-design MCP server did at each step, why the step exists, and the records to poke at."
+kind: "Project"
+category: "Design"
+layout: "walk"
+heroMachine: "kiln"
+thumb: "glaze-100"
+caseStudy: "operator-design"
+plate: "cocoa"
+glyph: "W"
+label: "Demonstration"
+status: "In progress"
+year: "2026"
+tag1: "Design"
+tag2: "OP-XY"
+tag3: "MCP"
+repo: "https://github.com/thoughtgrain/operator-design"
+sdk: "https://github.com/etcetc000/open-xy"
 ---
 
 Here's a question to hold onto as we go: how do you get an agent to design something *with* you, without it quietly designing something else? My answer turned out to be a string of small steps, each one refusing to be skipped. Let's walk through them with <Name />, one at a time.
 
-Every figure on this page is built from the files the MCP server wrote while the session ran: the briefs, the drawings, the measurements, the decisions and the times they were made. The buttons don't change what happened. They let you look at it from the angles the process did.
+Every figure on this page is built from the files the [operator-design](https://github.com/thoughtgrain/operator-design) MCP server wrote while the session ran: the briefs, the drawings, the measurements, the decisions and the times they were made. The buttons don't change what happened. They let you look at it from the angles the process did.
 
 ## Does it even need a screen?
 
-The very first question is whether to draw anything at all. Every OP-XY machine gets a stock page for free: a header with its four control names and their values. For plenty of machines, that's all you need. A custom screen has to earn its place by having one thing the sound acts on, something you could point at.
+The very first question is whether to draw anything at all. Every OP-XY machine built with the [open-xy SDK](https://github.com/etcetc000/open-xy) gets a stock page for free: a header with its four control names and their values. For plenty of machines, that's all you need. A custom screen has to earn its place by having one thing the sound acts on, something you could point at.
 
 Flip between the two and ask yourself which one tells you more about the sound.
 
@@ -20,7 +36,7 @@ For <Name />, the brief answers in one sentence: <Field name="subject" />. If I 
 
 ## Writing down what it sounds like
 
-Before anyone draws, the machine gets described in words: what it is, what it sounds like, which controls it has and where they came from. Then the server runs its definition through the same rules the SDK will enforce, so nothing gets designed on top of a control that's about to change.
+Before anyone draws, the machine gets described in words: what it is, what it sounds like, which controls it has and where they came from. Then the server runs its definition through the same rules [open-xy](https://github.com/etcetc000/open-xy) will enforce, so nothing gets designed on top of a control that's about to change.
 
 <Intake />
 
@@ -233,3 +249,5 @@ So where did <Name /> end up? The server can answer that too.
 <Status />
 
 Everything still pending is pending on purpose. Some of it is mine to finish. The rest, like how the real font measures and whether the motion feels right under your fingers, can only be proven on an OP-XY, and the record says so rather than guessing.
+
+If you want the longer story of why the server works this way, it's in [the case study](/projects/operator-design/). The code, the protocol and every record this page is built from are [on GitHub](https://github.com/thoughtgrain/operator-design).
