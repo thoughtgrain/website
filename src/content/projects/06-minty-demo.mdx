@@ -1,0 +1,79 @@
+---
+slug: minty-demo
+title: "Turn Minty's knobs"
+summary: "Minty's three knobs and footswitch, hands on. Every curve, filter and envelope here is measured by running Minty's own code, and the audio is its own test renders."
+kind: "Project"
+category: "Code"
+layout: "minty-demo"
+caseStudy: "minty"
+plate: "moss"
+glyph: "T"
+label: "Hands on"
+status: "In progress"
+year: "2026"
+tag1: "Audio"
+tag2: "DSP"
+tag3: "Polyend Endless"
+repo: "https://github.com/thoughtgrain/endless"
+sdk: "https://github.com/polyend/FxPatchSDK"
+---
+
+Here's a strange thing about compressors: they're one of the most common effects there is, and one of the hardest to *see*. You turn a knob, something changes, and you're never quite sure what. So let's look.
+
+Every chart on this page is measured, not drawn. A small program runs Minty's own engine, unmodified, the same way its test bench does, and the curves it measures agree with the bench's own numbers to within a twentieth of a decibel. When you turn a knob here, you're scrubbing through those measurements.
+
+## Three knobs and a footswitch
+
+This is the whole surface Minty gets on the Endless. Turn the knobs and watch the readout. Then use the last slider to set how hard you're playing, and watch the LED: its colour is the mode, and it brightens when Minty is taking off more than 3 dB.
+
+<Pedal caption="The LED colours are the SDK's names with my approximations as swatches. Press toggles the swell; hold cycles the character. On the drawing, a tap presses and a long press holds." />
+
+A press and a hold being different things is doing a lot of work there. The Endless reports them as separate events, so one footswitch can carry two ideas.
+
+## One knob, three compressors
+
+Now the big one. This chart shows what goes in against what comes out. The grey diagonal is no compression at all: whatever goes in comes out. Minty's line follows it until the threshold, then bends.
+
+Try DYNAMICS slowly from left to right. Up to noon, the line above the threshold gets flatter and flatter: that's compression getting firmer, until at noon everything above the threshold lands at about the same level. Keep going past 0.8 and something odd happens. The line tips *downward*: louder playing comes out quieter. That's the sag.
+
+<TransferCurve caption="Output level against input level for a 1 kHz sine, measured for every knob position. Switch the tuning to guitar and the threshold range moves, because a guitar arrives much quieter than a line-level synth." />
+
+Why would anyone want louder to come out quieter? Because it doesn't sound like a meter, it sounds like an old amp running out of power. Minty adds a "power supply" on top that droops when you lean on it and recovers when you back off.
+
+## Movement after the note
+
+Compression usually tries to be invisible. Two of Minty's characters do the opposite on purpose.
+
+Here's the gain reduction over two seconds while a quiet tone jumps to a loud one, holds, and drops back. Stable clamps down and holds still. Wobble puts a soft spring on that envelope, so every change overshoots and settles: a gentle breathing after each note. Twitchy uses a stiff, barely damped spring that gets random kicks scaled by how hard Minty is compressing.
+
+<Characters caption="Gain reduction while a 220 Hz tone goes from −40 to −6 dBFS and back, DYNAMICS 0.4. Measured from Minty's own meter." />
+
+There's a reason the spring only shapes what you hear. If the compressor's detector could see it, the spring would sit inside the feedback loop and keep itself ringing on a held note. That happened in an early version.
+
+## An EQ that gets out of the way
+
+The third knob tilts the tone: darker below noon, thinner above. On its own, that's an ordinary tone control. The interesting part is what happens when you dig in.
+
+Set the EQ dark, then switch between how hard you're playing. Under the threshold, the filter sits where the knob put it. Play past the threshold and it slides back toward full range, so your loudest notes come through bright, then it drifts back as you ease off.
+
+<ShiftyEq caption="The magnitude response of Minty's own filters at each knob position, with the dynamic shift settled at each playing level." />
+
+## Swell
+
+Press the footswitch and Minty becomes a volume pedal that moves itself: play past the threshold and the sound fades in over 450 ms, stop and it fades out over 600 ms. The fade is squared, so it feels like a pedal rather than a fader.
+
+The grey is what goes in: a run of sixteenth notes, a rest, a held note. The mint is what comes out. Then switch the tuning to guitar.
+
+<SwellFigure caption="Input and output envelopes with the swell on and compression off, so the swell is all that's acting." />
+
+On guitar, every fresh attack re-triggers the swell, which is exactly what hides a pick. On a fast synth line that same behaviour ducked every other note and never opened up, so the synth tuning swells once per phrase instead.
+
+## Listen
+
+Everything above is a measurement. This is what it sounds like. These are the renders Minty's test bench makes of its synth test phrase (a bass line, a pad, a plucky lead and some hard stabs), one per setting.
+
+Pick a setting and press play, then flip between Minty and dry while it plays. You'll stay in the same place, so you can hear just what changed. Click the waveform to jump.
+
+<Listen caption="The bench's own renders: 11 seconds of synthesized test material through Minty's engine on a desktop, not a recording of the pedal. The outlines are drawn from the same files." />
+
+If you want the story of how Minty got this way, the mistakes included, it's in [the case study](../minty/). The code, the test bench and the tuning are all [on GitHub](https://github.com/thoughtgrain/endless), built on [Polyend's FxPatch SDK](https://github.com/polyend/FxPatchSDK).

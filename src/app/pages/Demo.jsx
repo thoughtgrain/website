@@ -49,11 +49,14 @@ function relatedFor(project) {
   return study ? { label: 'Read the case study', to: `/projects/${study.slug}/` } : null;
 }
 
-/** The outside links: the source, and the SDK it designs for. */
+/** "operator-design on GitHub", from the repository's own URL. */
+const githubLabel = (url) => `${url.replace(/\/+$/, '').split('/').pop()} on GitHub`;
+
+/** The outside links: the source, and the SDK it is built on. */
 export function ProjectLinks({ project, extra }) {
   const links = [
-    project.repo && { href: project.repo, label: 'operator-design on GitHub' },
-    project.sdk && { href: project.sdk, label: 'open-xy on GitHub' },
+    project.repo && { href: project.repo, label: project.repoLabel || githubLabel(project.repo) },
+    project.sdk && { href: project.sdk, label: project.sdkLabel || githubLabel(project.sdk) },
   ].filter(Boolean);
   if (!links.length && !extra) return null;
   return (

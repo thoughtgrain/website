@@ -317,14 +317,31 @@ function writeReport(outDir) {
  * generator never run) should still produce a site, just one whose archive
  * pages say the index is missing.
  */
-const OPXY_MANIFEST = path.join(ROOT, 'src', 'opxy', 'manifest.json');
-let opxyManifestSource;
-function readOpxyManifest() {
-  if (opxyManifestSource !== undefined) return opxyManifestSource;
-  opxyManifestSource = existsSync(OPXY_MANIFEST) ? readFileSync(OPXY_MANIFEST, 'utf8') : null;
-  if (!opxyManifestSource) note('src/opxy/manifest.json is missing, so the screen archive renders empty');
-  return opxyManifestSource;
+/**
+ * Generated data the server render needs and the browser mostly doesn't.
+ *
+ * Each entry is a stub module under src/app/ that exports null, and the JSON
+ * a generator script writes. During the server render the stub's body is
+ * swapped for the JSON (see the `server-data` plugin below); in the browser
+ * the stub stays null. Read lazily and memoised, and a missing file is not
+ * an error: the pages that need it say so instead.
+ *
+ *   opxy-manifest.js  src/opxy/manifest.json   scripts/opxy-assets.mjs
+ *   minty-data.js     src/minty/data.json      scripts/minty-data.mjs
+ */
+const SERVER_DATA = {
+  'opxy-manifest.js': path.join(ROOT, 'src', 'opxy', 'manifest.json'),
+  'minty-data.js': path.join(ROOT, 'src', 'minty', 'data.json'),
+};
+const serverDataSource = {};
+function readServerData(stub) {
+  if (stub in serverDataSource) return serverDataSource[stub];
+  const file = SERVER_DATA[stub];
+  serverDataSource[stub] = existsSync(file) ? readFileSync(file, 'utf8') : null;
+  if (!serverDataSource[stub]) note(`${path.relative(ROOT, file)} is missing, so the pages that draw from it render without it`);
+  return serverDataSource[stub];
 }
+const readOpxyManifest = () => readServerData('opxy-manifest.js');
 
 /**
  * Read the content and write the entries, once per process, however many times
@@ -355,27 +372,29 @@ function prepare() {
 function contentPlugins() {
   return [
     /**
-     * Hand the server render the OP-XY screen index, and the browser nothing.
+     * Hand the server render its generated data, and the browser nothing.
      *
-     * src/app/opxy-manifest.js exports null. During the server render this
-     * swaps that body for the generated JSON, so the archive pages render
-     * from the full index; in the client bundle the file stays as written and
-     * the pages, already prerendered, never need it. The alternative, a JSON
-     * import in the components, would put 540 KB into the chunk that loads
-     * on the pages with interactive figures, for nothing they draw.
+     * The stubs in SERVER_DATA export null. During the server render this
+     * swaps a stub's body for its JSON, so the pages render from the full
+     * data; in the client bundle the file stays as written and the pages,
+     * already prerendered, never need it there. The alternative, a JSON
+     * import in the components, would put the OP-XY index's 540 KB into the
+     * chunk that loads on the pages with interactive figures, for nothing
+     * they draw.
      *
      * A transform on a real file rather than a virtual module id, because the
      * host scans the source for package names and a bare specifier would be
      * mistaken for one.
      */
     {
-      name: 'opxy-manifest',
+      name: 'server-data',
       enforce: 'pre',
       transform(code, id, options) {
-        if (!/[\\/]src[\\/]app[\\/]opxy-manifest\.js(\?.*)?$/.test(id)) return null;
+        const m = id.match(/[\\/]src[\\/]app[\\/]([a-z-]+\.js)(\?.*)?$/);
+        if (!m || !(m[1] in SERVER_DATA)) return null;
         const ssr = Boolean(options?.ssr) || this.environment?.config?.consumer === 'server';
         if (!ssr) return null;
-        const json = readOpxyManifest();
+        const json = readServerData(m[1]);
         if (!json) return null;
         return { code: `export default ${json.trim()};\n`, map: null };
       },
@@ -854,6 +873,14 @@ export default defineConfig(() => {
           const search = manifestJson ? searchIndex(JSON.parse(manifestJson)) : null;
           if (search) {
             this.emitFile({ type: 'asset', fileName: 'opxy/search.json', source: JSON.stringify(search) });
+          }
+
+          // Minty's measurements, for its figures to redraw from when a knob
+          // moves. The page already carries each chart drawn at its default
+          // setting, so this is only fetched once someone touches one.
+          const mintyJson = readServerData('minty-data.js');
+          if (mintyJson) {
+            this.emitFile({ type: 'asset', fileName: 'minty/data.json', source: JSON.stringify(JSON.parse(mintyJson)) });
           }
 
           // A copy of the XSL stylesheet beside every feed.xml.

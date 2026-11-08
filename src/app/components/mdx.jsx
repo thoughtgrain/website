@@ -20,6 +20,7 @@
 
 import { demoComponents } from './demos';
 import { screenFigures } from './operator/figures';
+import { mintyFigures } from './minty/figures';
 
 export function Dropcap({ text }) {
   return <p className="dropcap">{text}</p>;
@@ -78,4 +79,6 @@ export const mdxComponents = {
   ...demoComponents,
   // The OP-XY case study's figures: screens looked up by machine and name.
   ...screenFigures,
+  // Minty's figures: charts measured from its own DSP.
+  ...mintyFigures,
 };

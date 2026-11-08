@@ -1,0 +1,108 @@
+---
+slug: minty
+title: "Minty"
+summary: "A creative compressor for the Polyend Endless: how I folded a six-knob pedal's best ideas into three knobs and a footswitch, retuned it for synths, and what the mistakes along the way taught me."
+kind: "Project"
+category: "Code"
+layout: "minty"
+demo: "minty-demo"
+plate: "moss"
+glyph: "M"
+label: "Endless patch"
+status: "In progress"
+year: "2026"
+tag1: "Audio"
+tag2: "DSP"
+tag3: "Polyend Endless"
+repo: "https://github.com/thoughtgrain/endless"
+sdk: "https://github.com/polyend/FxPatchSDK"
+---
+
+<Dropcap text="The Polyend Endless is a pedal you can reprogram. Polyend publishes an SDK, you write an effect in C++, build it, and copy one file onto the pedal's USB drive. Minty is the first thing I built for it: a compressor that goes from barely-there leveling to a brick wall to a tired, sagging tube amp, all on one knob." />
+
+## Where it started
+
+The pedal I had in mind was the Chase Bliss Clean. It's a compressor with a lot of personality: it can level, limit, swell, wobble and sag, and you can steer every one of those. It also has six knobs, three toggles and sixteen DIP switches.
+
+An Endless patch gets three knobs and a footswitch.
+
+So Minty was never going to be a copy, and it can't be one. The real question was which behaviours make Clean *feel* like Clean, and how to fold them into controls that fit the hardware I actually had. Minty is my answer, and it's an independent patch: it isn't affiliated with or endorsed by Chase Bliss.
+
+## Three knobs, spent carefully
+
+With three knobs, each one has to carry a whole idea rather than a single parameter.
+
+- **SENSITIVITY** sets the threshold, from −3 dBFS fully counter-clockwise to −45 dBFS fully clockwise on the synth tuning. Turn it up and Minty reacts to softer playing. It also sets where the swell triggers and, in the Dusty character, how hard the clipper is driven.
+- **DYNAMICS** walks through three different compressors in order, which the next section is about. Make-up gain is automatic, so turning it doesn't also turn the volume.
+- **EQ** is a dynamic "shifty" EQ. Below noon it darkens, above noon it thins out, and noon is flat, with a small dead zone so a real pot actually finds flat. Dig in past the threshold and the filter slides back toward full range, then drifts back as you ease off.
+
+The footswitch does two jobs because the SDK reports a press and a hold as different events. A press toggles the swell. A hold cycles the character: Stable, Wobble, Twitchy, Dusty.
+
+## One knob, three compressors
+
+The DYNAMICS knob is the heart of Minty, so it's worth seeing what it does rather than reading about it. This is the slope of the output above the threshold across the whole knob, measured by running Minty's own engine on a sine at every setting.
+
+<DynamicsMap caption="Measured with Minty's own engine and test method, SENSITIVITY at noon. A slope of 1 is untouched, 0 means everything above the threshold lands at one level, and below 0 louder playing comes out quieter." />
+
+The first half of the knob is a **feedback** compressor, from 1:1 at zero to effectively infinite at noon. Feedback means the detector reads the signal *after* the gain has been applied, so it's naturally relaxed and program-dependent: it's always reacting to what it already did.
+
+From noon to about 0.8, **feedforward** limiting fades in, and the attack tightens from 4 ms to 0.8 ms. Feedforward reads the input directly, so it's precise and snappy. That split, feedback for compression and feedforward for limiting, is the same one the Clean manual describes.
+
+The last stretch is **sag**: over-compression, where louder playing actually comes out quieter, plus a drooping, sputtering "power supply" that dips and recovers. It's deliberately a bit broken.
+
+## Mistakes that made it better
+
+Most of Minty's design decisions are scars from a first version that didn't work. A few are worth telling.
+
+**The feedback loop that wound itself up.** My first feedback detector peak-detected the already-gained signal. On a sudden loud note, the detector's hold time sat *inside* the loop, and the gain wound itself up to 90 dB of reduction. The fix was to compute the feedback level in dB, as the detector level minus the current gain reduction. It's mathematically the same static curve with no lag in the loop. I also cap the loop gain so the attack coefficient times (1 + k) stays under 0.5, which keeps the discrete-time loop from ringing.
+
+**Needles on every pick.** Without any lookahead, pick attacks came through as single-sample needles carrying the full make-up gain. Now the detector hears the input 72 samples (1.5 ms) before the audio path does, so the compressor and the swell act *before* an attack arrives. That's about the latency plenty of digital pedals already add.
+
+<SignalFlow />
+
+**A spring that wouldn't stop.** The Wobble and Twitchy characters run a damped spring that chases the compressor's envelope. In my first try the feedback detector could see the spring, so the spring sat inside the loop and self-oscillated on a sustained note. Now it only shapes the gain you hear, and it isn't allowed to trail a fresh attack by more than 4 dB, so attacks don't slam the limiter.
+
+**Gaps that got noisy.** Compression with a lot of make-up gain drags the noise floor up between notes. A downward expander under everything pulls those gaps back down.
+
+## Retuning it for synths
+
+Minty started out tuned for guitar, and then I plugged a synth in. Almost everything that depends on the source was wrong, so it all moved into one struct, `InputProfile.h`. Synth is now the default, and the guitar tuning is one build flag away.
+
+The biggest change was the bass. At a 90 Hz detector highpass, a bass line around 40 Hz was mostly invisible to the compressor, so it skipped compression and went straight into the limiter. Dropping the highpass to 30 Hz fixed that, and then caused a new problem: once the detector can see bass, it has to stop following individual cycles of the waveform, or the gain wobbles along with them and adds distortion. Two cascaded RMS stages, slower on synth, roll that ripple off at 12 dB per octave.
+
+<BassDistortion caption="Harmonic distortion on a sustained sine at −6 dBFS, SENSITIVITY and DYNAMICS at noon, from Minty's test bench. The synth tuning compresses the bass more and distorts it less. The bench fails the build if any of these goes over 0.5%." />
+
+The swell changed too. On guitar, re-triggering the swell on every new attack is what hides the pick. On a sixteenth-note synth line it ducked every other note and never finished fading in, so the line nearly vanished. On the synth tuning, the swell fades in once per phrase and fades out across real gaps.
+
+## The LED does the metering
+
+Clean has a meter. Minty has one LED, so I split its job: colour says which mode you're in, and brightness says whether the compressor is working (more than 3 dB of gain reduction). Red is left alone on purpose, because the SDK uses it to report errors.
+
+<LedTable />
+
+The colour names are the SDK's. The swatches here are my approximations of them.
+
+## What I left out, and why
+
+Some of Clean didn't fit, and I'd rather say so than fake it.
+
+- **Separate wet and dry.** There's no knob left for parallel compression. Auto make-up gain stands in, tuned so the output lands within about 1.5 dB of the dry signal on the synth test phrase. Sag is the exception and sits quieter on purpose.
+- **Attack and release knobs.** DYNAMICS sets the attack, and the release adapts on its own, sliding between 70 ms and 1.2 s depending on how hard and how long it's been compressing.
+- **Momentary swell.** The SDK sends press and hold events but never a release, so the swell latches.
+- **MIDI, sidechain, expression, presets.** The SDK doesn't expose them, so anything I built for them would be a guess.
+
+## Small, and tested on a desk
+
+The firmware build is 16.6 KB. It uses 80 bytes of stack in the audio callback and allocates nothing: I checked the ELF for malloc, new and sbrk, and there are none.
+
+Most of the work happened on a desktop, though, in a test bench that runs the same engine as the pedal. It checks the static curves, loop stability, the physics, and survival under abuse (NaN, DC, full-scale square waves, knobs slammed mid-note), and it renders a synth phrase through a handful of settings to listen to. It runs well over a hundred times faster than realtime, which made tuning by ear a lot less tedious.
+
+<TryMinty href="../minty-demo/" />
+
+## What only the pedal can tell me
+
+A few things can only be settled on real hardware, and they're written down rather than assumed.
+
+- **Press against hold.** The SDK doesn't say whether a hold also fires a press first. Minty handles both: if a hold arrives within 1.2 s of a press, it undoes the swell toggle that press caused.
+- **Input level.** The synth tuning assumes a line-level source peaking somewhere between −1 and −12 dBFS. A much hotter or quieter synth means moving the threshold range in `InputProfile.h`.
+- **CPU.** My rough guess is about 1,000 cycles per stereo sample on the Endless's Cortex-M7, which should be comfortable, but I haven't measured it on the device yet.

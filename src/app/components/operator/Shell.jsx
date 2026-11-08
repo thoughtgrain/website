@@ -20,13 +20,14 @@ import Link from '../../Link';
  * @param {Array<{label: string, to: string}>} [props.trail]  pages above this one, nearest last
  * @param {string} [props.here]  this page's name, when it is not the project's own page
  * @param {{label: string, to: string}} [props.related]  the sibling project: the case study or the demonstration
+ * @param {string} [props.theme]  an extra class on <main> for a project's own accent (`minty`)
  */
-export function OperatorShell({ project, trail = [], here, related, children }) {
+export function OperatorShell({ project, trail = [], here, related, theme, children }) {
   const base = `/projects/${project.slug}/`;
   const crumbs = [{ label: project.title, to: base }, ...trail];
 
   return (
-    <main id="main" className="operator">
+    <main id="main" className={`operator${theme ? ` ${theme}` : ''}`}>
       <header className="operator-mast container">
         <div className="operator-mast__row">
           {here ? (

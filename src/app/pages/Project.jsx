@@ -7,7 +7,8 @@
  * greys as its accent. `walk` is the OP-XY demonstration, a separate project
  * that walks through the server's sessions (see Demo.jsx). The dispatch is
  * here rather than in routes.jsx because the URL has the same shape for all
- * three.
+ * three. `minty` and `minty-demo` are the Minty case study and its hands-on
+ * page (see Minty.jsx).
  */
 
 import { content } from '../content.js';
@@ -18,6 +19,7 @@ import { OperatorShell } from '../components/operator/Shell';
 import { Sprite } from '../components/operator/Sprite';
 import { machineById } from '../opxy.js';
 import { Demo, ProjectLinks } from './Demo';
+import { MintyDemo, MintyStudy } from './Minty';
 
 function PlainProject({ project }) {
   // Tags joined into one string rather than looped, so the meta row reads as a
@@ -98,6 +100,8 @@ export default function Project({ route }) {
   if (!project) return <main id="main"><div className="container section"><h1>Not found</h1></div></main>;
 
   if (hasWalk(project)) return <Demo route={route} />;
+  if (project.layout === 'minty') return <MintyStudy project={project} />;
+  if (project.layout === 'minty-demo') return <MintyDemo project={project} />;
   if (project.layout === 'operator') return <OperatorProject project={project} />;
   return <PlainProject project={project} />;
 }

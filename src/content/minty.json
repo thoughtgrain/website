@@ -1,0 +1,4 @@
+{
+  "_comment": "Where Minty's audio renders live. They are built by scripts/minty-data.mjs and hosted separately from the site, like the OP-XY screens. Must end with a slash. Until the real host is set, the players show their waveforms and say the audio is unavailable.",
+  "assetsBase": "https://assets.example/minty/"
+}

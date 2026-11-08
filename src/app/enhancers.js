@@ -17,3 +17,6 @@ import '../js/texture.js';
 import '../js/tag-filter.js';
 import '../js/opxy-filter.js';
 import '../js/opxy-walk.js';
+
+// Minty's figures carry their own chart code; only pages that have one load it.
+if (document.querySelector('[data-mfig]')) import('../js/minty.js');
