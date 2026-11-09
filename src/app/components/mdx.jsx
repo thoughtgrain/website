@@ -18,7 +18,7 @@
  * attribute.
  */
 
-import { demoComponents } from './demos';
+import { demoComponents } from './demo-figures';
 import { screenFigures } from './operator/figures';
 import { mintyFigures } from './minty/figures';
 

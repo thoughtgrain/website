@@ -144,7 +144,10 @@ export function StaticChart({ kind, spec: raw, readout, table, caption }) {
   const boxRef = useRef(null);
   const width = useWidth(boxRef);
   const { said, say } = useAnnouncer();
-  const spec = useMemo(() => withFormats({ ...raw, width }), [raw, width]);
+  const spec = useMemo(() => (raw ? withFormats({ ...raw, width }) : null), [raw, width]);
+  // No spec means no measurements to work one out from (`vite dev`, or a
+  // build without src/minty/data.json), the same case as every other figure.
+  if (!spec) return <Missing />;
   return (
     <Frame kind={kind} live={live} legend={raw.legend} readout={readout} said={said} table={table} caption={caption}>
       <Chart spec={spec} live={live} boxRef={boxRef} onSay={say} />

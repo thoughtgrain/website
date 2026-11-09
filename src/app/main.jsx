@@ -12,11 +12,15 @@
  *
  * Nor, for most pages, is there any React. The pages arrive prerendered, and
  * the drawer, theme toggle, tag filter and paper grain are plain DOM scripts.
- * React is only needed where a page has state to drive, which today means the
- * interactive figures in the build series. So this module does three things:
- * loads the stylesheet, starts the enhancers, and, only if the page needs it,
- * fetches the chunk that holds React and the app. On the 45 pages that don't,
- * the JavaScript that loads is about 2 KB instead of 105.
+ * React is only needed where a figure has state to drive (the build series'
+ * demos, Minty's charts and pedal), and then only for that figure: each is an
+ * island, hydrated on its own while the page around it stays static. So this
+ * module does three things: loads the stylesheet, starts the enhancers, and,
+ * only if the page has islands, fetches React and those figures' code. Pages
+ * without any load about 5 KB of JavaScript.
+ *
+ * The one exception is `vite dev`, where nothing is prerendered: there the
+ * whole page is drawn in the browser by hydrate.jsx.
  */
 
 // Cascade order is load-bearing: tokens define the variables, kit styles the
@@ -39,15 +43,13 @@ import './enhancers.js';
 
 const rootEl = document.getElementById('root');
 
-// A prerendered page with no interactive figure has nothing for React to do.
-// An empty root means `vite dev`, where nothing has been prerendered and the
-// whole page still has to be drawn client-side.
-const needsReact = !rootEl.firstChild || rootEl.querySelector('.demo');
-
-if (needsReact) {
+if (!rootEl.firstChild) {
+  // An empty root means `vite dev`: nothing was prerendered, so the whole
+  // page still has to be drawn client-side.
   import('./hydrate').then(({ mount }) => mount(rootEl));
 } else if (rootEl.querySelector('[data-island]')) {
   // Figures React drives on their own, without the rest of the page: see
-  // islands/island.jsx.
+  // islands/island.jsx. A prerendered page without any has nothing for React
+  // to do.
   import('./islands/client').then(({ mountIslands }) => mountIslands(rootEl));
 }

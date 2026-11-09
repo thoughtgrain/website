@@ -20,17 +20,21 @@
  *    results in a live region. The visual layout is a convenience; the source
  *    order is the actual document.
  *
- * They also import the real implementations, `relativeHref` from base.js, the
- * real route list from the content model. A demo that reimplements the thing it
- * documents is a demo that drifts. These can't: change the code and the figure
- * changes with it.
+ * They also use the real implementations: `relativeHref` from base.js, the
+ * real route list and file counts from the content model. A demo that
+ * reimplements the thing it documents is a demo that drifts. These can't:
+ * change the code and the figure changes with it.
+ *
+ * Each is hydrated in the browser as an island (src/app/islands/), on its own,
+ * without the rest of the page. So this module is what the browser loads, and
+ * it must not import the site's content: the values a demo needs from it (the
+ * route list, the file counts) are worked out on the server and arrive as
+ * props. See demo-figures.jsx, which wraps them.
  */
 
 import { useId, useState } from 'react';
 
 import { relativeHref } from '../base.js';
-import { content, contentFileCount, dataFileCount } from '../content.js';
-import { routesFor } from '../lib/content-model.js';
 
 /* ---------------------------------------------------------------- scaffold */
 
@@ -100,17 +104,21 @@ const baseOf = (route) => {
 /* ------------------------------------------------------------- the figures */
 
 /**
+ * A handful of routes that show different depths, rather than all of them in
+ * a radio group.
+ */
+export const EXPLORER_ROUTES = ['/', '/about/', '/notes/', '/essays/your-first-essay/', '/projects/cat/code/'];
+
+/**
  * RouteExplorer: pick a route, see the HTML the build writes for it.
  *
- * The routes come from `routesFor(content)`, the same function the build calls,
- * so this list is the real one. Add a note to src/content and it appears here.
+ *   routes  the site's real routes, from `routesFor(content)`, the same
+ *           function the build calls, worked out on the server. Only the
+ *           ones in EXPLORER_ROUTES are offered, so if a slug is ever
+ *           renamed it drops out instead of pointing nowhere.
  */
-export function RouteExplorer({ routes: given }) {
-  const all = given || routesFor(content);
-  // A handful that show different depths, rather than all fifty in a radio
-  // group. Falls back gracefully if a slug is ever renamed.
-  const preferred = ['/', '/about/', '/notes/', '/essays/your-first-essay/', '/projects/cat/code/'];
-  const choices = preferred.filter((r) => all.includes(r));
+export function RouteExplorer({ routes = [] }) {
+  const choices = EXPLORER_ROUTES.filter((r) => routes.includes(r));
   const [route, setRoute] = useState(choices[1] || choices[0] || '/');
   const name = useId();
 
@@ -188,7 +196,7 @@ export function PathResolver() {
  * while the build emitted fifty-one, and it would drift again the next time a
  * note was added. Same rule as the rest of this file.
  */
-const phasesFor = (routeCount, fileCount) => [
+const phasesFor = (routeCount, fileCount, dataFileCount) => [
   {
     label: 'Read',
     body: `readdirSync walks src/content. ${fileCount} .mdx files and ${dataFileCount} .json configs become one { path: module } map.`,
@@ -216,10 +224,17 @@ const phasesFor = (routeCount, fileCount) => [
   },
 ];
 
-export function BuildStepper() {
+/**
+ *   routeCount     how many routes the build publishes
+ *   fileCount      how many .mdx files it reads
+ *   dataFileCount  how many .json configs
+ *
+ * all from the real content model, on the server.
+ */
+export function BuildStepper({ routeCount = 0, fileCount = 0, dataFileCount = 0 }) {
   const [i, setI] = useState(0);
   const name = useId();
-  const PHASES = phasesFor(routesFor(content).length, contentFileCount);
+  const PHASES = phasesFor(routeCount, fileCount, dataFileCount);
   const phase = PHASES[i];
 
   return (
@@ -327,6 +342,7 @@ export function FeedFormats() {
   );
 }
 
-export const demoComponents = {
+/** What islands/client.jsx hydrates for the `demos/…` islands. */
+export const islands = {
   RouteExplorer, PathResolver, BuildStepper, LoaderCompare, FeedFormats,
 };
