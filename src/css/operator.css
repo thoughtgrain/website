@@ -476,11 +476,6 @@
 .machine__pager a { text-decoration: none; color: var(--fg-muted); }
 .machine__pager a:hover, .machine__pager a:focus-visible { text-decoration: underline; text-underline-offset: 4px; }
 
-/* ---- The projects index: a tile with a real picture ----
-   The thumbnail sits above the words, at the tile's own width, capped so a
-   single-column index does not turn it into a hero. */
-.project-tile__thumb { display: block; max-width: 320px; margin-bottom: 14px; }
-
 /* A link from the grid lands on one frame; give it room under the sticky nav
    and a quiet mark so the eye finds it. */
 .operator [id^="cell-"] { scroll-margin-top: 96px; }
