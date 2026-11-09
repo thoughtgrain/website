@@ -110,7 +110,7 @@ function Related({ items }) {
           <Link className="essay-card essay-card--compact" to={r.url} key={r.slug}>
             <div className="essay-card__meta">
               <span className="kicker">{r.kind}</span>
-              <span className="essay-card__date">{r.date}{r.read ? ` · ${r.read}` : ''}</span>
+              <span className="essay-card__date">{r.date}</span>
             </div>
             <h3 className="essay-card__title">{r.title}</h3>
             <p className="essay-card__dek">{r.summary}</p>

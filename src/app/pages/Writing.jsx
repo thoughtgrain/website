@@ -39,7 +39,7 @@ function Card({ item, hidden }) {
     >
       <div className="essay-card__meta">
         <span className="kicker">{item.kind}</span>
-        <span className="essay-card__date">{item.date} &middot; {item.read}</span>
+        <span className="essay-card__date">{item.date}</span>
       </div>
       <h2 className="essay-card__title">{item.title}</h2>
       <p className="essay-card__dek">{item.summary}</p>
