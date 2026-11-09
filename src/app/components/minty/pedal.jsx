@@ -62,15 +62,40 @@ function Defs({ id }) {
         <stop offset="0.7" stopColor="#f3f4f2" />
         <stop offset="1" stopColor="#dfe3e1" />
       </radialGradient>
-      <radialGradient id={`${id}-cap`} cx="0.4" cy="0.35" r="0.75">
-        <stop offset="0" stopColor="#f4f4f2" />
-        <stop offset="0.55" stopColor="#c9c9c6" />
-        <stop offset="1" stopColor="#8e8e8b" />
-      </radialGradient>
-      <radialGradient id={`${id}-bezel`} cx="0.5" cy="0.5" r="0.5">
-        <stop offset="0.72" stopColor="#5e5e5c" />
-        <stop offset="0.86" stopColor="#b9b9b6" />
-        <stop offset="1" stopColor="#7c7c79" />
+      {/* Chrome is reflection, not shading: hard bands of bright sky and
+          dark horizon, mirrored on the far side of the collar so its two
+          bevels catch the light from opposite edges. */}
+      <linearGradient id={`${id}-collar`} x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#fdfdfd" />
+        <stop offset="0.18" stopColor="#c6cacf" />
+        <stop offset="0.34" stopColor="#767b80" />
+        <stop offset="0.48" stopColor="#eef0f2" />
+        <stop offset="0.6" stopColor="#fafbfc" />
+        <stop offset="0.76" stopColor="#666b70" />
+        <stop offset="0.9" stopColor="#adb2b7" />
+        <stop offset="1" stopColor="#e4e7ea" />
+      </linearGradient>
+      <linearGradient id={`${id}-bevel`} x1="1" y1="1" x2="0" y2="0">
+        <stop offset="0" stopColor="#fdfdfd" />
+        <stop offset="0.22" stopColor="#9da2a7" />
+        <stop offset="0.45" stopColor="#f3f5f6" />
+        <stop offset="0.7" stopColor="#5f6469" />
+        <stop offset="1" stopColor="#d9dde0" />
+      </linearGradient>
+      {/* The dome mirrors a room: sky above, a dark horizon just below the middle, floor light beneath. */}
+      <linearGradient id={`${id}-chrome`} x1="0" y1="0" x2="0.25" y2="1">
+        <stop offset="0" stopColor="#ffffff" />
+        <stop offset="0.2" stopColor="#eceff1" />
+        <stop offset="0.42" stopColor="#aab0b5" />
+        <stop offset="0.5" stopColor="#4d5257" />
+        <stop offset="0.55" stopColor="#363a3e" />
+        <stop offset="0.63" stopColor="#80868b" />
+        <stop offset="0.82" stopColor="#d6dadd" />
+        <stop offset="1" stopColor="#f7f8f9" />
+      </linearGradient>
+      <radialGradient id={`${id}-dome`} cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0.62" stopColor="#000" stopOpacity="0" />
+        <stop offset="1" stopColor="#000" stopOpacity="0.38" />
       </radialGradient>
       <linearGradient id={`${id}-jack`} x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stopColor="#d7d7d4" />
@@ -100,12 +125,22 @@ function Jack({ x, y, id, side }) {
 }
 
 function Footswitch({ id, cx, which }) {
+  const cy = SWITCH_Y;
   return (
     <g>
-      <circle cx={cx} cy={SWITCH_Y} r="27" fill={`url(#${id}-bezel)`} stroke="#6f6f6c" strokeWidth="0.8" />
+      {/* A soft contact shadow, then the collar, its bevel, and the dark groove the cap sits in. */}
+      <circle cx={cx} cy={cy + 1.5} r="28.5" fill="#000" opacity="0.12" />
+      <circle cx={cx} cy={cy} r="27" fill={`url(#${id}-collar)`} stroke="#565b60" strokeWidth="0.6" />
+      <circle cx={cx} cy={cy} r="23.4" fill={`url(#${id}-bevel)`} />
+      <circle cx={cx} cy={cy} r="20.6" fill="#24272a" />
       <g className="mpedal__cap" data-cap={which}>
-        <circle cx={cx} cy={SWITCH_Y} r="18.5" fill={`url(#${id}-cap)`} stroke="#7d7d7a" strokeWidth="0.8" />
-        <ellipse cx={cx - 5} cy={SWITCH_Y - 7} rx="7" ry="3.5" fill="#fff" opacity="0.55" />
+        <circle cx={cx} cy={cy} r="18.5" fill={`url(#${id}-chrome)`} />
+        <circle cx={cx} cy={cy} r="18.5" fill={`url(#${id}-dome)`} />
+        {/* The window it's reflecting: one crisp highlight, a smaller echo, and light from below catching the rim. */}
+        <ellipse cx={cx - 6} cy={cy - 9.5} rx="6.5" ry="2.6" fill="#fff" opacity="0.95" transform={`rotate(-24 ${cx - 6} ${cy - 9.5})`} />
+        <circle cx={cx + 7.5} cy={cy - 11} r="1.3" fill="#fff" opacity="0.8" />
+        <path d={`M${cx - 12} ${cy + 11}A16 16 0 0 0 ${cx + 12} ${cy + 11}`} fill="none" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" opacity="0.55" />
+        <circle cx={cx} cy={cy} r="18.5" fill="none" stroke="#45494d" strokeWidth="0.7" />
       </g>
       <text className={`mpedal__switchlabel${which === 'left' ? ' mpedal__switchlabel--star' : ''}`} x={cx} y={which === 'left' ? 436 : 432} textAnchor="middle">{SWITCHES[which].label}</text>
     </g>
