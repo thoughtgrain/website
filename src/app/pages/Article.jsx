@@ -159,7 +159,6 @@ export default function Article({ route }) {
           <p className="reader__dek">{article.summary}</p>
           <div className="reader__meta">
             <span className="kicker">{article.date}</span>
-            {article.read && <span className="kicker">&middot; {article.read}</span>}
             {article.tagList.map((t) => <span className="kicker" key={t}>&middot; {t}</span>)}
           </div>
 
