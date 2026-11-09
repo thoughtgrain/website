@@ -1,10 +1,15 @@
 /* =========================================================================
-   Minty: the case study and its hands-on page.
+   Minty: the project page, and the figures its essay uses.
 
-   Rides on the project shell from operator.css, with `.minty` beside
-   `.operator` on <main>. Two ideas: the accent is mint, the colour Minty's
-   LED shows when it is working; and every chart is drawn on the page's own
-   paper, because these are measurements to read, not a device screen.
+   The project page rides on the project shell from operator.css, with
+   `.minty` beside `.operator` on <main>, and takes mint as its accent: the
+   colour Minty's LED shows when it is working.
+
+   The figures carry their own chart colours, so they draw the same wherever
+   they're used: on the project page, or in the essay "Turn Minty's knobs",
+   which keeps the essays' own accent for its text and links. Every chart is
+   drawn on the page's own paper, because these are measurements to read,
+   not a device screen.
 
    Chart colours were validated with the dataviz palette checks against this
    site's surfaces: mint and a warm grey, emphasis form (one accent series,
@@ -16,16 +21,21 @@
   --accent: #006b4e;          /* 6.3:1 on the paper, for text and links */
   --accent-hover: #00563f;
   --accent-soft: #8fd9be;
+}
+[data-theme="dark"] .operator.minty {
+  --accent: #6fd5b0;          /* 11:1 on the night page */
+  --accent-hover: #9be6ca;
+  --accent-soft: #1f5a47;
+}
+
+.mfig, .mflow, .mcard {
   --mc-accent: #007756;       /* chart mint, 5.4:1 */
   --mc-context: #8b857f;      /* chart grey, 3.5:1 */
   --mc-wash: 0.1;
   --mc-band: color-mix(in oklch, var(--mc-accent) 6%, transparent);
   --mc-band-strong: color-mix(in oklch, var(--mc-accent) 12%, transparent);
 }
-[data-theme="dark"] .operator.minty {
-  --accent: #6fd5b0;          /* 11:1 on the night page */
-  --accent-hover: #9be6ca;
-  --accent-soft: #1f5a47;
+[data-theme="dark"] :is(.mfig, .mflow, .mcard) {
   --mc-accent: #2fa984;       /* 6.7:1 */
   --mc-context: #75716a;      /* 4.1:1 */
   --mc-wash: 0.14;
@@ -44,10 +54,13 @@
 /* What moves on top of a chart (the crosshair, Listen's playhead), in an SVG
    of the same size laid exactly over it. */
 .mfig__chart .mfig__overlay { position: absolute; inset: 0; height: 100%; pointer-events: none; }
-.mfig__readout { font-size: 15px; color: var(--fg); margin: 10px 0 0; max-width: 62ch; }
-.mfig__note { font-size: 14px; color: var(--fg-muted); margin: 8px 0 0; }
+/* Text inside a figure is figure type, not body copy. These carry a parent
+   class so they hold inside an essay or a project page, whose `.reader p`
+   and `.reader li` would otherwise set them at reading size. */
+.mfig .mfig__readout { font-size: 15px; line-height: 1.5; color: var(--fg); margin: 10px 0 0; max-width: 62ch; }
+.mfig .mfig__note { font-size: 14px; line-height: 1.5; color: var(--fg-muted); margin: 8px 0 0; }
 .mfig__cap { margin-top: 10px; font-size: 14px; line-height: 1.5; color: var(--fg-muted); }
-.mfig__missing { font-size: 14px; color: var(--fg-muted); padding: 16px; border: 1px dashed var(--rule); border-radius: 6px; }
+p.mfig__missing { font-size: 14px; line-height: 1.5; color: var(--fg-muted); padding: 16px; border: 1px dashed var(--rule); border-radius: 6px; }
 
 /* Knobs as range inputs: a label, the slider, the value. */
 .mrange { display: grid; grid-template-columns: auto minmax(120px, 1fr) 5.5em; gap: 10px; align-items: center; flex: 1 1 260px; }
@@ -101,9 +114,9 @@
 .mfig--listen .mfig__chart { cursor: pointer; }
 
 /* Legend: a short line (or dot) in the series colour, the name in ink. */
-.mfig__legend { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: 8px 0 0; padding: 0; font-size: 13px; color: var(--fg-muted); }
-.mfig__legend:empty { display: none; }
-.mfig__legend li { display: inline-flex; align-items: center; gap: 8px; }
+.mfig .mfig__legend { max-width: none; display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: 8px 0 0; padding: 0; font-size: 13px; color: var(--fg-muted); }
+.mfig .mfig__legend:empty { display: none; }
+.mfig .mfig__legend li { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: inherit; line-height: 1.4; }
 .mkey { display: inline-block; flex: none; }
 .mkey--line { width: 16px; height: 2px; border-radius: 1px; }
 .mkey--dot { width: 9px; height: 9px; border-radius: 50%; }
@@ -119,9 +132,9 @@
   box-shadow: var(--sh-3);
   font-size: 13px; color: var(--fg);
 }
-.mtip p { margin: 0; max-width: none; }
-.mtip__head { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); margin-bottom: 4px !important; }
-.mtip__row { display: flex; align-items: center; gap: 8px; }
+.mfig .mtip p { margin: 0; max-width: none; font-size: inherit; line-height: 1.4; }
+.mfig .mtip__head { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); margin-bottom: 4px !important; }
+.mfig .mtip__row { display: flex; align-items: center; gap: 8px; }
 .mtip__row b { font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* The numbers behind a chart. */
@@ -184,7 +197,7 @@
 .mpedal__read dt { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--fg-muted); padding-top: 3px; }
 .mpedal__read dd { margin: 0; font-size: 15px; color: var(--fg); }
 .mpedal__extra { margin-top: var(--s-5); }
-.mpedal__hint { flex: 1 1 100%; margin: 0; font-size: 14px; line-height: 1.5; color: var(--fg-muted); }
+.mfig .mpedal__hint { flex: 1 1 100%; max-width: none; margin: 0; font-size: 14px; line-height: 1.5; color: var(--fg-muted); }
 .mfig--still .mpedal { grid-template-columns: minmax(0, 270px); }
 @media (max-width: 600px) {
   .mpedal { grid-template-columns: 1fr; }
@@ -205,7 +218,7 @@
 .mflow__row + .mflow__row { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--rule); }
 .mflow__label { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); padding-top: 6px; }
 .mflow__steps { display: flex; flex-wrap: wrap; gap: 6px 0; list-style: none; margin: 0; padding: 0; }
-.mflow__steps li { font-size: 13.5px; padding: 4px 10px; border: 1px solid var(--border-strong); border-radius: var(--r-pill); background: var(--bg); }
+.mflow .mflow__steps li { margin-bottom: 0; line-height: 1.4; font-size: 13.5px; padding: 4px 10px; border: 1px solid var(--border-strong); border-radius: var(--r-pill); background: var(--bg); }
 .mflow__row:first-child .mflow__steps li { border-color: var(--mc-accent); }
 .mflow__steps li + li::before { content: '\2192'; margin: 0 8px 0 -4px; color: var(--fg-subtle); display: none; }
 .mflow__steps li + li { margin-left: 22px; position: relative; }

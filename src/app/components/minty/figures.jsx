@@ -13,9 +13,10 @@
  * and nothing is hydrated.
  *
  * The rest render once and stay put: the LED table, the signal flow and the
- * link to the hands-on page.
+ * link to the essay that puts the knobs in your hands.
  */
 
+import Link from '../../Link';
 import { island } from '../../islands/island';
 import { CHARACTERS, LED, mapSpec, thdSpec } from '../../lib/minty-specs.js';
 import { minty, mintyAsset } from '../../minty.js';
@@ -97,17 +98,20 @@ export function SignalFlow() {
   );
 }
 
-/** The link from the case study to the hands-on page. */
-export function TryMinty({ href, title = 'Turn Minty’s knobs', text }) {
+/**
+ * The link from the project page to the essay with the figures in it.
+ * `to` is a site path ("/essays/…/"); Link makes it relative to this page.
+ */
+export function TryMinty({ to, title = 'Turn Minty’s knobs', text }) {
   return (
-    <a className="mcard" href={href}>
+    <Link className="mcard" to={to}>
       <span className="mcard__led" aria-hidden="true" />
       <span className="mcard__text">
         <span className="mcard__title">{title}</span>
-        <span className="mcard__dek">{text || 'Every chart measured from Minty’s own code: the curve under each knob, the EQ, the swell, and the renders to listen to.'}</span>
+        <span className="mcard__dek">{text || 'An essay with every chart measured from Minty’s own code: the curve under each knob, the EQ, the swell, and the renders to listen to.'}</span>
       </span>
       <span className="mcard__go" aria-hidden="true">&rarr;</span>
-    </a>
+    </Link>
   );
 }
 
