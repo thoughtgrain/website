@@ -18,7 +18,7 @@
  *      would be drawing something other than Minty.
  *
  * Writes src/minty/data.json (what the pages draw) and, into <out-dir>, the
- * renders as AAC for the asset host named in src/content/minty.json.
+ * renders as AAC for the asset host named in src/content/assets.json.
  *
  * Needs g++ (C++20), make and ffmpeg. The ARM toolchain is not needed.
  */

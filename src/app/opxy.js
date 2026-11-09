@@ -7,22 +7,17 @@
  * exported here tolerates it being null and the pages check `opxy` before they
  * render anything that needs it.
  *
- * The images themselves live on a separate host. `assetsBase` comes from
- * src/content/opxy.json, and VITE_OPXY_ASSETS_BASE overrides it for a local
- * build against a local copy of the files.
+ * The images themselves live on a separate host, configured with every other
+ * project's in src/content/assets.json (see assets.js).
  */
 
 import manifest from './opxy-manifest';
-import { content } from './content.js';
+import { assetsBaseFor } from './assets.js';
 
 export const opxy = manifest;
 
-const configured = import.meta.env.VITE_OPXY_ASSETS_BASE
-  || (content.data.opxy && content.data.opxy.assetsBase)
-  || '';
-
 /** Always ends with a slash, so `assetUrl` is plain concatenation. */
-export const assetsBase = configured && !configured.endsWith('/') ? `${configured}/` : configured;
+export const assetsBase = assetsBaseFor('opxy');
 
 export const assetUrl = (file) => assetsBase + file;
 
