@@ -4,11 +4,12 @@
  * Each function takes the measured data (src/minty/data.json) and a state,
  * and returns a chart spec for lineChart() plus the sentence that goes under
  * it. Called by the server render with each figure's default state, and by
- * src/js/minty.js with whatever the reader has turned the knobs to. Pure.
+ * the same components in the browser with whatever the reader has turned the
+ * knobs to (components/minty/live.jsx). Pure.
  *
- * Specs are plain data (formats are named, not functions) so a figure can
- * carry its own spec in the page and the script can redraw it at the real
- * width without the measurements.
+ * Specs are plain data (formats are named, not functions) so a figure can be
+ * handed its finished spec as props and redraw it at the real width without
+ * the measurements.
  */
 
 import {

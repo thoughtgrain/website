@@ -46,4 +46,8 @@ const needsReact = !rootEl.firstChild || rootEl.querySelector('.demo');
 
 if (needsReact) {
   import('./hydrate').then(({ mount }) => mount(rootEl));
+} else if (rootEl.querySelector('[data-island]')) {
+  // Figures React drives on their own, without the rest of the page: see
+  // islands/island.jsx.
+  import('./islands/client').then(({ mountIslands }) => mountIslands(rootEl));
 }

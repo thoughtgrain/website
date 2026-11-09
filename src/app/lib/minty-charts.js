@@ -2,9 +2,10 @@
  * minty-charts.js: line charts as SVG markup, for the Minty pages.
  *
  * One function, used twice. The server render calls it at a default width so
- * the page arrives with every chart already drawn; src/js/minty.js calls it
- * again at the chart's real width, and whenever a knob moves. Same code both
- * times, so the static chart and the live one can't disagree.
+ * the page arrives with every chart already drawn; the same component calls
+ * it again in the browser at the chart's real width, and whenever a knob
+ * moves (components/minty/parts.jsx). Same code both times, so the static
+ * chart and the live one can't disagree.
  *
  * Pure: a spec in, a string of SVG out, no DOM. Every label passes through
  * esc(), so nothing in a spec is ever interpreted as markup.
@@ -138,8 +139,9 @@ export function lineChart(spec) {
     out.push(`<circle class="mdot mc-${d.role || 'accent'}" cx="${x(d.x).toFixed(1)}" cy="${y(clampY(d.y)).toFixed(1)}" r="5"${tip}/>`);
   }
 
-  // The hover layer's pieces, hidden until the script places them.
-  out.push(`<line class="mcross" x1="0" x2="0" y1="${m.top}" y2="${H - m.bottom}" visibility="hidden"/>`);
+  // A transparent plot-sized target, so the pointer is over the chart
+  // anywhere inside the axes, not only on a line. The crosshair itself is
+  // drawn by the component, in an overlay React owns.
   out.push(`<rect class="mhit" x="${m.left}" y="${m.top}" width="${W - m.left - m.right}" height="${H - m.top - m.bottom}" fill="transparent"/>`);
   out.push('</svg>');
   return { svg: out.join(''), frame: { W, H, m } };

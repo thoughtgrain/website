@@ -32,7 +32,23 @@
 // identical; the process just never comes back.
 import { renderToString } from 'react-dom/server.node';
 import App from './App';
+import { IslandCollector, placeholder } from './islands/island';
 
+/**
+ * The page first, then each interactive figure on it as a root of its own,
+ * dropped into the placeholder its wrapper left. Each figure gets its own id
+ * prefix, the same one the browser hydrates it with (islands/client.jsx), so
+ * two figures on a page can't hand out the same useId.
+ */
 export function render(route, base) {
-  return renderToString(<App route={route} base={base} />);
+  const islands = [];
+  let html = renderToString(
+    <IslandCollector.Provider value={islands}>
+      <App route={route} base={base} />
+    </IslandCollector.Provider>,
+  );
+  islands.forEach((tree, i) => {
+    html = html.split(placeholder(i)).join(renderToString(tree, { identifierPrefix: `i${i}-` }));
+  });
+  return html;
 }

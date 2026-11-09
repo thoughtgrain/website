@@ -41,6 +41,9 @@
 }
 .mfig__chart { position: relative; width: 100%; outline-offset: 4px; }
 .mfig__chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+/* What moves on top of a chart (the crosshair, Listen's playhead), in an SVG
+   of the same size laid exactly over it. */
+.mfig__chart .mfig__overlay { position: absolute; inset: 0; height: 100%; pointer-events: none; }
 .mfig__readout { font-size: 15px; color: var(--fg); margin: 10px 0 0; max-width: 62ch; }
 .mfig__note { font-size: 14px; color: var(--fg-muted); margin: 8px 0 0; }
 .mfig__cap { margin-top: 10px; font-size: 14px; line-height: 1.5; color: var(--fg-muted); }

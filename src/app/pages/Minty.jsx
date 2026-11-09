@@ -13,7 +13,7 @@ import { content } from '../content.js';
 import Link from '../Link';
 import { mdxComponents } from '../components/mdx';
 import { OperatorShell } from '../components/operator/Shell';
-import { Pedal } from '../components/minty/figures';
+import { Pedal } from '../components/minty/pedal';
 import { ProjectLinks } from './Demo';
 
 const bySlug = (slug) => (slug ? content.projects.find((p) => p.slug === slug) || null : null);

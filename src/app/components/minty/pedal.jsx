@@ -16,14 +16,16 @@
  *
  * Native elements mean the keyboard, screen readers (VoiceOver's swipe to
  * adjust included), forced colours and focus all behave as they do anywhere
- * else, with nothing reimplemented. The layer is hidden until src/js/minty.js
- * wires it up, so without the script the drawing is a still image.
+ * else, with nothing reimplemented. The layer stays hidden until the pedal is
+ * hydrated as an island, so without the script the drawing is a still image.
  */
 
-import { relativeHref, useRoute } from '../../base.js';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import { PEDAL_DEFAULT, pedalState } from '../../lib/minty-specs.js';
-import { minty } from '../../minty.js';
+import { useAnnouncer, useLive, useMinty } from './hooks';
 import { MintSprig } from './mint-sprig';
+import { Range } from './parts';
 
 // The viewBox leaves room for the jacks that stick out of each side.
 const VB = { x: -10, y: -8, w: 306, h: 478 };
@@ -124,7 +126,7 @@ function Jack({ x, y, id, side }) {
   return <rect className="mpedal__jack" x={side === 'left' ? x - w : x} y={y} width={w} height="26" rx="2" fill={`url(#${id}-jack)`} />;
 }
 
-function Footswitch({ id, cx, which }) {
+function Footswitch({ id, cx, which, down }) {
   const cy = SWITCH_Y;
   return (
     <g>
@@ -133,7 +135,7 @@ function Footswitch({ id, cx, which }) {
       <circle cx={cx} cy={cy} r="27" fill={`url(#${id}-collar)`} stroke="#565b60" strokeWidth="0.6" />
       <circle cx={cx} cy={cy} r="23.4" fill={`url(#${id}-bevel)`} />
       <circle cx={cx} cy={cy} r="20.6" fill="#24272a" />
-      <g className="mpedal__cap" data-cap={which}>
+      <g className={`mpedal__cap${down ? ' is-down' : ''}`} data-cap={which}>
         <circle cx={cx} cy={cy} r="18.5" fill={`url(#${id}-chrome)`} />
         <circle cx={cx} cy={cy} r="18.5" fill={`url(#${id}-dome)`} />
         {/* The window it's reflecting: one crisp highlight, a smaller echo, and light from below catching the rim. */}
@@ -147,7 +149,7 @@ function Footswitch({ id, cx, which }) {
   );
 }
 
-function Drawing({ id, st, ps }) {
+function Drawing({ id, st, ps, down = {} }) {
   return (
     <svg className="mpedal__art" viewBox={`${VB.x} ${VB.y} ${VB.w} ${VB.h}`} role="img" aria-label="Drawing of the Endless running Minty: three knobs on a pale mint face with a sprig of mint leaves, an LED at the top right, and two footswitches.">
       <Defs id={id} />
@@ -176,48 +178,182 @@ function Drawing({ id, st, ps }) {
         </g>
       ))}
 
-      <Footswitch id={id} cx={SWITCHES.left.cx} which="left" />
-      <Footswitch id={id} cx={SWITCHES.on.cx} which="on" />
+      <Footswitch id={id} cx={SWITCHES.left.cx} which="left" down={down.left} />
+      <Footswitch id={id} cx={SWITCHES.on.cx} which="on" down={down.on} />
     </svg>
   );
 }
 
+/* --------------------------------------------------------------- controls */
+
+const HOLD_MS = 600;
+const toKnob = (v) => Number(Math.max(0, Math.min(1, Math.round(v / 0.01) * 0.01)).toFixed(2));
+
 /**
- * The controls, laid over the drawing. Each knob is a range input with a
- * grip on top of it for dragging; each switch is a button.
+ * One knob: a range input for focus, keys and assistive tech, with a grip
+ * over it for dragging. Up or right turns it clockwise, about 160 px for the
+ * whole sweep, the way most plugin knobs behave; a double-click returns it to
+ * noon, like a real pot's centre detent would.
  */
-function Controls({ st, ps, hintId }) {
+function Knob({ k, name, cx, value, valuetext, onValue }) {
+  const input = useRef(null);
+  const drag = useRef(null);
+  const [dragging, setDragging] = useState(false);
+  const end = () => { drag.current = null; setDragging(false); };
   return (
-    <div className="mpedal__layer" data-controls="" hidden>
-      {KNOBS.map(({ k, name, cx }, i) => (
-        <div key={k} className="mpedal__ctl mpedal__ctl--knob" style={box(cx, KNOB_Y, KNOB_R + 3)}>
-          <input
-            type="range" className="mpedal__input" min="0" max="1" step="0.01"
-            defaultValue={st[k]} data-key={k} aria-label={name}
-            aria-valuetext={`${st[k].toFixed(2)}: ${ps.lines[i][1]}`}
-          />
-          <span className="mpedal__grip" data-grip={k} aria-hidden="true" />
-        </div>
-      ))}
-      <button type="button" className="mpedal__ctl mpedal__switch" style={box(SWITCHES.left.cx, SWITCH_Y, 27)} data-switch="left" aria-label="Left footswitch" aria-describedby={hintId} />
-      <button type="button" className="mpedal__ctl mpedal__switch" style={box(SWITCHES.on.cx, SWITCH_Y, 27)} data-switch="on" aria-label="On" aria-pressed={st.on ? 'true' : 'false'} />
+    <div className="mpedal__ctl mpedal__ctl--knob" style={box(cx, KNOB_Y, KNOB_R + 3)}>
+      <input
+        ref={input} type="range" className="mpedal__input" min="0" max="1" step="0.01"
+        value={value} data-key={k} aria-label={name} aria-valuetext={valuetext}
+        onChange={(e) => onValue(Number(e.target.value))}
+      />
+      <span
+        className={`mpedal__grip${dragging ? ' is-dragging' : ''}`} data-grip={k} aria-hidden="true"
+        onPointerDown={(e) => {
+          if (e.button !== 0) return;
+          e.preventDefault();
+          if (input.current) input.current.focus({ preventScroll: true });
+          drag.current = { x: e.clientX, y: e.clientY, v: value };
+          e.currentTarget.setPointerCapture(e.pointerId);
+          setDragging(true);
+        }}
+        onPointerMove={(e) => {
+          const d = drag.current;
+          if (d) onValue(toKnob(d.v + ((d.y - e.clientY) + (e.clientX - d.x)) / 160));
+        }}
+        onPointerUp={end}
+        onPointerCancel={end}
+        onDoubleClick={() => onValue(0.5)}
+      />
     </div>
   );
 }
 
+/**
+ * The left switch knows a press from a hold, as the Endless does. Pointer and
+ * keyboard both time the hold; a click with neither (a screen reader
+ * activating it) is a press, and the hold has its own button beside it.
+ *
+ * The click a browser fires after a pointer or key release arrives in the
+ * same task as the release, so a flag cleared on the next tick catches
+ * exactly that click and never a later one from a screen reader.
+ */
+function usePressHold(press, hold) {
+  const [down, setDown] = useState(false);
+  const timer = useRef(null);
+  const active = useRef(false);
+  const swallow = useRef(false);
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  const start = () => {
+    if (active.current) return;
+    active.current = true;
+    setDown(true);
+    timer.current = setTimeout(() => { timer.current = null; hold(); }, HOLD_MS);
+  };
+  const finish = (cancel) => {
+    if (!active.current) return;
+    active.current = false;
+    setDown(false);
+    swallow.current = true;
+    setTimeout(() => { swallow.current = false; }, 0);
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+      if (!cancel) press();
+    }
+  };
+  const isKey = (e) => e.key === ' ' || e.key === 'Enter';
+
+  return {
+    down,
+    handlers: {
+      onPointerDown: (e) => { if (e.button === 0) start(); },
+      onPointerUp: () => finish(false),
+      onPointerCancel: () => finish(true),
+      onPointerLeave: () => finish(true),
+      onKeyDown: (e) => {
+        if (!isKey(e)) return;
+        e.preventDefault();
+        if (!e.repeat) start();
+      },
+      onKeyUp: (e) => {
+        if (!isKey(e)) return;
+        e.preventDefault();
+        finish(false);
+      },
+      onBlur: () => finish(true),
+      // A long press on a phone would otherwise open the context menu.
+      onContextMenu: (e) => e.preventDefault(),
+      onClick: () => { if (!active.current && !swallow.current) press(); },
+    },
+  };
+}
+
+/**
+ * The Endless running Minty. Interactive by default: knobs and switches over
+ * the drawing, the readout beside it, and how hard you're playing below.
+ * `interactive={false}` is the still drawing the case study opens with.
+ */
 export function Pedal({ interactive = true, caption }) {
-  if (!minty) return null;
-  const st = PEDAL_DEFAULT;
-  const ps = pedalState(minty, st);
-  const route = useRoute();
+  const data = useMinty();
+  const live = useLive();
+  const [st, setSt] = useState(PEDAL_DEFAULT);
+  const { said, say } = useAnnouncer();
+  const ps = useMemo(() => (data ? pedalState(data, st) : null), [data, st]);
+
+  // What to say once a switch's change has rendered, from the new state.
+  const pending = useRef(null);
+  useEffect(() => {
+    const what = pending.current;
+    if (!what || !ps) return;
+    pending.current = null;
+    if (what === 'swell') say(`Swell ${st.swell ? 'on' : 'off'}. LED ${ps.led.name}`);
+    if (what === 'character') say(`${ps.lines[3][1]}. LED ${ps.led.name}`);
+    if (what === 'on') say(ps.lines[4][1]);
+  }, [ps, st, say]);
+
+  const press = useCallback(() => { pending.current = 'swell'; setSt((s) => ({ ...s, swell: !s.swell })); }, []);
+  const hold = useCallback(() => { pending.current = 'character'; setSt((s) => ({ ...s, character: (s.character + 1) % 4 })); }, []);
+  const toggleOn = () => { pending.current = 'on'; setSt((s) => ({ ...s, on: s.on === false })); };
+  const set = (key) => (v) => setSt((s) => ({ ...s, [key]: v }));
+  const left = usePressHold(press, hold);
+  const [onDown, setOnDown] = useState(false);
+
+  if (!ps) return null;
   const id = interactive ? 'mped' : 'mped-still';
   const hintId = `${id}-hint`;
+
   return (
-    <figure className={`mfig mfig--pedal${interactive ? '' : ' mfig--still'}`} data-mfig={interactive ? 'pedal' : undefined} data-state={JSON.stringify(st)} data-src={relativeHref(route, '/minty/data.json')}>
+    <figure className={`mfig mfig--pedal${interactive ? '' : ' mfig--still'}${live && interactive ? ' is-live' : ''}`} data-mfig={interactive ? 'pedal' : undefined}>
       <div className="mpedal">
         <div className="mpedal__stage">
-          <Drawing id={id} st={st} ps={ps} />
-          {interactive && <Controls st={st} ps={ps} hintId={hintId} />}
+          <Drawing id={id} st={st} ps={ps} down={{ left: left.down, on: onDown }} />
+          {interactive && (
+            <div className="mpedal__layer" data-controls="" hidden={!live}>
+              {KNOBS.map(({ k, name, cx }, i) => (
+                <Knob
+                  key={k} k={k} name={name} cx={cx} value={st[k]} onValue={set(k)}
+                  valuetext={`${st[k].toFixed(2)}: ${ps.lines[i][1]}`}
+                />
+              ))}
+              <button
+                type="button" className="mpedal__ctl mpedal__switch" style={box(SWITCHES.left.cx, SWITCH_Y, 27)}
+                data-switch="left" aria-label="Left footswitch" aria-describedby={hintId}
+                {...left.handlers}
+              />
+              <button
+                type="button" className="mpedal__ctl mpedal__switch" style={box(SWITCHES.on.cx, SWITCH_Y, 27)}
+                data-switch="on" aria-label="On" aria-pressed={st.on === false ? 'false' : 'true'}
+                onClick={toggleOn}
+                // The On switch dips too, though it's a plain toggle.
+                onPointerDown={() => setOnDown(true)}
+                onPointerUp={() => setOnDown(false)}
+                onPointerCancel={() => setOnDown(false)}
+                onPointerLeave={() => setOnDown(false)}
+              />
+            </div>
+          )}
         </div>
         {interactive && (
           <dl className="mpedal__read" data-pedal-read="">
@@ -226,21 +362,17 @@ export function Pedal({ interactive = true, caption }) {
         )}
       </div>
       {interactive && (
-        <div className="mfig__controls mpedal__extra" data-controls="" hidden>
-          <label className="mrange">
-            <span className="mrange__label">You're playing at</span>
-            <input type="range" min="-48" max="0" step="1" defaultValue={st.level} data-key="level" />
-            <output className="mrange__out" data-out="level">{`${st.level} dBFS`}</output>
-          </label>
+        <div className="mfig__controls mpedal__extra" data-controls="" hidden={!live}>
+          <Range k="level" label="You're playing at" value={st.level} min={-48} max={0} step={1} format={(v) => `${v} dBFS`} onChange={set('level')} />
           <p className="mpedal__hint" id={hintId}>
             Drag a knob, or focus it and use the arrow keys. Tap the left switch to toggle the swell; hold it for half a second to change character.
           </p>
           {/* Holding is a timed gesture, and a screen reader can only click,
               so the hold gets a plain button too. */}
-          <button type="button" className="mplay" data-hold="">Hold the left switch</button>
+          <button type="button" className="mplay" data-hold="" onClick={hold}>Hold the left switch</button>
         </div>
       )}
-      <p className="visually-hidden" aria-live="polite" data-say="" />
+      {interactive && <p className="visually-hidden" aria-live="polite" data-say="">{said}</p>}
       {caption && <figcaption className="mfig__cap">{caption}</figcaption>}
     </figure>
   );
