@@ -128,28 +128,65 @@
 .mfig__table th, .mfig__table td { text-align: left; padding: 4px 18px 4px 0; border-bottom: 1px solid var(--rule); font-size: 13.5px; }
 .mfig__table th { font-family: var(--font-mono); font-size: 11px; font-weight: 400; color: var(--fg-muted); }
 
-/* ---- The pedal ---- */
-.mpedal { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: var(--s-5); align-items: center; }
+/* ---- The pedal ----
+   The Endless is an object, so it keeps its own colours in both themes. The
+   focus ring is a fixed dark teal: 7:1 on the mint face, more on the white
+   enclosure, which is what it is drawn against. */
+.mpedal { --mp-focus: #0a4a3b; display: grid; grid-template-columns: minmax(0, 290px) minmax(0, 1fr); gap: var(--s-6); align-items: center; }
+.mpedal__stage { position: relative; }
 .mpedal__art { display: block; width: 100%; height: auto; }
-.mpedal__body { fill: #23201c; stroke: #3a3631; stroke-width: 1; }
-.mpedal__knob { fill: #3d3a35; stroke: #5b5750; stroke-width: 1.5; }
-.mpedal__pointer line { stroke: #f2efe8; stroke-width: 3; stroke-linecap: round; }
-@media (prefers-reduced-motion: no-preference) { .mpedal__pointer { transition: transform 120ms var(--ease-out); } }
-.mpedal__name { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; fill: #cfcac0; }
-.mpedal__led { stroke: #000; stroke-width: 1; }
-.mpedal__switch { fill: #4a4741; stroke: #6a665e; stroke-width: 1.5; }
-.mpedal__switch-top { fill: #8a857c; pointer-events: none; }
-.mpedal__brand { font-family: var(--font-display); font-style: italic; font-size: 18px; fill: #9fe6c7; }
+.mpedal__body { stroke: #d4d1cb; stroke-width: 0.8; }
+.mpedal__jack { stroke: #8d8d8a; stroke-width: 0.6; }
+.mpedal__rings circle { fill: none; stroke: #24302f; stroke-width: 0.45; opacity: 0.7; }
+.mpedal__title { font-family: var(--font-serif); font-size: 27px; fill: #1b2524; }
+.mpedal__name { font-family: var(--font-body); font-weight: 600; font-size: 9.5px; fill: #1b2524; }
+/* The knob's edge carries 3:1 against the face, so the control is findable by more than its shadow. */
+.mpedal__knob { stroke: #5f7f7a; stroke-width: 0.8; }
+.mpedal__dot { fill: #1c1c1c; }
+.mpedal__led { stroke: rgba(0, 0, 0, 0.35); stroke-width: 0.6; }
+.mpedal__switchlabel { font-family: var(--font-body); font-weight: 600; font-size: 10px; fill: #3b3b39; }
+.mpedal__switchlabel--star { font-size: 17px; font-weight: 500; }
+.mpedal__cap { transform-box: fill-box; transform-origin: center; }
+.mpedal__cap.is-down { transform: scale(0.93); }
+@media (prefers-reduced-motion: no-preference) {
+  [data-knob] { transition: transform 90ms var(--ease-out); }
+  .mpedal__cap { transition: transform 70ms var(--ease-out); }
+}
+
+/* The control layer: native inputs and buttons over the drawing. */
+.mpedal__layer { position: absolute; inset: 0; }
+.mpedal__layer[hidden] { display: none; }
+.mpedal__ctl { position: absolute; border-radius: 50%; }
+.mpedal__input {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0;
+  opacity: 0; pointer-events: none; /* the grip takes the pointer; the input keeps focus, keys and the accessibility tree */
+}
+.mpedal__grip { position: absolute; inset: 0; border-radius: 50%; cursor: grab; touch-action: none; }
+.mpedal__grip.is-dragging { cursor: grabbing; }
+.mpedal__switch {
+  padding: 0; border: 0; background: transparent; cursor: pointer;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Dark ring, white halo: white fills the 2px gap and runs 2px past the ring,
+   so it reads at 3:1 or better whatever ends up behind it. */
+.mpedal__input:focus-visible + .mpedal__grip,
+.mpedal__switch:focus-visible { outline: 3px solid var(--mp-focus); outline-offset: 2px; box-shadow: 0 0 0 7px #fff; }
+@media (forced-colors: active) {
+  .mpedal__input:focus-visible + .mpedal__grip,
+  .mpedal__switch:focus-visible { outline-color: Highlight; box-shadow: none; }
+}
+
 .mpedal__read { margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .mpedal__read > div { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; }
 .mpedal__read dt { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--fg-muted); padding-top: 3px; }
 .mpedal__read dd { margin: 0; font-size: 15px; color: var(--fg); }
-.mpedal__foot { display: flex; flex-wrap: wrap; gap: 8px; }
-.mfig--still .mpedal__read { display: none; }
-.mfig--still .mpedal { grid-template-columns: minmax(0, 300px); }
+.mpedal__extra { margin-top: var(--s-5); }
+.mpedal__hint { flex: 1 1 100%; margin: 0; font-size: 14px; line-height: 1.5; color: var(--fg-muted); }
+.mfig--still .mpedal { grid-template-columns: minmax(0, 270px); }
 @media (max-width: 600px) {
   .mpedal { grid-template-columns: 1fr; }
-  .mpedal__art { max-width: 300px; }
+  .mpedal__stage { width: 100%; max-width: 290px; margin-inline: auto; }
   .mrange { grid-template-columns: 1fr 5.5em; }
   .mrange__label { grid-column: 1 / -1; }
 }

@@ -244,7 +244,9 @@ export function thdSpec(data) {
 
 /* ---------------------------------------------------------------- pedal */
 
-export const PEDAL_DEFAULT = { sens: 0.5, dyn: 0.35, eq: 0.5, level: -12, character: 0, swell: false };
+export const PEDAL_DEFAULT = { sens: 0.5, dyn: 0.35, eq: 0.5, level: -12, character: 0, swell: false, on: true };
+/** An unlit LED, for when the Endless is bypassed. */
+export const LED_OFF = '#6e6964';
 export const CHARACTERS = ['Stable', 'Wobble', 'Twitchy', 'Dusty'];
 
 /**
@@ -265,9 +267,12 @@ export function pedalState(data, st = PEDAL_DEFAULT) {
   const c = p.curves;
   const meter = curveAt(c, st.sens, st.dyn, 'meter');
   const gr = valueAt(c.levels, meter, Math.max(-60, Math.min(0, st.level)));
-  const busy = gr > 3;
+  // The On switch belongs to the Endless, not the patch: bypassed, Minty
+  // isn't heard, and I draw the LED dark (a guess at what the hardware does).
+  const on = st.on !== false;
+  const busy = on && gr > 3;
   const mode = st.swell ? 'Swell' : CHARACTERS[st.character];
-  const [name, hex] = LED[mode][busy ? 'busy' : 'idle'];
+  const [name, hex] = on ? LED[mode][busy ? 'busy' : 'idle'] : ['off', LED_OFF];
   const thr = thresholdFor(p, st.sens);
   const e = data.eq;
   const [ki, kw] = locate(e.knob, st.eq);
@@ -279,8 +284,9 @@ export function pedalState(data, st = PEDAL_DEFAULT) {
       ['SENSITIVITY', `threshold ${FORMATS.db(thr)} dBFS${CHARACTERS[st.character] === 'Dusty' ? ', and the Dusty drive' : ''}`],
       ['DYNAMICS', `${dynamicsZone(st.dyn)}, ${slopeWords(slopeAbove(c, p, st.sens, st.dyn))}`],
       ['EQ', eqWords(e.hz, db)],
-      ['Footswitch', `${CHARACTERS[st.character]}, swell ${st.swell ? 'on' : 'off'}`],
-      ['LED', `${name}: ${busy ? `compressing, about ${Math.round(gr)} dB` : `${gr > 0.5 ? `only ${Math.round(gr * 10) / 10} dB of` : 'no'} gain reduction`}`],
+      ['Left switch', `${CHARACTERS[st.character]}, swell ${st.swell ? 'on' : 'off'}`],
+      ['On switch', on ? 'on: you hear Minty' : 'bypassed: you hear the dry signal'],
+      ['LED', !on ? 'off while bypassed' : `${name}: ${busy ? `compressing, about ${Math.round(gr)} dB` : `${gr > 0.5 ? `only ${Math.round(gr * 10) / 10} dB of` : 'no'} gain reduction`}`],
     ],
   };
 }

@@ -262,13 +262,14 @@ import {
 
   /* -------------------------------------------------------------- pedal */
 
-  var KNOB_X = { sens: 70, dyn: 160, eq: 250 };
+  var HOLD_MS = 600;
+  var KNOB_KEYS = ['sens', 'dyn', 'eq'];
 
   function drawPedal(fig) {
     var st = fig._state;
     each(fig.querySelectorAll('[data-knob]'), function (g) {
       var k = g.getAttribute('data-knob');
-      g.setAttribute('transform', 'rotate(' + (-135 + 270 * st[k]).toFixed(1) + ' ' + KNOB_X[k] + ' 78)');
+      g.setAttribute('transform', 'rotate(' + (-135 + 270 * st[k]).toFixed(1) + ' ' + g.getAttribute('data-cx') + ' ' + g.getAttribute('data-cy') + ')');
     });
     if (!fig._data) return;
     var ps = pedalState(fig._data, st);
@@ -277,13 +278,112 @@ import {
     if (led) led.setAttribute('fill', ps.led.hex);
     if (glow) {
       glow.setAttribute('fill', ps.led.hex);
-      glow.setAttribute('opacity', ps.led.busy ? '0.35' : '0');
+      glow.setAttribute('opacity', ps.led.busy ? '0.55' : '0');
     }
     ps.lines.forEach(function (l) {
       var dd = fig.querySelector('[data-line="' + l[0] + '"]');
       if (dd) dd.textContent = l[1];
     });
+    // A screen reader hears what a knob does, not just where it is.
+    KNOB_KEYS.forEach(function (k, i) {
+      var input = fig.querySelector('input[data-key="' + k + '"]');
+      if (input) input.setAttribute('aria-valuetext', Number(st[k]).toFixed(2) + ': ' + ps.lines[i][1]);
+    });
+    var on = fig.querySelector('[data-switch="on"]');
+    if (on) on.setAttribute('aria-pressed', st.on === false ? 'false' : 'true');
     return ps;
+  }
+
+  /** Set a knob's input as if it had been moved, so every listener agrees. */
+  function setKnob(input, v) {
+    var step = Number(input.step) || 0.01;
+    var clamped = Math.max(Number(input.min), Math.min(Number(input.max), Math.round(v / step) * step));
+    if (Number(input.value) === clamped) return;
+    input.value = String(clamped);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  /**
+   * Dragging a knob: up or right turns it clockwise, about 160 px for the
+   * whole sweep, the way most plugin knobs behave. The grip sits over the
+   * range input, so the input keeps the focus and the keyboard.
+   */
+  function wireKnob(fig, grip) {
+    var input = fig.querySelector('input[data-key="' + grip.getAttribute('data-grip') + '"]');
+    if (!input) return;
+    var drag = null;
+    grip.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      input.focus({ preventScroll: true });
+      drag = { x: e.clientX, y: e.clientY, v: Number(input.value) };
+      grip.setPointerCapture(e.pointerId);
+      grip.classList.add('is-dragging');
+    });
+    grip.addEventListener('pointermove', function (e) {
+      if (!drag) return;
+      setKnob(input, drag.v + ((drag.y - e.clientY) + (e.clientX - drag.x)) / 160);
+    });
+    function end() { drag = null; grip.classList.remove('is-dragging'); }
+    grip.addEventListener('pointerup', end);
+    grip.addEventListener('pointercancel', end);
+    // Double-click returns a knob to noon, like a real pot's centre detent would.
+    grip.addEventListener('dblclick', function () { setKnob(input, 0.5); });
+  }
+
+  /**
+   * The left switch knows a press from a hold, as the Endless does. Pointer
+   * and keyboard both time the hold; a click with neither (a screen reader
+   * activating it) is a press, and the hold has its own button beside it.
+   */
+  function wireSwitch(btn, press, hold) {
+    var fig = btn.closest('[data-mfig]');
+    var cap = fig && fig.querySelector('[data-cap="left"]');
+    var timer = null;
+    var active = false;
+    // The click a browser fires after a pointer or key release arrives in the
+    // same task as the release, so a flag cleared on the next tick catches
+    // exactly that click and never a later one from a screen reader.
+    var swallow = false;
+    function down() {
+      if (active) return;
+      active = true;
+      if (cap) cap.classList.add('is-down');
+      timer = setTimeout(function () { timer = null; hold(); }, HOLD_MS);
+    }
+    function up(cancel) {
+      if (!active) return;
+      active = false;
+      if (cap) cap.classList.remove('is-down');
+      swallow = true;
+      setTimeout(function () { swallow = false; }, 0);
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+        if (!cancel) press();
+      }
+    }
+    btn.addEventListener('pointerdown', function (e) { if (e.button === 0) down(); });
+    btn.addEventListener('pointerup', function () { up(false); });
+    btn.addEventListener('pointercancel', function () { up(true); });
+    btn.addEventListener('pointerleave', function () { up(true); });
+    btn.addEventListener('keydown', function (e) {
+      if (e.key !== ' ' && e.key !== 'Enter') return;
+      e.preventDefault();
+      if (!e.repeat) down();
+    });
+    btn.addEventListener('keyup', function (e) {
+      if (e.key !== ' ' && e.key !== 'Enter') return;
+      e.preventDefault();
+      up(false);
+    });
+    btn.addEventListener('blur', function () { up(true); });
+    // A long press on a phone would otherwise open the context menu.
+    btn.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    btn.addEventListener('click', function () {
+      if (active || swallow) return;
+      press();
+    });
   }
 
   function wirePedal(fig) {
@@ -298,26 +398,24 @@ import {
       var ps = drawPedal(fig);
       say(fig, (ps ? ps.lines[3][1] : '') + '. LED ' + (ps ? ps.led.name : ''));
     };
-    var p = fig.querySelector('[data-press]');
+    each(fig.querySelectorAll('[data-grip]'), function (g) { wireKnob(fig, g); });
+    var left = fig.querySelector('[data-switch="left"]');
+    if (left) wireSwitch(left, press, hold);
     var h = fig.querySelector('[data-hold]');
-    if (p) p.addEventListener('click', press);
     if (h) h.addEventListener('click', hold);
-
-    // The drawn footswitch works too: a tap presses, a long press holds,
-    // the way the Endless reports them.
-    var sw = fig.querySelector('[data-switch]');
-    if (sw) {
-      var downAt = 0;
-      var held = null;
-      sw.style.cursor = 'pointer';
-      sw.addEventListener('pointerdown', function () {
-        downAt = Date.now();
-        held = setTimeout(function () { held = null; hold(); }, 600);
+    var on = fig.querySelector('[data-switch="on"]');
+    if (on) {
+      on.addEventListener('click', function () {
+        fig._state.on = fig._state.on === false;
+        var ps = drawPedal(fig);
+        say(fig, ps ? ps.lines[4][1] : '');
       });
-      sw.addEventListener('pointerup', function () {
-        if (held) { clearTimeout(held); held = null; if (Date.now() - downAt < 600) press(); }
-      });
-      sw.addEventListener('pointerleave', function () { if (held) { clearTimeout(held); held = null; } });
+      // The On switch dips too, though it's a plain toggle.
+      var onCap = fig.querySelector('[data-cap="on"]');
+      if (onCap) {
+        on.addEventListener('pointerdown', function () { onCap.classList.add('is-down'); });
+        ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (t) { on.addEventListener(t, function () { onCap.classList.remove('is-down'); }); });
+      }
     }
   }
 

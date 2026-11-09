@@ -26,10 +26,11 @@ import Html from '../Html';
 import { relativeHref, useRoute } from '../../base.js';
 import { lineChart } from '../../lib/minty-charts.js';
 import {
-  CHARACTERS, CHAR_DEFAULT, CURVE_DEFAULT, EQ_DEFAULT, LED, LISTEN_DEFAULT, PEDAL_DEFAULT, SWELL_DEFAULT,
-  charSpec, curveSpec, eqSpec, listenSpec, mapSpec, pedalState, swellSpec, thdSpec, withFormats,
+  CHARACTERS, CHAR_DEFAULT, CURVE_DEFAULT, EQ_DEFAULT, LED, LISTEN_DEFAULT, SWELL_DEFAULT,
+  charSpec, curveSpec, eqSpec, listenSpec, mapSpec, swellSpec, thdSpec, withFormats,
 } from '../../lib/minty-specs.js';
 import { minty, mintyAsset } from '../../minty.js';
+import { Pedal } from './pedal';
 
 const SSR_WIDTH = 640;
 
@@ -245,60 +246,8 @@ export function Listen({ caption }) {
 
 /* ------------------------------------------------------------------ pedal */
 
-const KNOBS = [['sens', 'SENSITIVITY', 70], ['dyn', 'DYNAMICS', 160], ['eq', 'EQ', 250]];
-/** A knob turns 270 degrees, from seven o'clock to five o'clock. */
-const angle = (v) => -135 + 270 * v;
-
-/**
- * A drawing of three knobs, a footswitch and an LED: the whole surface
- * Minty gets. Not a picture of the Endless itself, just its controls.
- */
-export function Pedal({ interactive = true, caption }) {
-  if (!minty) return <Missing />;
-  const st = PEDAL_DEFAULT;
-  const ps = pedalState(minty, st);
-  const route = useRoute();
-  return (
-    <figure className={`mfig mfig--pedal${interactive ? '' : ' mfig--still'}`} data-mfig={interactive ? 'pedal' : undefined} data-state={JSON.stringify(st)} data-src={relativeHref(route, '/minty/data.json')}>
-      <div className="mpedal">
-        <svg className="mpedal__art" viewBox="0 0 320 300" role="img" aria-label="Minty's controls: three knobs, an LED and a footswitch" data-pedal-art="">
-          <rect className="mpedal__body" x="10" y="10" width="300" height="280" rx="18" />
-          {KNOBS.map(([k, name, cx]) => (
-            <g key={k}>
-              <circle className="mpedal__knob" cx={cx} cy="78" r="30" />
-              <g className="mpedal__pointer" data-knob={k} transform={`rotate(${angle(st[k])} ${cx} 78)`}>
-                <line x1={cx} y1="78" x2={cx} y2="54" />
-              </g>
-              <text className="mpedal__name" x={cx} y="132" textAnchor="middle">{name}</text>
-            </g>
-          ))}
-          <circle className="mpedal__led-glow" cx="160" cy="176" r="16" fill={ps.led.hex} opacity={ps.led.busy ? 0.35 : 0} data-led-glow="" />
-          <circle className="mpedal__led" cx="160" cy="176" r="8" fill={ps.led.hex} data-led="" />
-          <circle className="mpedal__switch" cx="160" cy="240" r="26" data-switch="" />
-          <circle className="mpedal__switch-top" cx="160" cy="240" r="18" />
-          <text className="mpedal__brand" x="34" y="266">minty</text>
-        </svg>
-        <dl className="mpedal__read" data-pedal-read="">
-          {ps.lines.map(([k, v]) => <div key={k}><dt>{k}</dt><dd data-line={k}>{v}</dd></div>)}
-        </dl>
-      </div>
-      {interactive && (
-        <div className="mfig__controls" data-controls="" hidden>
-          <Range k="sens" label="SENSITIVITY" value={st.sens} />
-          <Range k="dyn" label="DYNAMICS" value={st.dyn} />
-          <Range k="eq" label="EQ" value={st.eq} />
-          <Range k="level" label="You're playing at" value={st.level} min={-48} max={0} step={1} out={`${st.level} dBFS`} />
-          <div className="mpedal__foot">
-            <button type="button" className="mplay" data-press="">Press: swell on/off</button>
-            <button type="button" className="mplay" data-hold="">Hold: next character</button>
-          </div>
-        </div>
-      )}
-      <p className="visually-hidden" aria-live="polite" data-say="" />
-      {caption && <figcaption className="mfig__cap">{caption}</figcaption>}
-    </figure>
-  );
-}
+// The Endless itself, drawn with its controls laid over it: see pedal.jsx.
+export { Pedal };
 
 /** The LED's colours, as a table of swatches: mode by state. */
 export function LedTable() {

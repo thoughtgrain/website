@@ -35,7 +35,7 @@ export function MintyStudy({ project }) {
           project={project}
           extra={demo ? <Link className="operator-links__a operator-links__a--demo" to={`/projects/${demo.slug}/`}>{demo.title}</Link> : null}
         />
-        <Pedal interactive={false} caption="Everything Minty gets to work with: three knobs, one footswitch that knows a press from a hold, and an LED." />
+        <Pedal interactive={false} caption="The Endless with Minty loaded. Minty gets the three knobs, the LED, and the left footswitch, which knows a press from a hold. The right footswitch is the pedal’s own on and off." />
         <div className="reader__body prose"><project.Body components={mdxComponents} /></div>
       </article>
     </OperatorShell>
