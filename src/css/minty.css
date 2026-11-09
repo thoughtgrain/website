@@ -137,7 +137,6 @@
 .mpedal__art { display: block; width: 100%; height: auto; }
 .mpedal__body { stroke: #d4d1cb; stroke-width: 0.8; }
 .mpedal__jack { stroke: #8d8d8a; stroke-width: 0.6; }
-.mpedal__rings circle { fill: none; stroke: #24302f; stroke-width: 0.45; opacity: 0.7; }
 .mpedal__title { font-family: var(--font-serif); font-size: 27px; fill: #1b2524; }
 .mpedal__name { font-family: var(--font-body); font-weight: 600; font-size: 9.5px; fill: #1b2524; }
 /* The knob's edge carries 3:1 against the face, so the control is findable by more than its shadow. */

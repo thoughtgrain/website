@@ -2,7 +2,7 @@
  * pedal.jsx: the Endless running Minty, drawn to scale.
  *
  * Proportions are measured from a front-on photo of the pedal: the white
- * enclosure, the mint face with its rings, three knobs, the LED top right,
+ * enclosure, the mint face (with a sprig of mint in place of the rings), three knobs, the LED top right,
  * and two footswitches. The left one (*) is the patch's: the SDK sends Minty
  * its press and its hold. The right one (On) is the Endless's own bypass.
  *
@@ -23,6 +23,7 @@
 import { relativeHref, useRoute } from '../../base.js';
 import { PEDAL_DEFAULT, pedalState } from '../../lib/minty-specs.js';
 import { minty } from '../../minty.js';
+import { MintSprig } from './mint-sprig';
 
 // The viewBox leaves room for the jacks that stick out of each side.
 const VB = { x: -10, y: -8, w: 306, h: 478 };
@@ -38,9 +39,7 @@ const KNOBS = [
 const SWITCH_Y = 393;
 const SWITCHES = { left: { cx: 55, label: '*' }, on: { cx: 231, label: 'On' } };
 const LED_AT = { cx: 231, cy: 24 };
-// The rings spread from just above the face's bottom edge, wrapping the name.
-const RING_CENTRE = { cx: 143, cy: 290 };
-const RINGS = Array.from({ length: 34 }, (_, i) => 66 + i * 6.4);
+const FACE = '#c6ece6';
 
 /** A knob turns 270 degrees, from seven o'clock to five o'clock. */
 const angle = (v) => -135 + 270 * v;
@@ -115,7 +114,7 @@ function Footswitch({ id, cx, which }) {
 
 function Drawing({ id, st, ps }) {
   return (
-    <svg className="mpedal__art" viewBox={`${VB.x} ${VB.y} ${VB.w} ${VB.h}`} role="img" aria-label="Drawing of the Endless running Minty: three knobs on a mint face, an LED at the top right, and two footswitches.">
+    <svg className="mpedal__art" viewBox={`${VB.x} ${VB.y} ${VB.w} ${VB.h}`} role="img" aria-label="Drawing of the Endless running Minty: three knobs on a pale mint face with a sprig of mint leaves, an LED at the top right, and two footswitches.">
       <Defs id={id} />
       <Jack id={id} side="left" x={0} y={296} />
       <Jack id={id} side="right" x={BODY.w} y={216} />
@@ -127,17 +126,13 @@ function Drawing({ id, st, ps }) {
       <circle cx={LED_AT.cx} cy={LED_AT.cy} r="11" fill={ps.led.hex} opacity={ps.led.busy ? 0.55 : 0} filter={`url(#${id}-glow)`} data-led-glow="" />
       <circle className="mpedal__led" cx={LED_AT.cx} cy={LED_AT.cy} r="5" fill={ps.led.hex} data-led="" />
 
-      {/* The face: mint, with rings spreading from behind the name. */}
-      <rect x={PANEL.x} y={PANEL.y} width={PANEL.w} height={PANEL.h} rx={PANEL.r} fill="#c6ece6" />
-      <g clipPath={`url(#${id}-panel)`} className="mpedal__rings">
-        {RINGS.map((r) => <circle key={r} cx={RING_CENTRE.cx} cy={RING_CENTRE.cy} r={r} />)}
-      </g>
-      <text className="mpedal__title" x={RING_CENTRE.cx} y={RING_CENTRE.cy - 8} textAnchor="middle">Minty</text>
+      {/* The face: pale mint, with a sprig of the real thing and the name. */}
+      <rect x={PANEL.x} y={PANEL.y} width={PANEL.w} height={PANEL.h} rx={PANEL.r} fill={FACE} />
+      <MintSprig face={FACE} clip={`url(#${id}-panel)`} />
+      <text className="mpedal__title" x="22" y="293">Minty</text>
 
       {KNOBS.map(({ k, name, cx }) => (
         <g key={k}>
-          {/* The rings stop short of each label, as they do on the real face. */}
-          <rect x={cx - name.length * 3.1 - 5} y="128" width={name.length * 6.2 + 10} height="13" fill="#c6ece6" />
           <text className="mpedal__name" x={cx} y="138" textAnchor="middle">{name}</text>
           <circle cx={cx} cy={KNOB_Y} r={KNOB_R} fill={`url(#${id}-knob)`} className="mpedal__knob" filter={`url(#${id}-lift)`} />
           <g data-knob={k} data-cx={cx} data-cy={KNOB_Y} transform={`rotate(${angle(st[k]).toFixed(1)} ${cx} ${KNOB_Y})`}>
