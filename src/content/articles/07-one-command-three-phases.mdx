@@ -1,0 +1,253 @@
+---
+slug: one-command-three-phases
+kind: "Build series"
+series: "Building this site"
+seriesPart: 5
+title: "One command, three phases"
+summary: "How a client build, a server build and a prerender pass fit inside a single `vite build`, the one config key whose position decides whether anything happens at all, and the discovery that the degraded path I'd been carefully designing was the one my site had been shipping all along."
+date: "28 October 2026"
+tag1: "Build series"
+tag2: "Static sites"
+toc:
+  - id: "why-it-has-to-be-one"
+    label: "Why it has to be one"
+  - id: "two-environments"
+    label: "Two environments"
+  - id: "the-prerender"
+    label: "The prerender"
+  - id: "the-key-that-has-to-be-top-level"
+    label: "The key that has to be top-level"
+  - id: "designing-the-failure"
+    label: "Designing the failure"
+  - id: "the-degraded-path-was-production"
+    label: "The degraded path was production"
+  - id: "prerendering-without-buildapp"
+    label: "Prerendering without buildApp"
+  - id: "reproducing-the-host"
+    label: "Reproducing the host"
+  - id: "failing-softly"
+    label: "Failing softly"
+---
+
+<Dropcap text="For a while the build was three commands chained with &&. It worked perfectly on my machine and did nothing at all on CodePen, which runs the standard one and nothing else." />
+
+## Why it has to be one
+
+The old `build` script:
+
+```
+vite build && vite build --ssr app/entry-server.jsx --outDir .ssr && node prerender.mjs
+```
+
+Client bundle, server bundle, then a Node script to stitch them together. Three invocations, two of them with flags, one of them not Vite at all.
+
+That's fine when you control the command. It stops being fine the moment something else builds your project: a CI template, a hosted builder, anything that runs `vite build` and nothing else. All it gets is the first third, which is a folder of pages with empty divs in them.
+
+So it all had to move inside one `vite build`.
+
+<BuildStepper />
+
+## Two environments
+
+Vite's Environment API is the thing that makes this possible rather than hacky. The config declares both builds:
+
+```js
+environments: {
+  ssr: { build: { ssr: 'src/app/entry-server', outDir: '.ssr' } },
+},
+builder: {
+  sharedConfigBuild: true,
+  async buildApp(builder) {
+    const ssr = await builder.build(builder.environments.ssr);
+    await builder.build(builder.environments.client);
+    await prerender(routes, entryFileOf(ssr));
+  },
+},
+```
+
+Defining `builder` at all is what makes a plain `vite build` build both. Vite picks the Environment API path when the config has one.
+
+`sharedConfigBuild: true` is there for an unglamorous reason: without it Vite resolves the config once per environment, so the content got read, and every generated entry deleted and rewritten, three times per build. Harmless, but deleting files three times as often as necessary is not a habit worth keeping.
+
+## The prerender
+
+The last step reads the finished client HTML off disk, runs each route through the SSR bundle, and injects the result:
+
+```js
+const filled = shell.replace(
+  /(<div id="root"[^>]*>)(<\/div>)/,
+  (_, open, close) => open + render(route, base) + close,
+);
+```
+
+It has to come after the client build rather than live in a plugin hook, because it needs the version of the HTML that has the asset links in it, and that only exists once every other hook has run.
+
+One small thing I got right by accident: it takes the SSR entry's filename from the build result rather than hardcoding it. Vite names it `.js` or `.mjs` depending on the nearest `package.json`, and that package.json later changed. Nothing broke, because nothing was asserting the name.
+
+## The key that has to be top-level
+
+Then the build succeeded on CodePen and every page was white.
+
+Not a rendering failure. *No bundle at all*. The output had every HTML file, a copied-through source tree, and no `assets/` directory. The HTML was byte-for-byte the shell, so what reached the browser was:
+
+```js
+import { StrictMode } from 'react';   // bare specifier, nothing to resolve it
+import App from './App';               // extensionless, not fetchable
+import '../css/tokens.css';            // not a module
+```
+
+All perfectly fine for a bundler. All impossible for a browser.
+
+The cause was one key in the wrong place. I'd declared the inputs here:
+
+```js
+environments: { client: { build: { rolldownOptions: { input } } } }
+```
+
+A build driven through Vite's legacy path rather than the Environment API builder never looks there. It reads top-level `build`, found nothing to bundle, and emitted nothing.
+
+## Designing the failure
+
+Moving `build` to the top level fixes that case, and the client environment inherits it, so the good path is unchanged.
+
+But the real lesson was about the *shape* of the failure, not the fix. So I started testing the degraded path deliberately: build with the `builder` key removed, which simulates a host that doesn't support the Environment API, and check what comes out.
+
+| | before | after |
+| --- | --- | --- |
+| HTML files | all, unprocessed | all, bundled |
+| hashed assets | 0 | 3 |
+| a page three levels deep | white | renders |
+
+Unprerendered and client-rendered rather than static. Degraded, but *working*. A build that can fail should fail into something usable, and mine had been failing into a blank screen with a zero exit code, which is the worst of both.
+
+I was quite pleased with that for about a day.
+
+## The degraded path was production
+
+Then I exported the deployed Pen and read it properly, and the degraded path wasn't a hypothetical I was defending against. It was what my site had been doing on every single build.
+
+Fifty-one pages, all correctly bundled, every asset link right. No `.ssr/` directory anywhere, and this in every one of them:
+
+```html
+<div id="root" data-route="/about/" data-base="../"></div>
+```
+
+Empty. 1,261 bytes where the same page built locally is 9,041. CodePen drives Vite through its legacy path, which means `buildApp` is never called, which means the SSR build never happens and the prerender pass never fires. It had never fired. The site looked perfect in a browser, because React filled those divs in on load, and looked like nothing whatsoever to a crawler, a link preview, or a reader with JavaScript off.
+
+Which is the entire premise of the series. I'd written four posts about putting the words in the HTML while shipping a site that didn't.
+
+<PullquoteNoCite text="Testing the degraded path told me what it produced. It didn't tell me I was living in it." />
+
+The thing that hid it is worth naming: every check I had was a check on *my* build. The output was correct every time I looked, because I was looking at the artefact from the command I control, not the one the host runs.
+
+## Prerendering without buildApp
+
+The fix is to stop making prerendering contingent on the host's choice of build path.
+
+`buildApp` stays, because when it's available it's the right mechanism and the sequencing is explicit. But the same three steps are now reachable from an ordinary plugin hook:
+
+```js
+{
+  name: 'prerender-fallback',
+  apply: 'build',
+  applyToEnvironment: (env) => env.name !== 'ssr',
+  async closeBundle() {
+    if (usingBuilder) return;
+    await buildSsrAndPrerender(routes, outDir);
+  },
+}
+```
+
+`usingBuilder` is set at the top of `buildApp`, which runs before any environment is built, so when the good path is in play the fallback sees the flag and stands down. No double render.
+
+Two details worth getting right. The nested SSR build runs with `configFile: false` and an explicit plugin list, because re-entering this config would re-read all the content and rewrite every entry file in the middle of a build that was already consuming them. And the output directory comes from the resolved config rather than the constant at the top of the file, because a host that merges its own build options in may well have moved it. CodePen renames the hashed assets, so assuming it left everything else alone seemed unwise.
+
+The result, with `builder` and `environments` both stripped out:
+
+| | before the fallback | after |
+| --- | --- | --- |
+| routes built | 51 | 51 |
+| prerendered | 0 | **51** |
+| empty `#root` | 51 | **0** |
+| `about/index.html` | 1,261 bytes | **9,041 bytes** |
+
+Then I shipped it and the host's build failed outright:
+
+```
+Rolldown failed to resolve import "react-dom/server"
+```
+
+`configFile: false` buys isolation, and isolation means the nested build inherits nothing: not the host's resolver settings, not mine. My first guess was conditional exports. `react-dom/server` has branches for node, browser, workerd, deno and edge-light, and a resolver applying none of those conditions matches no branch at all, so I switched the entry to `react-dom/server.node`, which is conditioned only on `default`.
+
+That failed identically. Which was the useful result, because it ruled out the explanation I liked: it isn't the conditions. The entire server family is unreachable by specifier on that host, while `react` and `react-dom/client` resolve fine, because the client bundle contains three hundred and fifty kilobytes of React and a bundler cannot bundle what it cannot read.
+
+So the package is on disk and I was asking the wrong question. Instead of asking the resolver for a subpath, ask Node where the package lives and then point at the file inside it:
+
+```js
+const dir = path.dirname(require.resolve('react-dom/package.json'));
+const entry = path.join(dir, 'server.node.js');
+```
+
+`server.node.js` sits at the package root next to `index.js`. Once the directory is known there is nothing left to resolve, and an alias pins both specifiers to that absolute path. It's less elegant than a correct import and it works on a machine whose resolver I can't inspect, which is the trade this whole project keeps making.
+
+<MarginaliaPin text="A dead end that eliminates a hypothesis is worth more than a fix you can't explain." rotate="2" />
+
+One wrong turn on the way, worth recording. `react-dom/server.browser` is also unconditional, and I tried it first. It renders every page, prints the summary, and then never exits. Its scheduler drives work through a `MessageChannel`, which in Node is an open handle that nothing closes. The markup is byte-for-byte identical; the process simply doesn't come back. A hang is a worse failure than a crash, because nothing tells you it happened.
+
+Fixing that one bought exactly one error's worth of progress. Next the host couldn't resolve `react` either, from a file that had imported it perfectly happily for months. Which finally made the shape of it obvious: the nested build resolves *no* bare specifiers at all. It was never a quirk of one package. `configFile: false` means none of the host's resolver setup comes along, and the host supplies React to the client build through its own config rather than through a `node_modules` this build can see.
+
+So every bare import the server graph needs is now pinned to an absolute path the same way. Anchored regexes, not plain strings, because a string alias of `react` also prefix-matches `react/jsx-runtime` and would rewrite it to `.../react/index.js/jsx-runtime`.
+
+And then, with everything resolving, it rendered nothing and said:
+
+```
+React is not defined
+```
+
+The host compiles the JSX out before Vite starts, using the *classic* runtime. So what the build actually receives is not my source at all. It's `.js` full of `React.createElement(...)`, with no import anywhere, because locally the automatic runtime means no file ever needs one. Their client build has something that supplies that binding. The nested one didn't. A plugin adds the import where it's missing, and does nothing at all on a machine using the automatic runtime, since nothing there mentions `React`.
+
+## Reproducing the host
+
+Four rounds of this were invisible locally and fatal there, and every one cost an upload, a build, and a report read back by hand. The fix I should have reached for first was not any of those patches. It was making the failure happen where I could see it.
+
+The two differences that matter are both reproducible: compile the JSX out with the classic runtime, then build with `builder` and `environments` deleted so `buildApp` can't be called. Thirty lines, against a throwaway copy.
+
+The first time I ran it, it failed with `React is not defined` before I'd uploaded anything. That's the whole return on it. Every bug in this post was reproducible all along; I just hadn't spent the half hour to find out.
+
+<PullquoteNoCite text="A bug you cannot reproduce is not a hard bug. It is a bug you have not yet paid for." />
+
+Babel goes into the throwaway copy rather than into `package.json`, because that file is something the host reads and installs from, and a local test tool is not its business. The one thing that caught me: `npm install` prunes anything not in `package.json`, so installing Babel after the toolchain silently removed Vite again.
+
+It paid for itself a second time almost immediately. The host scans the project for npm imports and writes an esm.sh importmap into every page, and it finds `node-loader.js`, which parses frontmatter with `yaml`. So fifty-one pages shipped a line offering the browser a YAML parser, for a package that only ever runs in Node and whose work is finished before a page exists. Harmless, since nothing imports it and an importmap is a lookup table rather than a preload, but wrong in a way worth fixing.
+
+My first instinct was to strip it from the built pages rather than touch the source, on the reasoning that whatever writes that importmap is plausibly the same thing deciding what gets installed, and trading a working build for a few hundred bytes is a poor deal. So the prerender pass learned to drop importmap entries that no emitted module imports.
+
+It didn't work, and the first version didn't work twice over, which is the useful part.
+
+The first version decided what was imported by scanning every `.js` file in the output directory. That sounds equivalent to asking what the pages import and isn't: the host copies the project's own files into its output, so `node-loader.js` sits in there beside the bundle with its `yaml` import intact, and the scan concluded the browser needed a YAML parser. The thing being pruned was the evidence for keeping it. Starting instead from what the pages actually reference fixed that, and the map still arrived.
+
+Which it was always going to, for a reason the build report had been telling me for two rounds. It records the size of `index.html` at the moment the build ends, and it said **8,427 bytes**. The same page built locally, adjusted for the host's shorter asset filenames, is 8,427 bytes exactly. An importmap block is 144. So at the moment my build finished, there wasn't one: the host injects it afterwards, and no pass inside the build can see a thing that doesn't exist yet.
+
+I had written that number into the report myself, specifically so a disagreement between the build and the browser would be visible, and then spent two rounds not reading it.
+
+<PullquoteNoCite text="I built the instrument, then ignored what it said twice." />
+
+So the hundred lines of pruning are gone, because code that provably cannot run is worse than no code, and the real fix is the one I had talked myself out of: don't write an import statement the scanner can find. `createRequire` loads the parser at build time, `yaml` stays in devDependencies so it is still installed, and the only thing that changes is what a tool reading the source sees. The comment explaining it carefully avoids spelling out the import, because the scanner reads source and a comment is source.
+
+## Failing softly
+
+The real lesson from that round, though, is the one I should have applied from the start: a build step I added should never be able to take the deploy down. The fallback is wrapped now.
+
+```js
+try {
+  await buildSsrAndPrerender(routes, outDir);
+} catch (err) {
+  this.warn(`[prerender] skipped: ${err.message}`);
+}
+```
+
+Prerendering is an improvement on a site that already works. If it can't run, the right outcome is fifty-one client-rendered pages and a warning in the log, which is where this project sat for months anyway. For a day and a half my attempt to fix the empty pages meant there were no pages.
+
+Same numbers the Environment API path produces, from a build that can't reach `buildApp`. The client bundle is byte-identical either way, which is how I know the fallback only adds the missing phase rather than quietly changing the rest.
+
+The broader lesson is less about Vite than about what I was verifying. A build that behaves differently on the host than on my machine is the normal case, not the exotic one, and "it works when I build it" was never evidence about the thing people actually load.

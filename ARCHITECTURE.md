@@ -33,91 +33,146 @@ components.
 
 ## 2. Repository layout
 
+A Vite multi-page app. The repo root is the Vite root, which is also what gets
+uploaded to a Pen: the generated entries at the top level, `.codepen/` beside
+them, source under `src/`.
+
 ```
 website/
-  vite.config.js               scans content, generates entries, emits feeds
-  prerender.mjs                renders each route to static HTML
+  vite.config.js               the entire build — see §3
   package.json
-  index.html                   generated — the home entry
-
-  app/
-    main.jsx                   mounts one page; imports the CSS in cascade order
-    App.jsx                    the shell: nav, drawer, footer
-    routes.jsx                 route string → page component
-    content.js                 import.meta.glob → parsed collections
-    base.js, Link.jsx          depth-prefix handling for relative links
-    enhancers.js               re-exports the src/js progressive enhancers
-    entry-server.jsx           the SSR entry prerender.mjs calls
-    lib/
-      frontmatter.js           YAML-lite parser
-      markdown.js              markdown → HTML
-      content-model.js         parse + derive + the route list
-      feeds.js                 the eleven Atom feeds
-    components/                Html, FeedLink, NoteList, TagFilter
-    pages/                     one component per page type
+  .codepen/pen.config.json     which CodePen blocks the Pen runs
+  index.html                   generated — one per route, see §3.1
+  dist/                        build output, gitignored
 
   src/
+    app/
+      main.jsx                 mounts one page; imports the CSS in cascade order
+      App.jsx                  the shell: nav, drawer, footer
+      routes.jsx               route string → page component
+      base.js, Link.jsx        depth-prefix handling for relative links
+      content.js               import.meta.glob → parsed collections
+      enhancers.js             re-exports the js/ progressive enhancers
+      entry-server.jsx         the SSR entry the prerender step calls
+      lib/
+        content-model.js       derive the collections + the route list
+        feeds.js               the eleven Atom feeds
+        node-loader.js         the same content map, read from disk
+      components/              Html, FeedLink, NoteList, TagFilter
+                               mdx.jsx — the components content may use
+      pages/                   one component per page type
+
     content/                   the site: .mdx entries + JSON config
     css/                       tokens.css, kit.css, site.css
     js/                        progressive enhancers
-    layouts/                   the OLD templates — kept as reference only,
-                               except styles.html, which /styles/ still renders
+    assets/                    product images
+    feed-style.xml             XSLT that renders a feed as a readable page
+    layouts/                   the OLD templates — reference only, except
+                               styles.html, which /styles/ still renders
 
   .github/workflows/pages.yml  npm ci && npm run build → Pages
 ```
 
-Generated at build time and gitignored: `index.html`, one directory per route at
-the repo root, `.generated-routes.json`, `dist/`, `.ssr/`.
+Generated at build time and gitignored: `index.html`, one directory per route
+at the root, `.generated-routes.json`, `.ssr/`, `dist/`.
 
 ---
 
 ## 3. The build pipeline
 
-Three passes, wired together by `npm run build`.
+One command, `vite build`, doing five things — because a bare `vite build` is
+all CodePen runs. Vite 8's Environment API is what makes that possible.
 
-### 3.1 Config — `vite.config.js`
+All of it lives in `vite.config.js`.
 
-Runs in Node. `readdirSync` reads every `.mdx` and `.json` under `src/content/`
-into a `{ path: rawText }` map, `buildContent` derives the collections, and
-`routesFor` produces the route list. Then one HTML entry is written per route, at
-the path it will be served from, and handed to `rollupOptions.input`.
+### 3.1 Config time — content and entries
 
-Each entry is the same shell. The only things that differ are `data-route`,
-which tells the app which page it is, and `data-base`, the prefix links need to
-climb back to the root.
+Runs in Node, before any bundling. `readdirSync` reads every `.mdx` and `.json`
+under `src/content/`, `buildContent` derives the collections, and `routesFor`
+produces the route list. Then one HTML entry is written per route, at the path
+it will be served from, and handed to `rolldownOptions.input`.
+
+Fifty entries at the root is also what CodePen's own entry discovery expects —
+its config is a recursive glob for `.html`. There is no single-page shell and
+no router: the filesystem resolves which page you asked for, and each entry
+carries `data-route` to tell the app which one it is.
+
+The module script's `src` is **relative** to each entry's depth — `./` at the
+root, `../../../` three levels down. A root-absolute path works under a plain
+`vite build` and not under CodePen's, which doesn't map `/` to the Vite root.
+That one mismatch produced fifty identical `Failed to resolve /app/main.jsx`
+errors.
 
 Entry generation writes directories at the repo root, so it refuses any route
-whose first segment collides with a project directory and removes only what it
-recorded creating. That guard caught a real collision on its first run: the
-output directory was `build/` and the build-series posts route at `/build/<slug>/`.
-Output is `dist/`.
+whose first segment collides with a project directory, and removes only what it
+recorded creating. That guard caught a real collision on its first run.
 
-### 3.2 Client build
+### 3.2 The two environments
 
-Vite builds all fifty entries, bundling `app/` and the CSS. A plugin emits the
-eleven Atom feeds — they need real files at real URLs, which no amount of client
-rendering provides.
+```js
+environments: {
+  client: { build: { outDir: 'dist', rolldownOptions: { input } } },
+  ssr:    { build: { ssr: 'src/app/entry-server.jsx', outDir: '.ssr' } },
+}
+```
 
-### 3.3 Prerender — `prerender.mjs`
+`builder.buildApp` sequences them: SSR first, then the client, then the
+prerender. Defining `builder` at all is what makes a plain `vite build` build
+both.
 
-A second Vite pass builds `app/entry-server.jsx` for Node, then this walks the
-routes, calls `renderToString` for each, and injects the markup into that route's
-shell. The words end up in the HTML: the site works with JS disabled, crawlers
-and link previews see real content, and the output is genuinely static. React
-hydrates rather than re-rendering.
+### 3.3 Prerender
 
-### 3.4 One content model, two loaders
+With the SSR bundle built and the client HTML on disk, `prerender()` walks the
+routes, calls `renderToString` for each, and injects the markup into that
+route's shell. The words end up in the HTML: the site works with JS disabled,
+crawlers and link previews see real content, and the output is genuinely
+static — fifty files you can drop on any host, with no rewrite rules.
 
-`app/lib/content-model.js` takes a `{ path: rawText }` map and returns the
-collections and the route list. It does no I/O at all, which is the point:
+### 3.4 The feeds
 
-- `vite.config.js` and `prerender.mjs` fill that map with `readdirSync`;
-- `app/content.js` fills the same shape with `import.meta.glob`.
+A Vite plugin emits twenty-two feeds at build time from the same content model
+the pages render: each of the eleven sections as Atom (`feed.xml`) and as JSON
+Feed 1.1 (`feed.json`).
 
-Both call `buildContent`, so the routes the config generates and the pages the
-app renders cannot drift apart. The previous build had two different ways of
-answering "what changed" and lost three rounds of debugging to the gap between
-them.
+Both serialisers share `orderEntries`, so the two formats can't drift into
+listing different items or a different order.
+
+The Atom feeds carry an XSLT stylesheet so a browser renders them as a readable
+page. It lives at `src/feed-style.xml` — `.xml` rather than `.xsl` because
+CodePen won't accept that extension, and the extension is irrelevant to how
+browsers resolve it. The plugin emits a copy beside every `feed.xml` rather than
+one shared copy, because the `<link>` and `<a href>` the transform produces
+resolve against the *feed's* URL, not the stylesheet's, so the paths inside have
+to match the depth of the feed that used it.
+
+Two things about it are worth knowing. A browser applies it only when the feed
+is served as `text/xml` or `application/xml`; `application/atom+xml` is ignored.
+And JSON Feed has no equivalent — JSON cannot carry a stylesheet, so those feeds
+render raw whatever we do.
+
+That's why `node-loader.js` exists. The browser fills the content map with
+`import.meta.glob`; the build fills the same shape with `readdirSync`, because
+inside the config there's no module graph to glob. Both hand it to the same
+`buildContent`, which is what stops the feeds and the pages describing different
+sites.
+
+### 3.5 One content model, two loaders
+
+`src/app/lib/content-model.js` takes a `{ path: module }` map and returns the
+collections and the route list. It does no I/O at all — no `fs`, no Node
+builtins, nothing that assumes where it's running. That's what lets the same
+module serve both loaders.
+
+Each value is a compiled MDX module: `{ frontmatter, default }`, the parsed
+YAML and a React component for the body. The model never touches the body —
+there is no HTML string in the middle any more, so nothing here can transform,
+split or re-parse it. It only derives from metadata.
+
+Both loaders parse frontmatter with the **same** YAML engine. The browser gets
+it from `remark-mdx-frontmatter`; `node-loader.js` calls `yaml` directly. The
+previous arrangement had two hand-written parsers that agreed on most fields
+and disagreed on types, which is the kind of drift that only surfaces in
+production.
 
 ---
 
@@ -149,14 +204,22 @@ Every `.mdx` file opens with YAML between two `---` lines. The parser handles st
 
 ### 4.2 MDX components
 
-Four custom tags are recognised in article bodies. Each maps to `src/components/<Name>.html` with `{{prop}}` placeholders.
+Five components are available in content bodies. They're real React components
+in `src/app/components/mdx.jsx`, passed to every body as its `components` prop.
 
 - `<Dropcap text="…" />` — display-typeface initial on the opening paragraph.
 - `<Pullquote text="…" cite="…" />` — bordered quote with attribution.
 - `<PullquoteNoCite text="…" />` — same, no attribution.
-- `<MarginaliaPin text="…" />` — small note in the right gutter on wide viewports.
+- `<MarginaliaPin text="…" rotate="…" />` — note in the right gutter on wide viewports.
+- `<Footnote id="…" />` — superscript reference.
 
-To add a new component: drop `src/components/<Name>.html` with the placeholders, then reference it as `<Name prop="value" />` in MDX. No code change needed — `lib/parse/components.js` loads whatever is in that directory.
+To add one: export it from `mdx.jsx` and add it to `mdxComponents`. MDX throws
+at render for any tag it can't resolve — `_missingMdxReference("Name", true)` —
+so a typo in content fails loudly rather than silently rendering as text.
+
+`text` arrives as a string and React escapes it. The old `{{prop}}` templates
+interpolated raw, so a quote could contain `<em>`; none did, and markdown
+inside the tag is the better way to do it now.
 
 ### 4.3 Notes can be text or image
 
@@ -197,26 +260,32 @@ transcription risk for no gain.
 
 ---
 
-## 7. The markdown parser
+## 7. Markdown and MDX
 
-`parseMarkdown(md)` is a line-by-line state machine. Handles:
+Bodies are compiled by `@mdx-js/rollup`, so content gets CommonMark plus JSX:
+ordered lists, nested lists, tables and images all work, which the previous
+hand-written parser didn't support.
 
-- Headings (`# … ######`) — `id` slugified from the text so TOC anchors work.
-- Paragraphs.
-- Unordered lists (`-` or `*`).
-- Blockquotes (`> `).
-- Horizontal rules (`---`).
-- Fenced code blocks (` ``` `), with optional language tag. Content is HTML-escaped before being emitted inside `<pre><code class="language-xxx">…</code></pre>`.
-- Inline: `**bold**`, `*italic*`, `` `code` ``, `[link](url)`.
-- Raw HTML / JSX-style component tags at the start of a line — emitted verbatim so block components don't get wrapped in `<p>`.
+That parser is gone, and with it a bug worth recording. It emitted inline code
+without escaping `<`, so a span like `` `/essays/<slug>/` `` put a real
+`<slug>` element into the DOM and the reader saw `/essays//`. Seven such ghost
+elements existed on one essay page alone. MDX escapes correctly.
 
-What it doesn't handle: ordered lists, nested lists, tables, images, footnotes (those use `<Footnote>` component shorthand instead), reference-style links.
+Three plugins make it work, and all three are load-bearing:
+
+- `remark-frontmatter` — recognises the `---` block as frontmatter rather than
+  a thematic break.
+- `remark-mdx-frontmatter` — exports it as `frontmatter` rather than leaving
+  the slug, title and toc to render as visible body text.
+- `@vitejs/plugin-react`, after both, because by then it's JSX.
 
 ---
 
 ## 8. CSS architecture
 
-Three files, concatenated into `dist/css/style.css` at build time.
+Three files, imported in cascade order by `app/main.jsx` and bundled into one
+stylesheet. Every page links the same one — including `/styles/`, so the
+specimen is rendered by exactly the CSS that renders the real pages.
 
 ### 8.1 `tokens.css` — foundations
 
@@ -254,7 +323,16 @@ Two fixed full-viewport layers behind everything, `body::before` (broad grain) a
 
 ## 9. JavaScript
 
-Each file is wrapped in an IIFE, attaches its listeners on `DOMContentLoaded`, and bails early if the elements it expects aren't on the page. All files are concatenated into `dist/js/main.js` at build time.
+Each file is wrapped in an IIFE and bails early if the elements it expects
+aren't on the page. `app/enhancers.js` imports them all, and `app/main.jsx`
+imports that *after* the first React render, so they enhance markup that already
+exists.
+
+That import order is why they call `ready()` from `js/ready.js` rather than
+listening for `DOMContentLoaded` directly: by the time a dynamically imported
+module runs, that event has long since fired, and a listener registered for it
+never runs at all. Every control on the site was silently dead for exactly this
+reason until it was caught.
 
 ### 9.1 `theme.js`
 
@@ -344,13 +422,32 @@ Build series posts (`kind: "Build series"`) all set `series: "Building this site
 
 ## 12. Deploy
 
-`.github/workflows/pages.yml` runs on push to `main` and `claude/**`:
-`npm ci`, then `npm run build`, then uploads `dist/` to Pages. `npm ci` rather
-than `npm install` so the lockfile is authoritative and CI can't quietly build a
-different dependency tree than local.
+### GitHub Pages
 
-`dist/` is not committed. It was, under the old generator, which meant every
-commit carried a diff of the built site.
+`.github/workflows/pages.yml` runs on push to `main` and `claude/**`:
+`npm ci`, then `npm run build`, then uploads `dist/` to Pages. Node 22 — Vite 8
+needs 20.19+ or 22.12+.
+
+Every URL in the output is relative, assets included (`base: './'`), so it works
+from a domain root, a project-pages subpath or a `file://` URL without change.
+
+### CodePen
+
+Upload `vite.config.js`, `package.json`, `.codepen/pen.config.json` and `src/`
+to a Pen created from the React/Vite template — not the whole repo. The
+generated entries sit at the top level, which is where the block's recursive
+`.html` discovery looks, but they don't need uploading: the config writes them.
+
+`package.json` declares three `devDependencies` and nothing else. CodePen
+installs `devDependencies` into `node_modules` for the build and turns
+`dependencies` into an `esm.sh` importmap for the browser — so the MDX packages
+`vite.config.js` imports have to be the former, not the latter.
+
+The bundler isn't declared at all: `vite` and `rollup` are the only two packages
+that pull `fsevents`, Yarn rewrites that to a `patch:` source, and `patch:` has
+no esm.sh URL. The block supplies vite, the React plugin, react and react-dom;
+`npm run setup` installs them locally and in CI instead. See
+`docs/GETTING_STARTED.md` for the full table.
 
 ---
 

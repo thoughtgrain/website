@@ -1,4 +1,4 @@
-/* Drawer dialog — full-screen menu */
+/* Drawer dialog, full-screen menu */
 import { ready } from './ready.js';
 
 (function () {
@@ -18,7 +18,7 @@ import { ready } from './ready.js';
     //
     // Walk the dialog's OWN siblings, not document.body's children: the shell
     // is a React tree under #root now, so the dialog's siblings are the nav,
-    // the page and the footer, while body's only child is #root — which
+    // the page and the footer, while body's only child is #root, which
     // contains the dialog, is skipped by the guard below, and would leave
     // nothing marked at all.
     function markBackgroundInert() {

@@ -1,0 +1,8 @@
+{
+  "_comment": "Where the files too big for the site live: OP-XY's screen sprites (built by scripts/opxy-assets.mjs) and Minty's audio renders (built by scripts/minty-data.mjs). `host` is the asset host's root URL; `projects` gives each project's folder under it. A project can instead be a full URL, for one hosted somewhere else. Every value ends with a slash. Until the real host is set, OP-XY's pages fall back to alt text and Minty's player says its audio isn't reachable. The host must support HTTP range requests, or audio can't seek.",
+  "host": "https://assets.example/",
+  "projects": {
+    "opxy": "opxy/",
+    "minty": "minty/"
+  }
+}

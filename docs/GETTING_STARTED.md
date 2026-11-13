@@ -1,22 +1,114 @@
 # Getting started
 
 A walkthrough for filling this site with your own content. The placeholder
-files at `src/content/**` show every supported shape — read alongside this doc.
+files at `src/content/**` show every supported shape, read alongside this doc.
 
 ## Run it
 
 ```sh
 npm install        # once
+npm run setup      # once, installs the bundler, see below
 npm run dev        # dev server with hot reload
 npm run build      # static site → dist/
 npm run preview    # serve the built site
 ```
 
-Requires Node 18+. `npm run build` does three passes: Vite builds the pages,
-a second pass builds a server renderer, and `prerender.mjs` renders each route
-to static HTML. The output in `dist/` is plain files — every route is a real
-`index.html` with the content already in it, so it works with JavaScript
-disabled and can be hosted anywhere that serves static files.
+Requires Node 20.19+ or 22.12+, Vite 8's floor.
+
+`npm run build` is one command doing three things: it builds a server renderer,
+builds the fifty pages, then renders each route into its page. The output in
+`dist/` is plain files, every route is a real `index.html` with the content
+already in it, so it works with JavaScript disabled, needs no rewrite rules, and
+can be hosted anywhere that serves static files.
+
+Content is real MDX, CommonMark plus JSX, so ordered lists, nested lists,
+tables and images all work. The five components content may use are exported
+from `src/app/components/mdx.jsx`.
+
+## Putting it on CodePen
+
+Upload these four things to a Pen made from the React/Vite template:
+
+| Upload | Leave out |
+| --- | --- |
+| `vite.config.js` | `node_modules/`, `dist/`, `.ssr/` |
+| `package.json` | `.generated-routes.json` |
+| `.codepen/pen.config.json` | `.github/`, `docs/`, `ARCHITECTURE.md` |
+| `src/` | `package-lock.json` |
+
+Not the whole repo. The generated route directories are optional, 
+`vite.config.js` writes them at config time, before any bundling.
+
+### How `package.json` is split
+
+CodePen reads the two dependency fields differently, and getting this wrong is
+why the build did nothing for a while:
+
+- **`dependencies`** become an `esm.sh` importmap entry and stay external at
+  runtime. That's for packages the *browser* imports.
+- **`devDependencies`** are installed into `node_modules` for the build. That's
+  for packages `vite.config.js` imports in Node.
+
+`@mdx-js/mdx`, `remark-frontmatter` and `remark-mdx-frontmatter` are all
+imported by the config, so they belong in `devDependencies`. Declared as
+`dependencies` they never resolve, the config throws, and nothing bundles at
+all, which looks like "the markdown isn't compiling" because that's the first
+thing you notice.
+
+### Never write an explicit `.jsx` import
+
+Write `import App from './App'`, not `'./App.jsx'`.
+
+CodePen's babel block compiles every `.jsx` to `.js` before Vite runs, and
+doesn't rewrite the specifiers inside, so an explicit extension ends up pointing
+at a filename that no longer exists:
+
+```
+Could not resolve './App.jsx' in src/app/main.js
+```
+
+Extensionless resolves to `.jsx` here and `.js` there. A literal `.js`
+specifier is *not* the answer, Vite maps `.js` to `.ts`/`.tsx`, never `.jsx`,
+so it breaks the local build instead.
+
+The build refuses to run if one creeps back in, naming the file and line. That
+guard exists because this failure is invisible locally and only shows up after
+an upload.
+
+### Why the bundler isn't declared at all
+
+`vite`, `@vitejs/plugin-react`, `react` and `react-dom` come from the Pen's
+`react-vite-19` block. Declaring them is both unnecessary and actively harmful:
+exactly two packages in the tree pull `fsevents`, and those are `vite` and
+`rollup`. Yarn Berry rewrites `fsevents` to a `patch:` source, which has no
+esm.sh URL, and the build is rejected before it starts:
+
+```
+build-time dependency rejected: fsevents uses unsupported source
+"fsevents@patch:fsevents@npm%3A2.3.3#optional!builtin<compat/fsevents>..."
+```
+
+The template's own manifest declares none of them either. `rollup` used to
+arrive as a peer of `@mdx-js/rollup`, which is why the MDX compile is a small
+inline plugin over `@mdx-js/mdx` instead.
+
+That's what `npm run setup` is for: it installs the toolchain locally and in CI,
+with exact pins, without putting it in the manifest CodePen reads.
+
+**Re-run it after any `npm install`.** Installing anything rewrites
+`node_modules` from the lockfile, and the lockfile doesn't cover the bundler, so
+the next build fails with `vite: not found`. One command fixes it:
+
+```sh
+npm run setup
+```
+
+There used to be a `prebuild` hook doing this automatically. It had to go:
+`package.json` is the file CodePen reads, and a hook that runs `npm i react` on
+the host installs a second React beside the one its block provides, at which
+point every hook call in the app fails and you get a blank page. Convenience
+scripts that mutate the dependency tree don't belong in a manifest someone else
+executes.
 
 Adding content needs none of that detail: drop a file in `src/content/`, and the
 route, the page and the feeds all follow. See `ARCHITECTURE.md` if you want to
@@ -30,7 +122,7 @@ src/
 │  ├─ articles/     essays + studies (kind: Essay or Study in frontmatter)
 │  ├─ notes/        short fragments, grouped by month
 │  ├─ projects/     case studies for things you've made
-│  ├─ reading/      books — currently reading / queued / finished
+│  ├─ reading/      books, currently reading / queued / finished
 │  ├─ music/        albums that mattered
 │  ├─ movies/       a viewing diary
 │  ├─ podcasts/     in rotation
@@ -44,7 +136,7 @@ src/
 ├─ layouts/         html templates with {{var}}, {{#each}}, {{#if}}
 ├─ components/      MDX component templates (Dropcap, Pullquote, MarginaliaPin, Footnote)
 ├─ css/             tokens.css → kit.css → site.css, concatenated into one bundle
-└─ js/              theme, drawer, tag filter, etc. — concatenated into one bundle
+└─ js/              theme, drawer, tag filter, etc., concatenated into one bundle
 ```
 
 ## Add a piece of writing
@@ -79,12 +171,12 @@ pages at `/essays/tag/<slug>/` (and `/studies/tag/<slug>/`) automatically.
 
 ### MDX components
 
-- `<Dropcap text="…" />` — drop cap opener.
-- `<Pullquote text="…" cite="…" />` — pull quote with attribution.
-- `<PullquoteNoCite text="…" />` — pull quote without a cite line.
-- `<MarginaliaPin text="…" rotate="-3" />` — handwritten margin note that floats
+- `<Dropcap text="…" />`: drop cap opener.
+- `<Pullquote text="…" cite="…" />`: pull quote with attribution.
+- `<PullquoteNoCite text="…" />`: pull quote without a cite line.
+- `<MarginaliaPin text="…" rotate="-3" />`: handwritten margin note that floats
   in the right gutter at viewport widths above 1200px.
-- `<Footnote id="1" text="…" />` — inline footnote reference.
+- `<Footnote id="1" text="…" />`: inline footnote reference.
 
 Components are resolved before the markdown parser runs, so they can't be wrapped
 in `<p>` tags accidentally.
@@ -138,7 +230,7 @@ Reading, music, movies, podcasts, and bookshelf each have their own MDX director
 and their own per-kind index page. They also aggregate into `/enjoying/`,
 which paginates at 12 per page.
 
-Frontmatter shapes — see the placeholder files for full examples:
+Frontmatter shapes, see the placeholder files for full examples:
 
 | Kind       | Required fields                                                                |
 |------------|--------------------------------------------------------------------------------|
@@ -153,7 +245,7 @@ render in the order they first appear in the file numbering.
 
 ## Add a product
 
-Products are external links — things you'd recommend, with a hero image, a
+Products are external links, things you'd recommend, with a hero image, a
 short note, and a "Buy from …" button that opens the source page in a new
 tab. They live at `/products/` and `/products/<slug>/`.
 
@@ -174,7 +266,7 @@ Optional longer commentary.
 
 ### How the image works
 
-On every build, `build.js` walks each product MDX file and tries, in order:
+On every build, `Products.jsx` resolves each product’s image and tries, in order:
 
 1. **A cached image on disk.** If `src/assets/products/<slug>.<ext>` already
    exists (committed alongside the rest of the site), use it. Skip the fetch.
@@ -219,9 +311,9 @@ on `/essays/`. Same for studies.
 
 ## Customise the design
 
-- `src/css/tokens.css` — palette (OKLCH), type scale, spacing, motion.
-- `src/css/kit.css` — buttons, tags, cards, inputs.
-- `src/css/site.css` — page-specific blocks.
+- `src/css/tokens.css`: palette (OKLCH), type scale, spacing, motion.
+- `src/css/kit.css`: buttons, tags, cards, inputs.
+- `src/css/site.css`: page-specific blocks.
 
 See `/styles/` (linked from `/colophon/`) for a live specimen of every token and
 component.
@@ -240,23 +332,45 @@ Every section gets its own Atom feed, and the global feed combines them:
 | `/products/feed.xml` | Products |
 | `/reading/feed.xml`, `/music/feed.xml`, `/movies/feed.xml`, `/podcasts/feed.xml`, `/bookshelf/feed.xml` | Each cultural kind |
 
-All feeds reference `/feed.xsl` via an `<?xml-stylesheet?>` processing
-instruction, so opening a feed URL in a browser renders a friendly preview
-(title + description + entry list with summaries) instead of raw XML.
+Each of those is published **twice**, as Atom (`feed.xml`) and as
+[JSON Feed 1.1](https://jsonfeed.org/version/1.1) (`feed.json`), so twenty-two
+files in all. Same entries, same order, same ids; one source serialised two
+ways.
 
-The `<head>` of every page links the global feed via
-`<link rel="alternate" type="application/atom+xml">` for feed-reader
-discovery. The footer RSS link points at the same.
+**The Atom feeds are styled.** Open one in a browser and you get a readable
+page, the site's own type and colour, a subscribe banner with the feed URL, and
+the entry list, rather than raw XML. That's XSLT: `src/feed-style.xml`, copied
+beside every `feed.xml` at build time with its paths fixed for that depth.
+
+It's named `.xml` rather than `.xsl` because CodePen won't accept a `.xsl` file.
+The extension doesn't matter, `<?xml-stylesheet?>` references a URL, and the
+browser decides from the instruction's `type`, not the filename.
+
+**One caveat.** A browser only applies the stylesheet when the feed is served as
+`text/xml` or `application/xml`. Served as `application/atom+xml`, technically
+the more correct type, Chromium shows raw XML and ignores it. Most static hosts
+serve `.xml` as `text/xml` by default, which is why this works, but it's the
+host's call, not ours.
+
+**The JSON feeds are not styled, and can't be.** JSON has no stylesheet
+mechanism, no equivalent of `<?xml-stylesheet?>` exists. A browser shows raw
+JSON, or its own built-in JSON viewer. That's the format's limit, not a gap in
+the build.
+
+The `<head>` of every page links both global feeds via
+`<link rel="alternate">` for feed-reader discovery. The footer RSS link points
+at the Atom one.
 
 The base URL the feed uses for absolute `<link>` and `<id>` values comes
 from `siteUrl` in `site.json`. Set this to your real domain before
-deploying — feed-reader behaviour depends on stable `<id>` values.
+deploying, feed-reader behaviour depends on stable `<id>` values.
 
 ## Deploy
 
-`.github/workflows/pages.yml` runs `node build.js` on every push to `main` (and
-to any `claude/**` branch) and uploads `dist/` to GitHub Pages. The site has a
-single live deploy — whichever branch finished last is what's live.
+`.github/workflows/pages.yml` runs `npm ci && npm run build` on every push to
+`main` (and to any `claude/**` branch) and uploads `src/dist/` to GitHub Pages.
+The site has a single live deploy, whichever branch finished last is what's
+live.
 
 If you don't want feature-branch deploys to clobber `main`, remove
 `'claude/**'` from the workflow's `branches:` list.

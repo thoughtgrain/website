@@ -1,0 +1,243 @@
+/* =========================================================================
+   Minty: the project page, and the figures its essay uses.
+
+   The project page rides on the project shell from operator.css, with
+   `.minty` beside `.operator` on <main>, and takes mint as its accent: the
+   colour Minty's LED shows when it is working.
+
+   The figures carry their own chart colours, so they draw the same wherever
+   they're used: on the project page, or in the essay "Turn Minty's knobs",
+   which keeps the essays' own accent for its text and links. Every chart is
+   drawn on the page's own paper, because these are measurements to read,
+   not a device screen.
+
+   Chart colours were validated with the dataviz palette checks against this
+   site's surfaces: mint and a warm grey, emphasis form (one accent series,
+   the rest context), >= 3:1 on both surfaces, colour-blind separation
+   above 8 in both modes.
+   ========================================================================= */
+
+.operator.minty {
+  --accent: #006b4e;          /* 6.3:1 on the paper, for text and links */
+  --accent-hover: #00563f;
+  --accent-soft: #8fd9be;
+}
+[data-theme="dark"] .operator.minty {
+  --accent: #6fd5b0;          /* 11:1 on the night page */
+  --accent-hover: #9be6ca;
+  --accent-soft: #1f5a47;
+}
+
+.mfig, .mflow, .mcard {
+  --mc-accent: #007756;       /* chart mint, 5.4:1 */
+  --mc-context: #8b857f;      /* chart grey, 3.5:1 */
+  --mc-wash: 0.1;
+  --mc-band: color-mix(in oklch, var(--mc-accent) 6%, transparent);
+  --mc-band-strong: color-mix(in oklch, var(--mc-accent) 12%, transparent);
+}
+[data-theme="dark"] :is(.mfig, .mflow, .mcard) {
+  --mc-accent: #2fa984;       /* 6.7:1 */
+  --mc-context: #75716a;      /* 4.1:1 */
+  --mc-wash: 0.14;
+}
+
+/* ---- The frame every figure shares ---- */
+.mfig { position: relative; margin: var(--s-6) 0 var(--s-7); }
+.mfig__controls {
+  display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: center;
+  padding: 14px 16px; margin-bottom: 12px;
+  border: 1px solid var(--rule); border-radius: 6px;
+  background: var(--bg-sunken);
+}
+.mfig__chart { position: relative; width: 100%; outline-offset: 4px; }
+.mfig__chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+/* What moves on top of a chart (the crosshair, Listen's playhead), in an SVG
+   of the same size laid exactly over it. */
+.mfig__chart .mfig__overlay { position: absolute; inset: 0; height: 100%; pointer-events: none; }
+/* Text inside a figure is figure type, not body copy. These carry a parent
+   class so they hold inside an essay or a project page, whose `.reader p`
+   and `.reader li` would otherwise set them at reading size. */
+.mfig .mfig__readout { font-size: 15px; line-height: 1.5; color: var(--fg); margin: 10px 0 0; max-width: 62ch; }
+.mfig .mfig__note { font-size: 14px; line-height: 1.5; color: var(--fg-muted); margin: 8px 0 0; }
+.mfig__cap { margin-top: 10px; font-size: 14px; line-height: 1.5; color: var(--fg-muted); }
+p.mfig__missing { font-size: 14px; line-height: 1.5; color: var(--fg-muted); padding: 16px; border: 1px dashed var(--rule); border-radius: 6px; }
+
+/* Knobs as range inputs: a label, the slider, the value. */
+.mrange { display: grid; grid-template-columns: auto minmax(120px, 1fr) 5.5em; gap: 10px; align-items: center; flex: 1 1 260px; }
+.mrange__label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--fg-muted); }
+.mrange input { width: 100%; accent-color: var(--mc-accent); margin: 0; }
+.mrange__out { font-family: var(--font-mono); font-size: 12.5px; color: var(--fg); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* One-of-several buttons. */
+.mseg { display: flex; flex-wrap: wrap; gap: 6px; }
+.mseg__btn, .mplay {
+  font-family: var(--font-mono); font-size: 11.5px; line-height: 1;
+  padding: 7px 12px; border-radius: var(--r-pill);
+  border: 1px solid var(--border-strong); background: var(--bg); color: var(--fg);
+  cursor: pointer;
+}
+.mseg__btn:hover, .mplay:hover { border-color: var(--fg-subtle); }
+.mseg__btn[aria-pressed="true"], .mplay[aria-pressed="true"] { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+
+/* Listen: play, the A/B switch and the clock sit on one line, wrapping at phone width. */
+.mlisten__transport { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; flex: 1 1 100%; }
+.mplay { min-width: 5.5em; }
+.mlisten__time { font-family: var(--font-mono); font-size: 12.5px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+
+/* ---- Chart marks (class names come from lib/minty-charts.js) ---- */
+.mchart text { font-family: var(--font-mono); }
+.mgrid { stroke: var(--rule); stroke-width: 1; }
+.mtick { font-size: 11px; fill: var(--fg-subtle); }
+.maxis { font-size: 11px; fill: var(--fg-muted); }
+.mline { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.mline.mc-accent { stroke: var(--mc-accent); }
+.mline.mc-context { stroke: var(--mc-context); }
+.marea { stroke: none; }
+.marea.mc-accent { fill: var(--mc-accent); fill-opacity: var(--mc-wash); }
+.marea.mc-context { fill: var(--mc-context); fill-opacity: var(--mc-wash); }
+/* A waveform is an area or nothing, so it gets a stronger wash and an edge. */
+.marea--mirror.mc-context { fill-opacity: 0.28; }
+.marea--mirror.mc-accent { fill-opacity: 0.32; stroke: var(--mc-accent); stroke-width: 1; }
+.mdot { stroke: var(--bg); stroke-width: 2; }
+.mdot.mc-accent { fill: var(--mc-accent); }
+.mdot.mc-context { fill: var(--mc-context); }
+.mdot[data-tip] { cursor: default; }
+.mdot[data-tip]:focus-visible { outline: none; stroke: var(--fg); stroke-width: 2; }
+.mend { font-size: 12px; fill: var(--fg); }
+.mband { fill: var(--mc-band); }
+.mband--strong { fill: var(--mc-band-strong); }
+.mband__label { font-size: 11px; fill: var(--fg-muted); }
+.mrule { stroke: var(--fg-subtle); stroke-width: 1; }
+.mrule__label { font-size: 11px; fill: var(--fg-muted); }
+.mcross { stroke: var(--fg-subtle); stroke-width: 1; pointer-events: none; }
+.mplayhead { stroke: var(--fg); stroke-width: 1.5; pointer-events: none; }
+.mfig--listen .mfig__chart { cursor: pointer; }
+
+/* Legend: a short line (or dot) in the series colour, the name in ink. */
+.mfig .mfig__legend { max-width: none; display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: 8px 0 0; padding: 0; font-size: 13px; color: var(--fg-muted); }
+.mfig .mfig__legend:empty { display: none; }
+.mfig .mfig__legend li { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: inherit; line-height: 1.4; }
+.mkey { display: inline-block; flex: none; }
+.mkey--line { width: 16px; height: 2px; border-radius: 1px; }
+.mkey--dot { width: 9px; height: 9px; border-radius: 50%; }
+.mkey.mc-accent { background: var(--mc-accent); }
+.mkey.mc-context { background: var(--mc-context); }
+
+/* Tooltip: value first, then the name. */
+.mtip {
+  position: absolute; z-index: 5; pointer-events: none;
+  min-width: 120px; max-width: 260px;
+  padding: 8px 10px; border-radius: 6px;
+  background: var(--bg); border: 1px solid var(--border-strong);
+  box-shadow: var(--sh-3);
+  font-size: 13px; color: var(--fg);
+}
+.mfig .mtip p { margin: 0; max-width: none; font-size: inherit; line-height: 1.4; }
+.mfig .mtip__head { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); margin-bottom: 4px !important; }
+.mfig .mtip__row { display: flex; align-items: center; gap: 8px; }
+.mtip__row b { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* The numbers behind a chart. */
+.mfig__table { margin-top: 10px; font-size: 13.5px; }
+.mfig__table summary { cursor: pointer; color: var(--fg-muted); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--border-strong); }
+.mfig__table table { border-collapse: collapse; margin-top: 8px; font-variant-numeric: tabular-nums; }
+.mfig__table th, .mfig__table td { text-align: left; padding: 4px 18px 4px 0; border-bottom: 1px solid var(--rule); font-size: 13.5px; }
+.mfig__table th { font-family: var(--font-mono); font-size: 11px; font-weight: 400; color: var(--fg-muted); }
+
+/* ---- The pedal ----
+   The Endless is an object, so it keeps its own colours in both themes. The
+   focus ring is a fixed dark teal: 7:1 on the mint face, more on the white
+   enclosure, which is what it is drawn against. */
+.mpedal { --mp-focus: #0a4a3b; display: grid; grid-template-columns: minmax(0, 290px) minmax(0, 1fr); gap: var(--s-6); align-items: center; }
+.mpedal__stage { position: relative; }
+.mpedal__art { display: block; width: 100%; height: auto; }
+.mpedal__body { stroke: #d4d1cb; stroke-width: 0.8; }
+.mpedal__jack { stroke: #8d8d8a; stroke-width: 0.6; }
+.mpedal__title { font-family: var(--font-serif); font-size: 27px; fill: #1b2524; }
+.mpedal__name { font-family: var(--font-body); font-weight: 600; font-size: 9.5px; fill: #1b2524; }
+/* The knob's edge carries 3:1 against the face, so the control is findable by more than its shadow. */
+.mpedal__knob { stroke: #5f7f7a; stroke-width: 0.8; }
+.mpedal__dot { fill: #1c1c1c; }
+.mpedal__led { stroke: rgba(0, 0, 0, 0.35); stroke-width: 0.6; }
+.mpedal__switchlabel { font-family: var(--font-body); font-weight: 600; font-size: 10px; fill: #3b3b39; }
+.mpedal__switchlabel--star { font-size: 17px; font-weight: 500; }
+.mpedal__cap { transform-box: fill-box; transform-origin: center; }
+.mpedal__cap.is-down { transform: scale(0.93); }
+@media (prefers-reduced-motion: no-preference) {
+  [data-knob] { transition: transform 90ms var(--ease-out); }
+  .mpedal__cap { transition: transform 70ms var(--ease-out); }
+}
+
+/* The control layer: native inputs and buttons over the drawing. */
+.mpedal__layer { position: absolute; inset: 0; }
+.mpedal__layer[hidden] { display: none; }
+.mpedal__ctl { position: absolute; border-radius: 50%; }
+.mpedal__input {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0;
+  opacity: 0; pointer-events: none; /* the grip takes the pointer; the input keeps focus, keys and the accessibility tree */
+}
+.mpedal__grip { position: absolute; inset: 0; border-radius: 50%; cursor: grab; touch-action: none; }
+.mpedal__grip.is-dragging { cursor: grabbing; }
+.mpedal__switch {
+  padding: 0; border: 0; background: transparent; cursor: pointer;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Dark ring, white halo: white fills the 2px gap and runs 2px past the ring,
+   so it reads at 3:1 or better whatever ends up behind it. */
+.mpedal__input:focus-visible + .mpedal__grip,
+.mpedal__switch:focus-visible { outline: 3px solid var(--mp-focus); outline-offset: 2px; box-shadow: 0 0 0 7px #fff; }
+@media (forced-colors: active) {
+  .mpedal__input:focus-visible + .mpedal__grip,
+  .mpedal__switch:focus-visible { outline-color: Highlight; box-shadow: none; }
+}
+
+.mpedal__read { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.mpedal__read > div { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; }
+.mpedal__read dt { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--fg-muted); padding-top: 3px; }
+.mpedal__read dd { margin: 0; font-size: 15px; color: var(--fg); }
+.mpedal__extra { margin-top: var(--s-5); }
+.mfig .mpedal__hint { flex: 1 1 100%; max-width: none; margin: 0; font-size: 14px; line-height: 1.5; color: var(--fg-muted); }
+.mfig--still .mpedal { grid-template-columns: minmax(0, 270px); }
+@media (max-width: 600px) {
+  .mpedal { grid-template-columns: 1fr; }
+  .mpedal__stage { width: 100%; max-width: 290px; margin-inline: auto; }
+  .mrange { grid-template-columns: 1fr 5.5em; }
+  .mrange__label { grid-column: 1 / -1; }
+}
+
+/* ---- LED colours ---- */
+.mledtable { border-collapse: collapse; margin: var(--s-5) 0; font-size: 14.5px; }
+.mledtable th, .mledtable td { text-align: left; padding: 6px 20px 6px 0; border-bottom: 1px solid var(--rule); }
+.mledtable thead th { font-family: var(--font-mono); font-size: 11px; font-weight: 400; color: var(--fg-muted); }
+.mledtable__dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; vertical-align: -1px; box-shadow: 0 0 0 1px var(--border-strong); }
+
+/* ---- Signal flow ---- */
+.mflow { margin: var(--s-6) 0; padding: 16px; border: 1px solid var(--rule); border-radius: 6px; }
+.mflow__row { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 12px; align-items: start; }
+.mflow__row + .mflow__row { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--rule); }
+.mflow__label { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); padding-top: 6px; }
+.mflow__steps { display: flex; flex-wrap: wrap; gap: 6px 0; list-style: none; margin: 0; padding: 0; }
+.mflow .mflow__steps li { margin-bottom: 0; line-height: 1.4; font-size: 13.5px; padding: 4px 10px; border: 1px solid var(--border-strong); border-radius: var(--r-pill); background: var(--bg); }
+.mflow__row:first-child .mflow__steps li { border-color: var(--mc-accent); }
+.mflow__steps li + li::before { content: '\2192'; margin: 0 8px 0 -4px; color: var(--fg-subtle); display: none; }
+.mflow__steps li + li { margin-left: 22px; position: relative; }
+.mflow__steps li + li::after { content: '\2192'; position: absolute; left: -18px; top: 4px; color: var(--fg-subtle); }
+@media (max-width: 600px) { .mflow__row { grid-template-columns: 1fr; gap: 6px; } }
+
+/* ---- The card from the case study to the hands-on page ---- */
+.operator .reader a.mcard,
+.operator .reader a.mcard:hover,
+.operator .reader a.mcard:focus-visible { color: var(--fg); text-decoration: none; }
+.mcard {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s-4); align-items: center;
+  margin: var(--s-7) 0; padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--mc-accent); border-radius: 8px;
+  background: color-mix(in oklch, var(--mc-accent) 6%, var(--bg));
+}
+.mcard__led { width: 14px; height: 14px; border-radius: 50%; background: #9ef0c6; box-shadow: 0 0 0 1px #2b5c45, 0 0 14px 2px rgba(110, 230, 180, 0.6); }
+.mcard__text { display: flex; flex-direction: column; gap: 2px; }
+.mcard__title { font-family: var(--font-display); font-size: 1.4rem; line-height: 1.2; }
+.mcard:hover .mcard__title, .mcard:focus-visible .mcard__title { text-decoration: underline; text-underline-offset: 4px; }
+.mcard__dek { font-size: 14.5px; color: var(--fg-muted); }
+.mcard__go { font-size: 1.4rem; color: var(--fg); }

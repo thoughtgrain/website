@@ -5,10 +5,12 @@ node_modules/
 dist/
 .ssr/
 
-# Generated route entries. vite.config.js writes one index.html per route at the
-# repo root, and records which top-level directories it created so cleanup only
-# removes its own work. All derived from src/content — never edit by hand.
+# Generated route entries. vite.config.js writes one index.html per route at
+# the repo root, which is also what CodePen's recursive .html glob discovers,
+# and records which top-level directories it created so cleanup only removes
+# its own work. All derived from src/content; never edit by hand.
 .generated-routes.json
+/index.html
 /about/
 /bookshelf/
 /build/
@@ -16,7 +18,6 @@ dist/
 /enjoying/
 /essays/
 /gear/
-/index.html
 /learning/
 /movies/
 /music/
