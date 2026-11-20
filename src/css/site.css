@@ -560,6 +560,15 @@ body::after {
 .reader__back:hover .reader__back-label { text-decoration: underline; text-decoration-color: currentColor; }
 .btn--link .ph { text-decoration: none; display: inline-block; }
 .reader__kicker { margin-bottom: 14px; }
+/* A folder project's pages: the list under the project, the pager under a page. */
+.project-pages { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--rule); }
+.project-pages__title { font-family: var(--font-display); font-size: 1.4rem; margin: 0 0 12px; }
+.project-pages__list { margin: 0; padding-left: 1.4em; display: grid; gap: 10px; }
+.project-pages__list a { text-underline-offset: 4px; }
+.project-pages__summary { display: block; color: var(--fg-muted); }
+.reader__pager { display: flex; justify-content: space-between; gap: 24px; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--rule); }
+.reader__pager a { color: var(--fg-muted); text-decoration: none; }
+.reader__pager a:hover, .reader__pager a:focus-visible { text-decoration: underline; text-underline-offset: 4px; }
 .reader h1 {
   font-family: var(--font-display);
   font-size: clamp(2.2rem, 1rem + 2.2vw, 3rem);

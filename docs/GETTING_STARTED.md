@@ -224,6 +224,30 @@ Projects live at `/projects/<slug>/`. Active projects (status contains
 `In progress`, `Ongoing`, or `Maintained`) appear in the homepage's
 "Currently building" stack.
 
+### A project with more than one page
+
+A project can be a folder instead of a file. The folder's `index.mdx` is the
+project, with the same frontmatter as above, and every other `.mdx` beside it is
+one of its pages:
+
+```
+src/content/projects/06-lamp/
+├─ index.mdx          the project, at /projects/lamp/
+├─ 01-wiring.mdx      /projects/lamp/wiring/
+└─ 02-the-shade.mdx   /projects/lamp/the-shade/
+```
+
+The folder's number sets the project's place in the list, the same as a file's,
+and the pages' numbers set their order. A page needs a `title`; `summary` is
+optional, and `slug` defaults to the filename without its number. The project
+page lists its pages under the body, and each page links to the next and back.
+Images can sit in the folder too and be imported from the MDX
+(`import shot from './shot.png'`).
+
+The build stops with a message if a folder has no `index.mdx`, if two pages end
+up with the same slug, or if a `layout: walk` project has pages, since a walk's
+machines already use `/projects/<slug>/<id>/`.
+
 ## Add a cultural item
 
 Reading, music, movies, podcasts, and bookshelf each have their own MDX directory

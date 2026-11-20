@@ -476,7 +476,18 @@ content, so nothing else needs touching.
 `src/content/nav.json`, the `enabled` flag. Both the drawer and the footer read
 from it. The item's page still builds, so a direct URL keeps working.
 
-### 13.5 Add a product image
+### 13.5 Give a project more than one page
+
+Make it a folder: `projects/06-lamp/index.mdx` is the project, and every other
+`.mdx` in the folder is a page at `/projects/lamp/<page>/`, in filename order.
+`buildContent` turns those into `project.pages`, `routesFor` adds their routes,
+and `ProjectChild` in `pages/Project.jsx` serves `/projects/:slug/:child/` for both
+a folder's pages and a walk's machines (a walk can't have pages, so the two never
+meet). `node-loader.js` reads one level of folders for the same reason the browser
+glob is `**`: so the feeds and the pages agree. `docs/GETTING_STARTED.md` has the
+author's side.
+
+### 13.6 Add a product image
 
 Save it as `src/assets/products/<slug>.{jpg,png,webp}`. It gets picked up by
 glob. There's no scraping any more — the old build fetched `og:image` over the
