@@ -18,8 +18,7 @@ import Note from './pages/Note';
 import Writing from './pages/Writing';
 import Article from './pages/Article';
 import Projects from './pages/Projects';
-import Project from './pages/Project';
-import { Machine } from './pages/Demo';
+import Project, { ProjectChild } from './pages/Project';
 import Styles from './pages/Styles';
 import { Now, About, Learning, Gear, Colophon } from './pages/Flat';
 import { KindIndex, KindReader, Enjoying } from './pages/Enjoying';
@@ -41,9 +40,9 @@ const ROUTES = [
   [/^\/projects\/$/, Projects],
   [/^\/projects\/cat\/[^/]+\/$/, Projects],
   [/^\/projects\/[^/]+\/$/, Project],
-  // A demonstration project has one page per machine beneath it. After the
-  // category pattern above, which has the same shape.
-  [/^\/projects\/[^/]+\/[^/]+\/$/, Machine],
+  // Beneath a project: a demonstration's machines, or a folder project's pages.
+  // After the category pattern above, which has the same shape.
+  [/^\/projects\/[^/]+\/[^/]+\/$/, ProjectChild],
 
   [new RegExp(`^/(${KINDS})/$`), KindIndex],
   [new RegExp(`^/(${KINDS})/[^/]+/$`), KindReader],

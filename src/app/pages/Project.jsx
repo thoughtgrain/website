@@ -18,7 +18,7 @@ import { mdxComponents } from '../components/mdx';
 import { OperatorShell } from '../components/operator/Shell';
 import { Sprite } from '../components/operator/Sprite';
 import { machineById } from '../opxy.js';
-import { Demo, ProjectLinks } from './Demo';
+import { Demo, Machine, ProjectLinks } from './Demo';
 import { MintyStudy } from './Minty';
 
 function PlainProject({ project }) {
@@ -48,6 +48,58 @@ function PlainProject({ project }) {
         </div>
 
         <div className="reader__body prose"><project.Body components={mdxComponents} /></div>
+
+        <PagesList project={project} />
+      </article>
+    </main>
+  );
+}
+
+/**
+ * A folder project's pages, under its body: `projects/06-lamp/` holds
+ * `index.mdx` (the project) and any other .mdx beside it (these). Nothing
+ * renders for a one-file project.
+ */
+function PagesList({ project }) {
+  if (!project.pages || !project.pages.length) return null;
+  return (
+    <nav className="project-pages" aria-labelledby="project-pages-title">
+      <h2 id="project-pages-title" className="project-pages__title">In this project</h2>
+      <ol className="project-pages__list">
+        {project.pages.map((pg) => (
+          <li key={pg.slug}>
+            <Link to={pg.url}>{pg.title}</Link>
+            {pg.summary && <span className="project-pages__summary">{pg.summary}</span>}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
+/** /projects/:slug/:page/, one page of a folder project, read like the project itself. */
+function ProjectPage({ project, page }) {
+  const at = project.pages.indexOf(page);
+  const prev = project.pages[at - 1];
+  const next = project.pages[at + 1];
+  return (
+    <main id="main">
+      <article className="reader reader--wide">
+        <Link className="btn btn--link reader__back" to={`/projects/${project.slug}/`}>
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12,19 5,12 12,5" /></svg>
+          <span className="reader__back-label">{project.title}</span>
+        </Link>
+
+        <div className="reader__kicker"><span className="kicker">{project.title} &middot; {at + 1} of {project.pages.length}</span></div>
+        <h1>{page.title}</h1>
+        {page.summary && <p className="lead">{page.summary}</p>}
+
+        <div className="reader__body prose"><page.Body components={mdxComponents} /></div>
+
+        <nav className="reader__pager" aria-label={`Other pages in ${project.title}`}>
+          {prev ? <Link to={prev.url} rel="prev">&larr; {prev.title}</Link> : <Link to={`/projects/${project.slug}/`} rel="prev">&larr; {project.title}</Link>}
+          {next ? <Link to={next.url} rel="next">{next.title} &rarr;</Link> : <span />}
+        </nav>
       </article>
     </main>
   );
@@ -103,4 +155,17 @@ export default function Project({ route }) {
   if (project.layout === 'minty') return <MintyStudy project={project} />;
   if (project.layout === 'operator') return <OperatorProject project={project} />;
   return <PlainProject project={project} />;
+}
+
+/**
+ * /projects/:slug/:child/ is a walk project's machine or a folder project's page.
+ * The two can't collide: buildContent refuses pages on a walk project.
+ */
+export function ProjectChild({ route }) {
+  const [, slug, child] = route.split('/').filter(Boolean);
+  const project = content.projects.find((p) => p.slug === slug);
+  if (project && hasWalk(project)) return <Machine route={route} />;
+  const page = project && (project.pages || []).find((p) => p.slug === child);
+  if (!page) return <main id="main"><div className="container section"><h1>Not found</h1></div></main>;
+  return <ProjectPage project={project} page={page} />;
 }

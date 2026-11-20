@@ -74,12 +74,38 @@ function toEntry(mod) {
  */
 export function buildContent(moduleMap, jsonMap = {}) {
   const collections = {};
+  // collection → folder name → the entry its index.mdx made, for the pass below.
+  const folders = {};
+  const keys = Object.keys(moduleMap).sort();
 
-  Object.keys(moduleMap).sort().forEach((filePath) => {
-    const m = filePath.match(/\/content\/([^/]+)\/[^/]+\.mdx$/);
+  // An entry is either one file, `projects/02-moss-and-air.mdx`, or a folder whose
+  // `index.mdx` is the entry, `projects/06-lamp/index.mdx`. The folder's name sorts
+  // like a file's, so a numbered folder keeps its place in the list.
+  keys.forEach((filePath) => {
+    const m = filePath.match(/\/content\/([^/]+)\/(?:([^/]+)\/index|[^/]+)\.mdx$/);
     if (!m) return;
-    const key = m[1];
-    (collections[key] = collections[key] || []).push(toEntry(moduleMap[filePath]));
+    const [, key, folder] = m;
+    const entry = toEntry(moduleMap[filePath]);
+    (collections[key] = collections[key] || []).push(entry);
+    if (folder) (folders[key] = folders[key] || {})[folder] = entry;
+  });
+
+  // Every other .mdx in an entry's folder is one of its pages, in filename order.
+  // Its slug is its frontmatter's, or the filename without its number.
+  keys.forEach((filePath) => {
+    const m = filePath.match(/\/content\/([^/]+)\/([^/]+)\/([^/]+)\.mdx$/);
+    if (!m || m[3] === 'index') return;
+    const [, key, folder, file] = m;
+    const owner = (folders[key] || {})[folder];
+    if (!owner) {
+      throw new Error(`${filePath} is in a folder with no index.mdx; add one, or move the file up a level`);
+    }
+    const page = toEntry(moduleMap[filePath]);
+    page.slug = page.slug || file.replace(/^\d+-/, '');
+    if ((owner.pages || []).some((p) => p.slug === page.slug)) {
+      throw new Error(`${filePath}: another page in ${key}/${folder}/ already has the slug "${page.slug}"`);
+    }
+    (owner.pages = owner.pages || []).push(page);
   });
 
   // Make every collection exist, so pages never guard against undefined.
@@ -89,6 +115,19 @@ export function buildContent(moduleMap, jsonMap = {}) {
   const {
     articles, projects, notes, reading, music, movies, podcasts, bookshelf, products,
   } = collections;
+
+  // --- project pages -------------------------------------------------------
+  // A folder project's other files are pages under it: /projects/<slug>/<page>/.
+  // A walk project already owns that level for its machines, so it can't have them.
+  projects.forEach((p) => {
+    p.pages = p.pages || [];
+    if (p.pages.length && hasWalk(p)) {
+      throw new Error(`project "${p.slug}" is a walk, whose machines already use /projects/${p.slug}/<id>/; it can't have pages too`);
+    }
+    // Plain fields only, no links back to the project or between pages: entries can
+    // end up in an island's JSON props, and a cycle there would fail the build.
+    p.pages.forEach((pg) => { pg.url = `/projects/${p.slug}/${pg.slug}/`; pg.projectSlug = p.slug; });
+  });
 
   // --- products -----------------------------------------------------------
   products.forEach((p) => {
@@ -183,6 +222,7 @@ export function routesFor(content) {
     if (hasWalk(p)) {
       machinesOf(content).forEach((m) => routes.push(`/projects/${p.slug}/${m.id}/`));
     }
+    (p.pages || []).forEach((pg) => routes.push(pg.url));
   });
 
   ['reading', 'music', 'movies', 'podcasts', 'bookshelf'].forEach((kind) => {
@@ -269,6 +309,10 @@ export function metaFor(route, content) {
     if (c && p && hasWalk(p)) {
       const m = machinesOf(content).find((x) => x.id === c);
       return page(m ? `${m.name}, ${p.title}` : p.title, m?.description || p.summary);
+    }
+    if (c && p) {
+      const pg = (p.pages || []).find((x) => x.slug === c);
+      return page(pg ? `${pg.title}, ${p.title}` : p.title, pg?.summary || p.summary);
     }
     return page(p?.title, p?.summary);
   }

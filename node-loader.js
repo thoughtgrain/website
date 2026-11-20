@@ -81,18 +81,26 @@ export function readContent() {
     .filter((d) => d.isDirectory())
     .forEach((dir) => {
       const abs = path.join(CONTENT, dir.name);
-      readdirSync(abs)
-        .filter((f) => f.endsWith('.mdx'))
-        // Content files are numbered (01-, 02-, …) and that filename order IS
-        // their display order, so sort before reading.
-        .sort()
-        .forEach((file) => {
-          const full = path.join(abs, file);
-          out[`../content/${dir.name}/${file}`] = {
-            frontmatter: frontmatterOf(readFileSync(full, 'utf8'), full),
-            default: null,
-          };
-        });
+      // One level of folders too: a folder entry is its index.mdx plus its pages
+      // (see buildContent), keyed the way the browser's ** glob keys them.
+      const files = [];
+      readdirSync(abs, { withFileTypes: true }).forEach((d) => {
+        if (d.isFile() && d.name.endsWith('.mdx')) files.push(d.name);
+        if (d.isDirectory()) {
+          readdirSync(path.join(abs, d.name))
+            .filter((f) => f.endsWith('.mdx'))
+            .forEach((f) => files.push(`${d.name}/${f}`));
+        }
+      });
+      // Content files are numbered (01-, 02-, …) and that filename order IS
+      // their display order, so sort before reading.
+      files.sort().forEach((file) => {
+        const full = path.join(abs, file);
+        out[`../content/${dir.name}/${file}`] = {
+          frontmatter: frontmatterOf(readFileSync(full, 'utf8'), full),
+          default: null,
+        };
+      });
     });
   return out;
 }
